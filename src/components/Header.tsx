@@ -63,13 +63,37 @@ export function Header() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
-                      <User className="h-4 w-4" />
-                      <span className="hidden sm:inline">{user.email?.split('@')[0] || 'User'}</span>
+                      {user.user_metadata?.avatar_url ? (
+                        <img 
+                          src={user.user_metadata.avatar_url} 
+                          alt="Avatar" 
+                          className="h-5 w-5 rounded-full"
+                        />
+                      ) : (
+                        <User className="h-4 w-4" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {user.user_metadata?.custom_claims?.global_name || 
+                         user.user_metadata?.full_name || 
+                         user.user_metadata?.name || 
+                         'User'}
+                      </span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem disabled>
-                      <span className="text-muted-foreground">{user.email}</span>
+                    <DropdownMenuItem disabled className="flex items-center gap-2">
+                      {user.user_metadata?.avatar_url && (
+                        <img 
+                          src={user.user_metadata.avatar_url} 
+                          alt="Avatar" 
+                          className="h-6 w-6 rounded-full"
+                        />
+                      )}
+                      <span className="text-muted-foreground">
+                        {user.user_metadata?.custom_claims?.global_name || 
+                         user.user_metadata?.full_name || 
+                         user.email}
+                      </span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => signOut()}>
