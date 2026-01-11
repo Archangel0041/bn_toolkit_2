@@ -35,7 +35,7 @@ const UPLOAD_CONFIG: Record<UploadType, {
   listFn: () => Promise<string[]>;
   label: string;
 }> = {
-  units: { fn: uploadMultipleImages, listFn: listUploadedImages, label: "unit" },
+  units: { fn: (files, onProgress) => uploadMultipleImages(files, false, onProgress), listFn: listUploadedImages, label: "unit" },
   abilities: { fn: uploadMultipleAbilityImages, listFn: listUploadedAbilityImages, label: "ability" },
   damage: { fn: uploadMultipleDamageImages, listFn: listUploadedDamageImages, label: "damage" },
   status: { fn: uploadMultipleStatusImages, listFn: listUploadedStatusImages, label: "status" },
