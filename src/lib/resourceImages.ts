@@ -1,15 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import { validateFile, sanitizeFilename } from "./uploadValidation";
 
-const RESOURCE_ICONS_BUCKET = "resource-icons";
-const EVENT_REWARD_ICONS_BUCKET = "event-reward-icons";
-const MENU_BACKGROUNDS_BUCKET = "menu-backgrounds";
-const ENCOUNTER_ICONS_BUCKET = "encounter-icons";
-const MISSION_ICONS_BUCKET = "mission-icons";
+const BUCKET_NAME = "Art";
+const RESOURCE_PATH = "icons/bn_resources";
+const REWARD_PATH = "icons/rewards";
+const MENU_BG_PATH = "icons/boss_strikes";
+const ENCOUNTER_PATH = "icons/encounters";
+const MISSION_PATH = "icons/missions";
 
 export function getResourceIconUrl(resourceKey: string): string {
   const fileName = `resource_${resourceKey}.png`;
-  const { data } = supabase.storage.from(RESOURCE_ICONS_BUCKET).getPublicUrl(fileName);
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(`${RESOURCE_PATH}/${fileName}`);
   return data.publicUrl;
 }
 
@@ -17,14 +18,14 @@ export function getEventRewardIconUrl(rewardImage: string): string {
   // Remove trailing period if exists and add .png
   const cleanName = rewardImage.replace(/\.$/, '');
   const fileName = `${cleanName}.png`;
-  const { data } = supabase.storage.from(EVENT_REWARD_ICONS_BUCKET).getPublicUrl(fileName);
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(`${REWARD_PATH}/${fileName}`);
   return data.publicUrl;
 }
 
 export function getMenuBackgroundUrl(backgroundKey: string): string {
   // Handle cases where extension may or may not be included
   const fileName = backgroundKey.endsWith('.png') ? backgroundKey : `${backgroundKey}.png`;
-  const { data } = supabase.storage.from(MENU_BACKGROUNDS_BUCKET).getPublicUrl(fileName);
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(`${MENU_BG_PATH}/${fileName}`);
   return data.publicUrl;
 }
 
@@ -47,17 +48,17 @@ const encounterIconMappings: Record<string, string> = {
 export function getEncounterIconUrl(iconKey: string): string {
   // Check if we have a mapping for this icon
   const mappedIcon = encounterIconMappings[iconKey.toLowerCase()];
-  const fileName = mappedIcon 
+  const fileName = mappedIcon
     ? `${mappedIcon}.png`
     : iconKey.endsWith('.png') ? iconKey : `${iconKey}.png`;
-  
-  const { data } = supabase.storage.from(ENCOUNTER_ICONS_BUCKET).getPublicUrl(fileName);
+
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(`${ENCOUNTER_PATH}/${fileName}`);
   return data.publicUrl;
 }
 
 export function getMissionIconUrl(iconKey: string): string {
   const fileName = `${iconKey}.png`;
-  const { data } = supabase.storage.from(MISSION_ICONS_BUCKET).getPublicUrl(fileName);
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(`${MISSION_PATH}/${fileName}`);
   return data.publicUrl;
 }
 
@@ -72,7 +73,7 @@ export async function uploadMultipleResourceIcons(
 
   for (let i = 0; i < total; i++) {
     const file = files[i];
-    
+
     // Validate file before upload
     const validation = validateFile(file);
     if (!validation.valid) {
@@ -80,12 +81,12 @@ export async function uploadMultipleResourceIcons(
       errors.push(validation.error || `Invalid file: ${file.name}`);
       continue;
     }
-    
-    const sanitizedName = sanitizeFilename(file.name);
+
+    const sanitizedName = sanitizeFilename(`${RESOURCE_PATH}/${file.name}`);
     onProgress?.(i + 1, total, file.name);
 
     const { error } = await supabase.storage
-      .from(RESOURCE_ICONS_BUCKET)
+      .from(BUCKET_NAME)
       .upload(sanitizedName, file, { upsert: true });
 
     if (error) {
@@ -110,7 +111,7 @@ export async function uploadMultipleEventRewardIcons(
 
   for (let i = 0; i < total; i++) {
     const file = files[i];
-    
+
     // Validate file before upload
     const validation = validateFile(file);
     if (!validation.valid) {
@@ -118,12 +119,12 @@ export async function uploadMultipleEventRewardIcons(
       errors.push(validation.error || `Invalid file: ${file.name}`);
       continue;
     }
-    
-    const sanitizedName = sanitizeFilename(file.name);
+
+    const sanitizedName = sanitizeFilename(`${REWARD_PATH}/${file.name}`);
     onProgress?.(i + 1, total, file.name);
 
     const { error } = await supabase.storage
-      .from(EVENT_REWARD_ICONS_BUCKET)
+      .from(BUCKET_NAME)
       .upload(sanitizedName, file, { upsert: true });
 
     if (error) {
@@ -148,7 +149,7 @@ export async function uploadMultipleMenuBackgrounds(
 
   for (let i = 0; i < total; i++) {
     const file = files[i];
-    
+
     // Validate file before upload
     const validation = validateFile(file);
     if (!validation.valid) {
@@ -156,12 +157,12 @@ export async function uploadMultipleMenuBackgrounds(
       errors.push(validation.error || `Invalid file: ${file.name}`);
       continue;
     }
-    
-    const sanitizedName = sanitizeFilename(file.name);
+
+    const sanitizedName = sanitizeFilename(`${MENU_BG_PATH}/${file.name}`);
     onProgress?.(i + 1, total, file.name);
 
     const { error } = await supabase.storage
-      .from(MENU_BACKGROUNDS_BUCKET)
+      .from(BUCKET_NAME)
       .upload(sanitizedName, file, { upsert: true });
 
     if (error) {
@@ -176,19 +177,19 @@ export async function uploadMultipleMenuBackgrounds(
 }
 
 export async function listResourceIcons(): Promise<string[]> {
-  const { data, error } = await supabase.storage.from(RESOURCE_ICONS_BUCKET).list();
+  const { data, error } = await supabase.storage.from(BUCKET_NAME).list(RESOURCE_PATH);
   if (error || !data) return [];
   return data.map(f => f.name);
 }
 
 export async function listEventRewardIcons(): Promise<string[]> {
-  const { data, error } = await supabase.storage.from(EVENT_REWARD_ICONS_BUCKET).list();
+  const { data, error } = await supabase.storage.from(BUCKET_NAME).list(REWARD_PATH);
   if (error || !data) return [];
   return data.map(f => f.name);
 }
 
 export async function listMenuBackgrounds(): Promise<string[]> {
-  const { data, error } = await supabase.storage.from(MENU_BACKGROUNDS_BUCKET).list();
+  const { data, error } = await supabase.storage.from(BUCKET_NAME).list(MENU_BG_PATH);
   if (error || !data) return [];
   return data.map(f => f.name);
 }
@@ -204,7 +205,7 @@ export async function uploadMultipleEncounterIcons(
 
   for (let i = 0; i < total; i++) {
     const file = files[i];
-    
+
     // Validate file before upload
     const validation = validateFile(file);
     if (!validation.valid) {
@@ -212,12 +213,12 @@ export async function uploadMultipleEncounterIcons(
       errors.push(validation.error || `Invalid file: ${file.name}`);
       continue;
     }
-    
-    const sanitizedName = sanitizeFilename(file.name);
+
+    const sanitizedName = sanitizeFilename(`${ENCOUNTER_PATH}/${file.name}`);
     onProgress?.(i + 1, total, file.name);
 
     const { error } = await supabase.storage
-      .from(ENCOUNTER_ICONS_BUCKET)
+      .from(BUCKET_NAME)
       .upload(sanitizedName, file, { upsert: true });
 
     if (error) {
@@ -242,7 +243,7 @@ export async function uploadMultipleMissionIcons(
 
   for (let i = 0; i < total; i++) {
     const file = files[i];
-    
+
     // Validate file before upload
     const validation = validateFile(file);
     if (!validation.valid) {
@@ -250,12 +251,12 @@ export async function uploadMultipleMissionIcons(
       errors.push(validation.error || `Invalid file: ${file.name}`);
       continue;
     }
-    
-    const sanitizedName = sanitizeFilename(file.name);
+
+    const sanitizedName = sanitizeFilename(`${MISSION_PATH}/${file.name}`);
     onProgress?.(i + 1, total, file.name);
 
     const { error } = await supabase.storage
-      .from(MISSION_ICONS_BUCKET)
+      .from(BUCKET_NAME)
       .upload(sanitizedName, file, { upsert: true });
 
     if (error) {
@@ -270,13 +271,13 @@ export async function uploadMultipleMissionIcons(
 }
 
 export async function listEncounterIcons(): Promise<string[]> {
-  const { data, error } = await supabase.storage.from(ENCOUNTER_ICONS_BUCKET).list();
+  const { data, error} = await supabase.storage.from(BUCKET_NAME).list(ENCOUNTER_PATH);
   if (error || !data) return [];
   return data.map(f => f.name);
 }
 
 export async function listMissionIcons(): Promise<string[]> {
-  const { data, error } = await supabase.storage.from(MISSION_ICONS_BUCKET).list();
+  const { data, error } = await supabase.storage.from(BUCKET_NAME).list(MISSION_PATH);
   if (error || !data) return [];
   return data.map(f => f.name);
 }
