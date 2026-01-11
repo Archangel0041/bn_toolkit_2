@@ -312,7 +312,7 @@ export default function UnitDetail() {
           )}
 
           {/* Abilities */}
-          {unit.weapons && Object.keys(unit.weapons.weapons).length > 0 && (
+          {unit.weapons?.weapons && Object.keys(unit.weapons.weapons).length > 0 && (
             <StatSection title="Abilities" icon={<Swords className="h-4 w-4" />} defaultOpen>
               <div className="space-y-4">
                 {Object.entries(unit.weapons.weapons).flatMap(([weaponKey, weapon]) =>
@@ -471,7 +471,7 @@ export default function UnitDetail() {
           )}
 
           {/* Requirements */}
-          {unit.requirements && (
+          {unit.requirements?.cost && (
             <StatSection title="Build Requirements" icon={<Coins className="h-4 w-4" />} defaultOpen>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {Object.entries(unit.requirements.cost).map(([resource, amount]) => (
@@ -505,7 +505,7 @@ export default function UnitDetail() {
           )}
 
           {/* Healing */}
-          {unit.healing && (
+          {unit.healing?.heal_cost && (
             <StatSection title="Healing" icon={<Wrench className="h-4 w-4" />} defaultOpen>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {Object.entries(unit.healing.heal_cost).map(([resource, amount]) => (
