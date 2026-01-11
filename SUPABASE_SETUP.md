@@ -101,6 +101,7 @@ If you prefer not to use the CLI:
 20260111211933_d600f8f7-4974-4d7b-b302-48253a502ea4.sql
 20260111212814_e294facd-10cc-4adf-a0d3-780ad90aa2b8.sql
 20260111220500_add_invite_code_tracking.sql
+20260111223000_update_storage_for_consolidated_buckets.sql
 ```
 
 ## Step 5: Configure Authentication
@@ -122,30 +123,66 @@ If you prefer not to use the CLI:
 
 ## Step 6: Create Storage Buckets
 
-Your app uses several storage buckets for images. Create them in **Storage** → **Buckets**:
+Your app uses a consolidated bucket structure for better organization. Create them in **Storage** → **Buckets**:
 
-1. Click "New Bucket" for each of the following:
-   - `unit-images` (Public bucket)
-   - `ability-icons` (Public bucket)
-   - `damage-icons` (Public bucket)
-   - `status-icons` (Public bucket)
-   - `resource-icons` (Public bucket)
-   - `event-reward-icons` (Public bucket)
-   - `menu-backgrounds` (Public bucket)
-   - `encounter-icons` (Public bucket)
-   - `mission-icons` (Public bucket)
+### Required Buckets:
 
-2. For each bucket:
-   - **Name**: Use the exact names above
-   - **Public bucket**: ✅ Check this box (allows public read access)
-   - **File size limit**: Set to 5MB or higher
-   - **Allowed MIME types**: `image/*`
+1. **Art** (Public bucket)
+   - Contains all game art assets organized in folders
+   - Folder structure:
+     ```
+     Art/
+       icons/
+         units/
+           front/     (enemy unit icons)
+           back/      (player unit icons)
+         abilities/   (ability icons)
+         status_effects/  (status effect icons)
+         bn_resources/    (resource icons)
+         rewards/         (event reward icons)
+         boss_strikes/    (menu background images)
+         encounters/      (encounter icons)
+         missions/        (mission icons)
+       ui/              (UI elements like damage icons)
+     ```
+
+2. **config** (Public bucket)
+   - Contains game configuration files (battle_units.json, etc.)
+   - Folder structure:
+     ```
+     config/
+       (various .json config files)
+     ```
+
+3. **Localizations** (Public bucket)
+   - Contains localization and translation files
+   - Folder structure:
+     ```
+     Localizations/
+       tables/
+         (GameTextSharedData and other localization files)
+     ```
+
+### Bucket Configuration:
+
+For each bucket:
+- **Name**: Use the exact names above (`Art`, `config`, `Localizations`)
+- **Public bucket**: ✅ Check this box (allows public read access)
+- **File size limit**:
+  - `Art`: 5MB (for images)
+  - `config`: 10MB (for JSON files)
+  - `Localizations`: 10MB (for localization files)
+- **Allowed MIME types**:
+  - `Art`: `image/*`
+  - `config`: `application/json, text/*`
+  - `Localizations`: `application/json, text/*`
 
 ### Storage Policies
 
 The storage policies for uploaders are already created by the migrations. These policies ensure that:
-- Only users with `admin` or `uploader` roles can upload/update images
-- Anyone can view images (public buckets)
+- Only users with `admin` or `uploader` roles can upload/update/delete files
+- Anyone can view files (public buckets for game assets)
+- Row Level Security (RLS) is enforced via the `can_upload()` function
 
 ## Step 7: Set Up Your First Admin User
 
@@ -261,10 +298,15 @@ Your database includes:
 - `handle_new_user()` - Automatically create profile on signup
 
 ### Storage Buckets:
-- 9 public buckets for various game assets and images
+- **Art** - Consolidated bucket for all game art assets
+  - Organized with folder structure: units (front/back), abilities, status effects, resources, rewards, boss strikes, encounters, missions, UI elements
+- **config** - Game configuration JSON files
+- **Localizations** - Translation and localization files
+
+All buckets are public (read access) with upload/update/delete restricted to users with admin or uploader roles.
 
 ### Row Level Security (RLS):
-All tables have RLS enabled with appropriate policies for data security.
+All tables have RLS enabled with appropriate policies for data security. Storage buckets use RLS via the `can_upload()` function to restrict write access.
 
 ## Troubleshooting
 
