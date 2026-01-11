@@ -12,7 +12,7 @@ import UnitDetail from "./pages/UnitDetail";
 import Compare from "./pages/Compare";
 import BattleSimulator from "./pages/BattleSimulator";
 import LiveBattleSimulator from "./pages/LiveBattleSimulator";
-import UploadImages from "./pages/UploadImages";
+
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -35,7 +35,7 @@ const App = () => (
                   <Route path="/compare/:id1/:id2" element={<Compare />} />
                   <Route path="/battle/:encounterId" element={<BattleSimulator />} />
                   <Route path="/live-battle/:encounterId" element={<LiveBattleSimulator />} />
-                  <Route path="/upload" element={<UploadImages />} />
+                  
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/admin" element={<Admin />} />
                   
