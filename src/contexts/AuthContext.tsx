@@ -14,7 +14,7 @@ interface AuthContextType {
   pendingInviteCode: string | null;
   sendOtp: (emailOrPhone: string, inviteCode?: string) => Promise<{ error: Error | null }>;
   verifyOtp: (emailOrPhone: string, token: string) => Promise<{ error: Error | null }>;
-  signInWithGoogle: (inviteCode?: string) => Promise<{ error: Error | null }>;
+  signInWithDiscord: (inviteCode?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshRoles: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -196,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signInWithGoogle = async (inviteCode?: string) => {
+  const signInWithDiscord = async (inviteCode?: string) => {
     // If invite code provided (for sign up), validate it first
     if (inviteCode) {
       const isValid = await validateInviteCode(inviteCode);
@@ -211,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: 'discord',
       options: {
         redirectTo: `${window.location.origin}/auth`,
       }
@@ -254,7 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       pendingInviteCode,
       sendOtp,
       verifyOtp,
-      signInWithGoogle,
+      signInWithDiscord,
       signOut,
       refreshRoles,
       resetPassword,
