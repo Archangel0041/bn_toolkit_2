@@ -1,7 +1,7 @@
 import { LanguageSelector } from "./LanguageSelector";
 import { ThemeToggle } from "./ThemeToggle";
 import { Link } from "react-router-dom";
-import { Sword, Upload, Shield, LogIn, LogOut, User } from "lucide-react";
+import { Sword, Shield, LogIn, LogOut, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "./ui/button";
 import {
@@ -13,7 +13,7 @@ import {
 } from "./ui/dropdown-menu";
 
 export function Header() {
-  const { user, isAdmin, canUpload, signOut, loading } = useAuth();
+  const { user, isAdmin, signOut, loading } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -25,14 +25,6 @@ export function Header() {
         <div className="flex items-center gap-2">
           {!loading && (
             <>
-              {canUpload && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/upload" className="gap-2">
-                    <Upload className="h-4 w-4" />
-                    Upload
-                  </Link>
-                </Button>
-              )}
               {isAdmin && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/admin" className="gap-2">
