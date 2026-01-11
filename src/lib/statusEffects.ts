@@ -3,7 +3,8 @@ import statusEffectFamiliesData from "@/data/status_effect_families.json";
 import statusEffectsData from "@/data/status_effects.json";
 import { validateFile, sanitizeFilename } from "./uploadValidation";
 
-const BUCKET_NAME = "status-icons";
+const BUCKET_NAME = "Art";
+const STATUS_PATH = "icons/status_effects";
 
 interface StatusEffectFamily {
   color_hex: string;
@@ -93,11 +94,11 @@ export function getStatusEffectColor(familyId: number): string {
 export function getStatusEffectIconUrl(familyId: number): string | null {
   const family = getStatusEffectFamily(familyId);
   if (!family?.ui_icon) return null;
-  
+
   const { data } = supabase.storage
     .from(BUCKET_NAME)
-    .getPublicUrl(`${family.ui_icon}.png`);
-  
+    .getPublicUrl(`${STATUS_PATH}/${family.ui_icon}.png`);
+
   return data.publicUrl;
 }
 
@@ -115,11 +116,11 @@ export function getEffectColor(effectId: number): string {
 export function getEffectIconUrl(effectId: number): string | null {
   const family = getFamilyFromEffectId(effectId);
   if (!family?.ui_icon) return null;
-  
+
   const { data } = supabase.storage
     .from(BUCKET_NAME)
-    .getPublicUrl(`${family.ui_icon}.png`);
-  
+    .getPublicUrl(`${STATUS_PATH}/${family.ui_icon}.png`);
+
   return data.publicUrl;
 }
 
@@ -140,10 +141,10 @@ export async function uploadMultipleStatusImages(
   onProgress?: (current: number, total: number, fileName: string) => void
 ): Promise<{ success: number; failed: number; errors: string[] }> {
   const results = { success: 0, failed: 0, errors: [] as string[] };
-  
+
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    
+
     // Validate file before upload
     const validation = validateFile(file);
     if (!validation.valid) {
@@ -151,16 +152,16 @@ export async function uploadMultipleStatusImages(
       results.errors.push(validation.error || `Invalid file: ${file.name}`);
       continue;
     }
-    
+
     const iconName = file.name.replace(/\.(png|jpg|jpeg|webp|gif)$/i, "");
-    const sanitizedName = sanitizeFilename(`${iconName}.png`);
-    
+    const sanitizedName = sanitizeFilename(`${STATUS_PATH}/${iconName}.png`);
+
     onProgress?.(i + 1, files.length, file.name);
-    
+
     const { error } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(sanitizedName, file, { upsert: true });
-    
+
     if (error) {
       results.failed++;
       results.errors.push(`${file.name}: ${error.message}`);
@@ -168,16 +169,16 @@ export async function uploadMultipleStatusImages(
       results.success++;
     }
   }
-  
+
   return results;
 }
 
 export async function listUploadedStatusImages(): Promise<string[]> {
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
-    .list();
-  
+    .list(STATUS_PATH);
+
   if (error || !data) return [];
-  
+
   return data.map((file) => file.name.replace(/\.png$/, ""));
 }
