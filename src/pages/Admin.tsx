@@ -7,19 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Upload, Trash2, ArrowLeft } from 'lucide-react';
+import { Shield, Check, X, ArrowLeft } from 'lucide-react';
 import { Header } from '@/components/Header';
 
-type AppRole = 'admin' | 'uploader';
-
-interface UserWithRoles {
+interface UserAccess {
   id: string;
-  roles: AppRole[];
+  user_id: string;
+  discord_username: string;
+  has_access: boolean;
 }
 
 export default function Admin() {
-  const { user, isAdmin, loading: authLoading } = useAuth();
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const { user, hasAccess, loading: authLoading } = useAuth();
+  const [users, setUsers] = useState<UserAccess[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -28,26 +28,25 @@ export default function Admin() {
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/');
-    } else if (!authLoading && !isAdmin) {
+    } else if (!authLoading && !hasAccess) {
       navigate('/');
       toast({
         title: 'Access Denied',
-        description: 'You need admin privileges to access this page.',
+        description: 'You need access privileges to view this page.',
         variant: 'destructive',
       });
     }
-  }, [user, isAdmin, authLoading, navigate, toast]);
+  }, [user, hasAccess, authLoading, navigate, toast]);
 
   const fetchUsers = async () => {
     setLoading(true);
     
-    // Get all roles and group by user
-    const { data: roles, error: rolesError } = await supabase
+    const { data, error } = await supabase
       .from('user_roles')
-      .select('user_id, role');
+      .select('id, user_id, discord_username, has_access');
     
-    if (rolesError) {
-      console.error('Error fetching roles:', rolesError);
+    if (error) {
+      console.error('Error fetching users:', error);
       toast({
         title: 'Error',
         description: 'Failed to load users.',
@@ -57,92 +56,34 @@ export default function Admin() {
       return;
     }
 
-    // Group roles by user_id
-    const userMap = new Map<string, AppRole[]>();
-    (roles || []).forEach(r => {
-      const existing = userMap.get(r.user_id) || [];
-      existing.push(r.role as AppRole);
-      userMap.set(r.user_id, existing);
-    });
-
-    const usersWithRoles: UserWithRoles[] = Array.from(userMap.entries()).map(([id, roles]) => ({
-      id,
-      roles,
-    }));
-
-    setUsers(usersWithRoles);
+    setUsers(data || []);
     setLoading(false);
   };
 
   useEffect(() => {
-    if (isAdmin) {
+    if (hasAccess) {
       fetchUsers();
     }
-  }, [isAdmin]);
+  }, [hasAccess]);
 
-  const grantRole = async (userId: string, role: AppRole) => {
-    setActionLoading(`${userId}-${role}`);
+  const toggleAccess = async (userId: string, currentAccess: boolean) => {
+    setActionLoading(userId);
     
     const { error } = await supabase
       .from('user_roles')
-      .insert({
-        user_id: userId,
-        role,
-        granted_by: user?.id,
-      });
-    
-    if (error) {
-      if (error.code === '23505') {
-        toast({
-          title: 'Role exists',
-          description: 'User already has this role.',
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to grant role.',
-          variant: 'destructive',
-        });
-      }
-    } else {
-      toast({
-        title: 'Role granted',
-        description: `Successfully granted ${role} role.`,
-      });
-      await fetchUsers();
-    }
-    
-    setActionLoading(null);
-  };
-
-  const revokeRole = async (userId: string, role: AppRole) => {
-    if (userId === user?.id && role === 'admin') {
-      toast({
-        title: 'Cannot remove',
-        description: 'You cannot remove your own admin role.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setActionLoading(`${userId}-${role}-revoke`);
-    
-    const { error } = await supabase
-      .from('user_roles')
-      .delete()
-      .eq('user_id', userId)
-      .eq('role', role);
+      .update({ has_access: !currentAccess })
+      .eq('user_id', userId);
     
     if (error) {
       toast({
         title: 'Error',
-        description: 'Failed to revoke role.',
+        description: 'Failed to update access.',
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Role revoked',
-        description: `Successfully revoked ${role} role.`,
+        title: 'Access updated',
+        description: `Successfully ${!currentAccess ? 'granted' : 'revoked'} access.`,
       });
       await fetchUsers();
     }
@@ -150,7 +91,7 @@ export default function Admin() {
     setActionLoading(null);
   };
 
-  if (authLoading || !isAdmin) {
+  if (authLoading || !hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Loading...</p>
@@ -169,7 +110,6 @@ export default function Admin() {
           </Button>
         </div>
 
-        {/* User Management Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -177,20 +117,20 @@ export default function Admin() {
               User Management
             </CardTitle>
             <CardDescription>
-              Manage user roles and permissions. Grant or revoke upload access.
+              Manage user access permissions.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <p className="text-center py-8 text-muted-foreground">Loading users...</p>
             ) : users.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">No users with roles found.</p>
+              <p className="text-center py-8 text-muted-foreground">No users found.</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User ID</TableHead>
-                    <TableHead>Roles</TableHead>
+                    <TableHead>Discord Username</TableHead>
+                    <TableHead>Access</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -198,58 +138,27 @@ export default function Admin() {
                   {users.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell>
-                        <p className="font-mono text-sm">{u.id.slice(0, 8)}...</p>
+                        <p className="font-medium">{u.discord_username}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{u.user_id.slice(0, 8)}...</p>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1 flex-wrap">
-                          {u.roles.length === 0 ? (
-                            <span className="text-muted-foreground text-sm">No roles</span>
+                        <Badge variant={u.has_access ? 'default' : 'secondary'}>
+                          {u.has_access ? (
+                            <><Check className="h-3 w-3 mr-1" /> Has Access</>
                           ) : (
-                            u.roles.map(role => (
-                              <Badge 
-                                key={role} 
-                                variant={role === 'admin' ? 'default' : 'secondary'}
-                                className="flex items-center gap-1"
-                              >
-                                {role === 'admin' ? <Shield className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
-                                {role}
-                                <button
-                                  onClick={() => revokeRole(u.id, role)}
-                                  disabled={actionLoading === `${u.id}-${role}-revoke`}
-                                  className="ml-1 hover:text-destructive"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            ))
+                            <><X className="h-3 w-3 mr-1" /> No Access</>
                           )}
-                        </div>
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          {!u.roles.includes('uploader') && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => grantRole(u.id, 'uploader')}
-                              disabled={actionLoading === `${u.id}-uploader`}
-                            >
-                              <Upload className="h-3 w-3 mr-1" />
-                              Grant Uploader
-                            </Button>
-                          )}
-                          {!u.roles.includes('admin') && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => grantRole(u.id, 'admin')}
-                              disabled={actionLoading === `${u.id}-admin`}
-                            >
-                              <Shield className="h-3 w-3 mr-1" />
-                              Grant Admin
-                            </Button>
-                          )}
-                        </div>
+                        <Button
+                          size="sm"
+                          variant={u.has_access ? 'destructive' : 'default'}
+                          onClick={() => toggleAccess(u.user_id, u.has_access)}
+                          disabled={actionLoading === u.user_id || u.user_id === user?.id}
+                        >
+                          {u.has_access ? 'Revoke Access' : 'Grant Access'}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

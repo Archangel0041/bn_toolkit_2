@@ -23,7 +23,7 @@ function DiscordIcon({ className }: { className?: string }) {
 }
 
 export function Header() {
-  const { user, isAdmin, signOut, signInWithDiscord, loading } = useAuth();
+  const { user, hasAccess, signOut, signInWithDiscord, loading } = useAuth();
   const [signingIn, setSigningIn] = useState(false);
   const { toast } = useToast();
 
@@ -51,7 +51,7 @@ export function Header() {
         <div className="flex items-center gap-2">
           {!loading && (
             <>
-              {isAdmin && (
+              {hasAccess && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/admin" className="gap-2">
                     <Shield className="h-4 w-4" />

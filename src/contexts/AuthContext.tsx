@@ -2,18 +2,14 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'uploader';
-
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  roles: AppRole[];
-  isAdmin: boolean;
-  canUpload: boolean;
+  hasAccess: boolean;
   signInWithDiscord: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  refreshRoles: () => Promise<void>;
+  refreshAccess: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,26 +18,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [roles, setRoles] = useState<AppRole[]>([]);
+  const [hasAccess, setHasAccess] = useState(false);
 
-  const fetchRoles = async (userId: string) => {
+  const fetchAccess = async (userId: string) => {
     const { data, error } = await supabase
       .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
+      .select('has_access')
+      .eq('user_id', userId)
+      .maybeSingle();
     
     if (error) {
-      console.error('Error fetching roles:', error);
-      setRoles([]);
+      console.error('Error fetching access:', error);
+      setHasAccess(false);
       return;
     }
     
-    setRoles((data || []).map(r => r.role as AppRole));
+    setHasAccess(data?.has_access ?? false);
   };
 
-  const refreshRoles = async () => {
+  const refreshAccess = async () => {
     if (user) {
-      await fetchRoles(user.id);
+      await fetchAccess(user.id);
     }
   };
 
@@ -53,13 +50,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Defer role fetching to avoid deadlock
+        // Defer access fetching to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
-            fetchRoles(session.user.id);
+            fetchAccess(session.user.id);
           }, 0);
         } else {
-          setRoles([]);
+          setHasAccess(false);
         }
       }
     );
@@ -71,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       
       if (session?.user) {
-        fetchRoles(session.user.id);
+        fetchAccess(session.user.id);
       }
     });
 
@@ -83,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       provider: 'discord',
       options: {
         redirectTo: `${window.location.origin}/`,
+        scopes: 'identify guilds.members.read',
       }
     });
     
@@ -91,23 +89,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setRoles([]);
+    setHasAccess(false);
   };
-
-  const isAdmin = roles.includes('admin');
-  const canUpload = roles.includes('admin') || roles.includes('uploader');
 
   return (
     <AuthContext.Provider value={{
       user,
       session,
       loading,
-      roles,
-      isAdmin,
-      canUpload,
+      hasAccess,
       signInWithDiscord,
       signOut,
-      refreshRoles,
+      refreshAccess,
     }}>
       {children}
     </AuthContext.Provider>
