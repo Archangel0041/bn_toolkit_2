@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { getUnitById } from "@/lib/units";
+import { useState, useMemo } from "react";
+import { getUnitById, getAllUnits } from "@/lib/units";
 import { UnitImage } from "@/components/units/UnitImage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, AlertCircle } from "lucide-react";
-import { allUnits } from "@/lib/units";
+
 import { UnitSide } from "@/data/gameEnums";
 import type { PartyUnit } from "@/types/battleSimulator";
 import type { Encounter } from "@/types/encounters";
@@ -50,6 +50,7 @@ export function UnitSelector({
   const [isDragOver, setIsDragOver] = useState(false);
 
   // Filter to only show Player units (side 1)
+  const allUnits = useMemo(() => getAllUnits(), []);
   const playerUnits = allUnits.filter(u => u.identity.side === UnitSide.Player);
   
   const filteredUnits = playerUnits.filter(unit => {
