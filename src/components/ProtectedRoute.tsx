@@ -5,8 +5,24 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
+// Check if we're in the Lovable development environment
+function isLovableEnvironment(): boolean {
+  const hostname = window.location.hostname;
+  return (
+    hostname.includes('lovableproject.com') ||
+    hostname.includes('lovable.app') ||
+    hostname.includes('localhost') ||
+    hostname.includes('127.0.0.1')
+  );
+}
+
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
+
+  // Allow access in Lovable environment without auth
+  if (isLovableEnvironment()) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
@@ -22,3 +38,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   return <>{children}</>;
 }
+
+// Export for use in other components
+export { isLovableEnvironment };
