@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, forwardRef } from "react";
 import { getUnitById, getAllUnits } from "@/lib/units";
 import { UnitImage } from "@/components/units/UnitImage";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -37,13 +37,13 @@ interface UnitSelectorProps {
   encounter?: Encounter | null;
 }
 
-export function UnitSelector({
+export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(function UnitSelector({
   partyUnits,
   onAddUnit,
   onRemoveUnit,
   onUpdateRank,
   encounter,
-}: UnitSelectorProps) {
+}, ref) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,6 +126,7 @@ export function UnitSelector({
 
   return (
     <div 
+      ref={ref}
       className={cn(
         "space-y-4 p-4 rounded-lg border-2 border-dashed transition-colors",
         isDragOver ? "border-destructive bg-destructive/10" : "border-transparent"
@@ -250,4 +251,6 @@ export function UnitSelector({
       )}
     </div>
   );
-}
+});
+
+UnitSelector.displayName = "UnitSelector";

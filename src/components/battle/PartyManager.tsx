@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Save, Edit2 } from "lucide-react";
+import { Plus, Trash2, Edit2 } from "lucide-react";
 import type { Party } from "@/types/battleSimulator";
 
 interface PartyManagerProps {
@@ -39,14 +39,14 @@ interface PartyManagerProps {
   onRenameParty: (name: string) => void;
 }
 
-export function PartyManager({
+export const PartyManager = forwardRef<HTMLDivElement, PartyManagerProps>(function PartyManager({
   parties,
   selectedPartyId,
   onSelectParty,
   onCreateParty,
   onDeleteParty,
   onRenameParty,
-}: PartyManagerProps) {
+}, ref) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -70,7 +70,7 @@ export function PartyManager({
   };
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div ref={ref} className="flex items-center gap-2 flex-wrap">
       <Select
         value={selectedPartyId || ""}
         onValueChange={(val) => onSelectParty(val || null)}
@@ -171,4 +171,6 @@ export function PartyManager({
       )}
     </div>
   );
-}
+});
+
+PartyManager.displayName = "PartyManager";

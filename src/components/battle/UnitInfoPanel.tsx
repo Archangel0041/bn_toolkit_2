@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, forwardRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -62,7 +62,7 @@ interface UnitInfoPanelProps {
   className?: string;
 }
 
-export function UnitInfoPanel({
+export const UnitInfoPanel = forwardRef<HTMLDivElement, UnitInfoPanelProps>(function UnitInfoPanel({
   unitId,
   rank,
   gridId,
@@ -73,7 +73,7 @@ export function UnitInfoPanel({
   abilityCooldowns,
   weaponGlobalCooldowns,
   className,
-}: UnitInfoPanelProps) {
+}, ref) {
   const { t } = useLanguage();
 
   const unit = useMemo(() => getUnitById(unitId), [unitId]);
@@ -117,7 +117,7 @@ export function UnitInfoPanel({
   const weapons = unit.weapons?.weapons;
 
   return (
-    <Card className={cn("w-full", className)}>
+    <Card ref={ref} className={cn("w-full", className)}>
       <CardHeader className="py-3 px-4">
         <div className="flex items-center gap-3">
           <UnitImage
@@ -466,4 +466,6 @@ export function UnitInfoPanel({
       </CardContent>
     </Card>
   );
-}
+});
+
+UnitInfoPanel.displayName = "UnitInfoPanel";

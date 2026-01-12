@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, forwardRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,12 +46,12 @@ export const defaultEncounterFilters: EncounterFilterState = {
   hasMultipleWaves: null,
 };
 
-export function EncounterFilters({
+export const EncounterFilters = forwardRef<HTMLDivElement, EncounterFiltersProps>(function EncounterFilters({
   filters,
   onFiltersChange,
   maxLevel,
   maxWaves,
-}: EncounterFiltersProps) {
+}, ref) {
   const { t } = useLanguage();
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [unitSearchQuery, setUnitSearchQuery] = useState("");
@@ -107,7 +107,7 @@ export function EncounterFilters({
   };
 
   return (
-    <div className="space-y-3">
+    <div ref={ref} className="space-y-3">
       {/* Search input */}
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -306,4 +306,6 @@ export function EncounterFilters({
       </Collapsible>
     </div>
   );
-}
+});
+
+EncounterFilters.displayName = "EncounterFilters";

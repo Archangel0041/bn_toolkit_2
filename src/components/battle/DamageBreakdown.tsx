@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type { DamageResult } from "@/types/battleSimulator";
 import { DAMAGE_TYPE_MAP } from "@/types/battleSimulator";
 
@@ -21,7 +22,7 @@ function formatModifier(modifier: number): string {
   return `${percentage}%`;
 }
 
-export function DamageBreakdown({ damageResult, damageType, label = "Damage Calculation" }: DamageBreakdownProps) {
+export const DamageBreakdown = forwardRef<HTMLDivElement, DamageBreakdownProps>(function DamageBreakdown({ damageResult, damageType, label = "Damage Calculation" }, ref) {
   const { breakdown } = damageResult;
 
   // If no breakdown available, don't render anything
@@ -47,7 +48,7 @@ export function DamageBreakdown({ damageResult, damageType, label = "Damage Calc
   const typeName = getDamageTypeName(damageType);
 
   return (
-    <div className="space-y-1.5 text-xs border-t border-border/40 pt-1.5 mt-1.5">
+    <div ref={ref} className="space-y-1.5 text-xs border-t border-border/40 pt-1.5 mt-1.5">
       <p className="font-medium text-muted-foreground">{label}:</p>
 
       {/* Base Damage */}
@@ -179,4 +180,6 @@ export function DamageBreakdown({ damageResult, damageType, label = "Damage Calc
       </div>
     </div>
   );
-}
+});
+
+DamageBreakdown.displayName = "DamageBreakdown";
