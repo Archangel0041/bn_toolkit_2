@@ -92,6 +92,7 @@ interface LiveAbilitySelectorProps {
   abilityChargeProgress?: Record<number, number>;
   disabled?: boolean;
   className?: string;
+  unitId?: number; // For debugging
 }
 
 export function LiveAbilitySelector({
@@ -105,18 +106,29 @@ export function LiveAbilitySelector({
   abilityChargeProgress,
   disabled,
   className,
+  unitId,
 }: LiveAbilitySelectorProps) {
   const { t } = useLanguage();
 
   return (
     <TooltipProvider>
       <div className={cn("flex flex-wrap gap-2", className)}>
-        {abilities.map(ability => {
+        {abilities.map((ability, index) => {
           const abilityData = getAbilityById(ability.abilityId);
           const abilityName = abilityData ? t(abilityData.name) : `Ability ${ability.abilityId}`;
           const iconUrl = abilityData ? getAbilityImageUrl(abilityData.icon) : undefined;
           const dmgTypeIcon = getDamageTypeIconUrl(ability.damageType);
           const dmgTypeName = getDamageTypeName(ability.damageType);
+          
+          // Debug logging for unit 171's abilities
+          if (unitId === 171) {
+            console.log(`[Unit 171] Ability ${index + 1}:`, {
+              abilityId: ability.abilityId,
+              abilityDataName: abilityData?.name,
+              localizedName: abilityName,
+              weaponName: ability.weaponName,
+            });
+          }
           
           const abilityCooldown = cooldowns[ability.abilityId] || 0;
           const weaponCooldown = weaponGlobalCooldowns[ability.weaponName] || 0;
