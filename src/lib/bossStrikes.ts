@@ -1,18 +1,21 @@
-import bossStrikeData from "@/data/boss_strike_config.json";
 import archivedBossStrikeData from "@/data/boss_strike_config_archived.json";
+import { getBossStrikeConfigData } from "@/lib/gameDataStore";
 import type { BossStrike, BossStrikeData, TierInfo } from "@/types/bossStrike";
 import { getEncounterById } from "@/lib/encounters";
 
-const currentData = bossStrikeData as unknown as BossStrikeData;
 const archivedData = archivedBossStrikeData as unknown as BossStrikeData;
 
+function getCurrentData(): BossStrikeData {
+  return getBossStrikeConfigData() as BossStrikeData;
+}
+
 export function getBossStrikeById(id: number | string, archived = false): BossStrike | undefined {
-  const data = archived ? archivedData : currentData;
+  const data = archived ? archivedData : getCurrentData();
   return data[String(id)];
 }
 
 export function getAllBossStrikeIds(archived = false): string[] {
-  const data = archived ? archivedData : currentData;
+  const data = archived ? archivedData : getCurrentData();
   return Object.keys(data).sort((a, b) => parseInt(a) - parseInt(b));
 }
 
