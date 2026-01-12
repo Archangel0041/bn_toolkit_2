@@ -20,7 +20,7 @@ import {
   getCoreDataFromMemory,
   getLanguageDataFromMemory,
 } from "@/lib/dataLoader";
-import { initializeGameDataStore, isGameDataStoreInitialized } from "@/lib/gameDataStore";
+import { initializeGameDataStore, isGameDataStoreInitialized, addLanguageToStore } from "@/lib/gameDataStore";
 import type { Ability } from "@/lib/abilities";
 import type { ParsedUnit, UnitConfig, IdentityConfig, AnimationConfig, StatsConfig, RequirementsConfig, HealingConfig, WeaponsConfig, SharedDataFile, LocalizedFile, SupportedLanguage } from "@/types/units";
 import type { EncountersData } from "@/types/encounters";
@@ -39,12 +39,32 @@ interface GameData {
   // Boss strikes
   bossStrikeConfig: any;
   
-  // Localizations
+  // Localizations - now lazy loaded
   sharedData: SharedDataFile;
-  languageData: Record<SupportedLanguage, LocalizedFile>;
+  languageData: Partial<Record<SupportedLanguage, LocalizedFile>>;
   
   // Parsed units (computed from battleUnits)
   parsedUnits: ParsedUnit[];
+}
+
+// Get initial language from localStorage or browser
+function getInitialLanguage(): SupportedLanguage {
+  const stored = localStorage.getItem("battle-units-language");
+  if (stored && ["en", "de", "es", "fr", "it", "ja", "ko", "ru", "zh-Hans", "zh-Hant"].includes(stored)) {
+    return stored as SupportedLanguage;
+  }
+  // Simple browser language detection
+  const browserLang = navigator.language.toLowerCase();
+  if (browserLang.startsWith("de")) return "de";
+  if (browserLang.startsWith("es")) return "es";
+  if (browserLang.startsWith("fr")) return "fr";
+  if (browserLang.startsWith("it")) return "it";
+  if (browserLang.startsWith("ja")) return "ja";
+  if (browserLang.startsWith("ko")) return "ko";
+  if (browserLang.startsWith("ru")) return "ru";
+  if (browserLang === "zh-tw" || browserLang === "zh-hant") return "zh-Hant";
+  if (browserLang.startsWith("zh")) return "zh-Hans";
+  return "en";
 }
 
 interface GameDataContextType {
@@ -54,6 +74,7 @@ interface GameDataContextType {
   error: string | null;
   loadProgress: number;
   reload: () => Promise<void>;
+  loadLanguage: (lang: SupportedLanguage) => Promise<void>;
   
   // Convenience accessors (these throw if data not loaded)
   getUnitById: (id: number) => ParsedUnit | undefined;
@@ -97,12 +118,18 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
     const coreData = getCoreDataFromMemory();
     if (!coreData) return false;
     
-    // Check if all language data is also in memory
-    const languageData: Record<SupportedLanguage, LocalizedFile> = {} as any;
-    for (const lang of SUPPORTED_LANGUAGES) {
-      const langData = getLanguageDataFromMemory(lang);
-      if (!langData) return false;
-      languageData[lang] = langData;
+    // Only require the initial language + English fallback
+    const initialLang = getInitialLanguage();
+    const languageData: Partial<Record<SupportedLanguage, LocalizedFile>> = {};
+    
+    const initialLangData = getLanguageDataFromMemory(initialLang);
+    if (!initialLangData) return false;
+    languageData[initialLang] = initialLangData;
+    
+    // Also check for English fallback
+    if (initialLang !== "en") {
+      const enData = getLanguageDataFromMemory("en");
+      if (enData) languageData.en = enData;
     }
     
     // Parse units
@@ -161,24 +188,26 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
       
       setLoadProgress(60);
       
-      // Load shared localization data
-      const sharedData = await loadGameTextSharedData();
+      // Load shared localization data + initial language only
+      const initialLang = getInitialLanguage();
+      const [sharedData, initialLangData] = await Promise.all([
+        loadGameTextSharedData(),
+        loadGameTextLanguage(initialLang),
+      ]);
       
-      setLoadProgress(70);
+      // Also load English as fallback if not already the initial language
+      let languageData: Partial<Record<SupportedLanguage, LocalizedFile>> = {
+        [initialLang]: initialLangData,
+      };
       
-      // Load all language files in parallel
-      const languagePromises = SUPPORTED_LANGUAGES.map(async (lang) => {
+      if (initialLang !== "en") {
         try {
-          const langData = await loadGameTextLanguage(lang);
-          return [lang, langData] as const;
+          const enData = await loadGameTextLanguage("en");
+          languageData.en = enData;
         } catch (err) {
-          console.warn(`Failed to load language ${lang}:`, err);
-          return [lang, { m_Name: lang, m_LocaleId: { m_Code: lang }, m_TableData: [] }] as const;
+          console.warn("Failed to load English fallback:", err);
         }
-      });
-      
-      const languageResults = await Promise.all(languagePromises);
-      const languageData = Object.fromEntries(languageResults) as Record<SupportedLanguage, LocalizedFile>;
+      }
       
       setLoadProgress(90);
       
@@ -189,7 +218,7 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
       
       setLoadProgress(100);
       
-      const gameData = {
+      const gameData: GameData = {
         battleUnits,
         battleAbilities,
         battleEncounters,
@@ -250,6 +279,28 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
     await loadAllData();
   }, [loadAllData]);
 
+  // Lazy load additional languages
+  const loadLanguage = useCallback(async (lang: SupportedLanguage) => {
+    if (!data) return;
+    if (data.languageData[lang]) return; // Already loaded
+    
+    try {
+      console.log(`[GameDataContext] Lazy loading language: ${lang}`);
+      const langData = await loadGameTextLanguage(lang);
+      
+      // Update state
+      setData(prev => prev ? {
+        ...prev,
+        languageData: { ...prev.languageData, [lang]: langData }
+      } : null);
+      
+      // Update store
+      addLanguageToStore(lang, langData);
+    } catch (err) {
+      console.warn(`Failed to load language ${lang}:`, err);
+    }
+  }, [data]);
+
   const isLoaded = data !== null && !isLoading;
 
   return (
@@ -261,6 +312,7 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
         error,
         loadProgress,
         reload,
+        loadLanguage,
         getUnitById,
         getAbilityById,
         getEncounterById,
@@ -281,13 +333,13 @@ const defaultContext: GameDataContextType = {
   error: null,
   loadProgress: 0,
   reload: async () => {},
+  loadLanguage: async () => {},
   getUnitById: () => undefined,
   getAbilityById: () => undefined,
   getEncounterById: () => undefined,
   getAllUnits: () => [],
   getAllAbilities: () => ({}),
 };
-
 export function useGameData() {
   const context = useContext(GameDataContext);
   // Return default loading state during HMR transitions instead of throwing

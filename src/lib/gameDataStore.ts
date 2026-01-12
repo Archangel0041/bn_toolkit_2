@@ -52,7 +52,7 @@ export function initializeGameDataStore(data: {
   statusEffectFamilies: Record<string, any>;
   bossStrikeConfig: any;
   sharedData: SharedDataFile;
-  languageData: Record<SupportedLanguage, LocalizedFile>;
+  languageData: Partial<Record<SupportedLanguage, LocalizedFile>>;
   parsedUnits: ParsedUnit[];
 }) {
   store.battleUnits = data.battleUnits;
@@ -63,13 +63,30 @@ export function initializeGameDataStore(data: {
   store.statusEffectFamilies = data.statusEffectFamilies;
   store.bossStrikeConfig = data.bossStrikeConfig;
   store.sharedData = data.sharedData;
-  store.languageData = data.languageData;
+  store.languageData = data.languageData as Record<SupportedLanguage, LocalizedFile>;
   store.parsedUnits = data.parsedUnits;
   
   // Build lookup maps for localization
   buildLocalizationMaps();
   
   console.log("[GameDataStore] Store initialized with data from Supabase Storage");
+}
+
+// Add language data to existing store (for lazy loading)
+export function addLanguageToStore(lang: SupportedLanguage, data: LocalizedFile) {
+  if (!store.languageData) {
+    store.languageData = {} as Record<SupportedLanguage, LocalizedFile>;
+  }
+  store.languageData[lang] = data;
+  
+  // Rebuild the map for this language
+  if (store.idToTextMaps) {
+    const map = new Map<string, string>();
+    data.m_TableData.forEach((entry) => {
+      map.set(String(entry.m_Id), entry.m_Localized);
+    });
+    store.idToTextMaps[lang] = map;
+  }
 }
 
 function buildLocalizationMaps() {
