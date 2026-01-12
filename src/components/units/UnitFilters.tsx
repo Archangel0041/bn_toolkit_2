@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,7 @@ const availableDamageTypes = [
   DamageType.Shell,
 ];
 
-export function UnitFilters({
+export const UnitFilters = forwardRef<HTMLDivElement, UnitFiltersProps>(function UnitFilters({
   searchQuery,
   setSearchQuery,
   selectedTags,
@@ -64,7 +65,7 @@ export function UnitFilters({
   setHasStatusEffects,
   vulnerableTo,
   setVulnerableTo,
-}: UnitFiltersProps) {
+}, ref) {
   const toggleTag = (tag: number) => {
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter((t) => t !== tag));
@@ -123,7 +124,7 @@ export function UnitFilters({
     vulnerableTo.length;
 
   return (
-    <div className="space-y-4">
+    <div ref={ref} className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -363,4 +364,6 @@ export function UnitFilters({
       )}
     </div>
   );
-}
+});
+
+UnitFilters.displayName = "UnitFilters";
