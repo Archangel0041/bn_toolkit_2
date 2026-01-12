@@ -561,18 +561,14 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     console.log(`[executePlayerAction] Fresh valid targets for ability ${selectedAbility.abilityId}:`, 
       freshValidTargets.map(t => t.gridId));
     
-    // Validate target based on attack type
-    if (isRandom) {
-      // Random attacks don't need target validation
-    } else if (isAOE && validReticlePositions) {
-      // AOE attacks can target any valid reticle position (including empty tiles)
-      if (!validReticlePositions.has(targetGridId)) return;
-    } else {
-      // Single target and fixed attacks need a valid target unit
-      if (!freshValidTargets.some(t => t.gridId === targetGridId)) {
-        console.log(`[executePlayerAction] Target grid ${targetGridId} not in fresh valid targets, rejecting`);
-        return;
-      }
+    // Players can attack any position - no target validation required
+    // This allows players to attempt attacks even without valid targets in range
+    console.log(`[executePlayerAction] Player attacking grid ${targetGridId} (no validation)`);
+    
+    // Only validate AOE reticle positions to prevent invalid grid positions
+    if (isAOE && validReticlePositions && !validReticlePositions.has(targetGridId)) {
+      console.log(`[executePlayerAction] Invalid AOE reticle position ${targetGridId}`);
+      return;
     }
 
     setIsProcessing(true);

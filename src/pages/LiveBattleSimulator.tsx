@@ -156,10 +156,8 @@ const LiveBattleSimulator = () => {
   const handleTargetClick = (unit: { gridId: number }) => {
     if (!battleState?.isPlayerTurn || !selectedAbility) return;
     
-    // Check if this is a valid target
-    if (validTargets.some(t => t.gridId === unit.gridId)) {
-      executePlayerAction(unit.gridId);
-    }
+    // Players can attack any position - let them try
+    executePlayerAction(unit.gridId);
   };
 
   const selectedUnitData = selectedUnit ? getUnitById(selectedUnit.unitId) : null;
