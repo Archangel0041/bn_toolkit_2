@@ -10,6 +10,7 @@ import { getEncounterWaves } from "@/lib/encounters";
 import type { Encounter } from "@/types/encounters";
 import type { BossStrike } from "@/types/bossStrike";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import bsPointsIcon from "@/assets/bs_points_icon.png";
 
 interface EncounterViewerProps {
@@ -22,6 +23,7 @@ interface EncounterViewerProps {
 
 export function EncounterViewer({ encounter, encounterId, bossStrike, backPath, backLabel }: EncounterViewerProps) {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const waves = getEncounterWaves(encounter);
@@ -48,10 +50,12 @@ export function EncounterViewer({ encounter, encounterId, bossStrike, backPath, 
           <Badge variant="outline">ID: {encounterId}</Badge>
           {encounter.level && <Badge variant="secondary">Lv. {encounter.level}</Badge>}
           {waves.length > 1 && <Badge>{waves.length} Waves</Badge>}
-          <Button variant="outline" size="sm" className="ml-auto gap-1" onClick={handleSimulate}>
-            <Swords className="h-4 w-4" />
-            Simulate
-          </Button>
+          {user && (
+            <Button variant="outline" size="sm" className="ml-auto gap-1" onClick={handleSimulate}>
+              <Swords className="h-4 w-4" />
+              Simulate
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
