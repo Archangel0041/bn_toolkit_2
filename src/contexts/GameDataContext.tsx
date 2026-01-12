@@ -198,7 +198,7 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
   }, [data]);
 
   const reload = useCallback(async () => {
-    clearDataCache();
+    await clearDataCache();
     await loadAllData();
   }, [loadAllData]);
 
