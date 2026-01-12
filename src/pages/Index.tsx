@@ -4,7 +4,7 @@ import { UnitFilters } from "@/components/units/UnitFilters";
 import { UnitGrid } from "@/components/units/UnitGrid";
 import { CompareBar } from "@/components/units/CompareBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { allUnits, getAllTags, filterUnits } from "@/lib/units";
+import { getAllUnits, getAllTags, filterUnits } from "@/lib/units";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { EncounterLookup } from "@/components/encounters/EncounterLookup";
 import { BossStrikeLookup } from "@/components/bossStrikes/BossStrikeLookup";
@@ -25,6 +25,7 @@ const Index = () => {
   const [hasStatusEffects, setHasStatusEffects] = useState(false);
   const [vulnerableTo, setVulnerableTo] = useState<number[]>([]);
 
+  const allUnits = useMemo(() => getAllUnits(), []);
   const allTags = useMemo(() => getAllTags(), []);
 
   const filteredUnits = useMemo(() => {

@@ -15,12 +15,13 @@ import type { ParsedUnit } from "@/types/units";
 // Re-export the types
 export type { ParsedUnit };
 
-// Get all units - for backwards compatibility, returns the array directly
-export const allUnits: ParsedUnit[] = [];
-
-// This will be populated when the store is initialized
-// For now, use the getter function
+// Get all units - wrapper function for the store
 export function getAllUnits(): ParsedUnit[] {
+  return getAllUnitsFromStore();
+}
+
+// Legacy export for backwards compatibility - use getAllUnits() instead
+export function getAllUnitsArray(): ParsedUnit[] {
   return getAllUnitsFromStore();
 }
 
