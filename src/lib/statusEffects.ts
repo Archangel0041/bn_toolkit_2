@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import statusEffectFamiliesData from "@/data/status_effect_families.json";
-import statusEffectsData from "@/data/status_effects.json";
+import { getStatusEffectsData, getStatusEffectFamiliesData } from "@/lib/gameDataStore";
 
 const BUCKET_NAME = "Art";
 const STATUS_PATH = "icons/status_effects";
@@ -33,17 +32,16 @@ interface StatusEffect {
 
 export type { StatusEffect, StatusEffectFamily };
 
-const families = statusEffectFamiliesData as Record<string, StatusEffectFamily>;
-const effects = statusEffectsData as Record<string, StatusEffect>;
-
 // Get family directly by family ID (for immunities which use family IDs)
 export function getStatusEffectFamily(familyId: number): StatusEffectFamily | undefined {
-  return families[familyId.toString()];
+  const families = getStatusEffectFamiliesData();
+  return families[familyId.toString()] as StatusEffectFamily | undefined;
 }
 
 // Get status effect by effect ID, then resolve to family
 export function getStatusEffect(effectId: number): StatusEffect | undefined {
-  return effects[effectId.toString()];
+  const effects = getStatusEffectsData();
+  return effects[effectId.toString()] as StatusEffect | undefined;
 }
 
 // Get family from a status effect ID (for abilities which use effect IDs)
@@ -129,8 +127,9 @@ export function getEffectDuration(effectId: number): number {
 }
 
 export function getAllStatusEffectFamilies(): { id: number; family: StatusEffectFamily }[] {
+  const families = getStatusEffectFamiliesData();
   return Object.entries(families).map(([id, family]) => ({
     id: parseInt(id),
-    family,
+    family: family as StatusEffectFamily,
   }));
 }
