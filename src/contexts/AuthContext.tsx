@@ -8,7 +8,8 @@ interface AuthContextType {
   loading: boolean;
   hasAccess: boolean;
   isAnonymous: boolean;
-  signInAnonymously: () => Promise<{ error: Error | null }>;
+  displayName: string | null;
+  signInWithUsername: (username: string) => Promise<{ error: Error | null }>;
   linkDiscord: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshAccess: () => Promise<void>;
@@ -16,13 +17,34 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Generate a random password for the pseudo-anonymous account
+function generateRandomPassword(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < 32; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
 
-  const isAnonymous = user?.is_anonymous ?? false;
+  // Check if user signed up with our custom email pattern (not linked to Discord yet)
+  const isAnonymous = user?.email?.endsWith('@archangel04.com') && 
+    !user?.app_metadata?.providers?.includes('discord');
+
+  // Get display name from metadata or extract from custom email
+  const displayName = user?.user_metadata?.discord_username || 
+    user?.user_metadata?.custom_claims?.global_name ||
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    (user?.email?.endsWith('@archangel04.com') 
+      ? user.email.replace('@archangel04.com', '') 
+      : null);
 
   const fetchAccess = async (userId: string) => {
     const { data, error } = await supabase
@@ -79,9 +101,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInAnonymously = async () => {
-    const { error } = await supabase.auth.signInAnonymously();
-    return { error: error || null };
+  const signInWithUsername = async (username: string) => {
+    const email = `${username.toLowerCase()}@archangel04.com`;
+    const password = generateRandomPassword();
+    
+    // Try to sign up first
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          discord_username: username,
+        },
+      },
+    });
+
+    if (signUpError) {
+      // If user already exists, try to sign in (they should link Discord to recover)
+      if (signUpError.message.includes('already registered')) {
+        return { 
+          error: new Error('This username is already taken. If this is you, please contact support to recover your account.') 
+        };
+      }
+      return { error: signUpError };
+    }
+
+    return { error: null };
   };
 
   const linkDiscord = async () => {
@@ -108,7 +153,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       hasAccess,
       isAnonymous,
-      signInAnonymously,
+      displayName,
+      signInWithUsername,
       linkDiscord,
       signOut,
       refreshAccess,
