@@ -190,38 +190,30 @@ export function getAvailableAbilities(
   enemyCollapsedRows?: Set<number>
 ): AbilityInfo[] {
   const abilities = getUnitAbilities(unit.unitId, unit.rank);
-  console.log(`[getAvailableAbilities] Unit ${unit.unitId} has ${abilities.length} total abilities`);
   
   const available = abilities.filter(ability => {
     // Check ability-specific cooldown
     const abilityCooldown = unit.abilityCooldowns[ability.abilityId] ?? 0;
-    console.log(`[getAvailableAbilities] Ability ${ability.abilityId} (${ability.weaponName}): abilityCooldown=${abilityCooldown} (from unit.abilityCooldowns), ability.cooldown=${ability.cooldown}`);
     if (abilityCooldown > 0) {
-      console.log(`[getAvailableAbilities] Ability ${ability.abilityId} is on cooldown (${abilityCooldown} turns remaining)`);
       return false;
     }
     
     // Check charge time (prep time) - ability needs to charge before it can be used
     if (ability.chargeTime > 0) {
       const chargeProgress = unit.abilityChargeProgress[ability.abilityId] ?? 0;
-      console.log(`[getAvailableAbilities] Ability ${ability.abilityId} has chargeTime=${ability.chargeTime}, chargeProgress=${chargeProgress}`);
       if (chargeProgress < ability.chargeTime) {
-        console.log(`[getAvailableAbilities] Ability ${ability.abilityId} is still charging (${chargeProgress}/${ability.chargeTime} turns)`);
         return false;
       }
     }
     
     // Check weapon global cooldown - blocks ALL abilities on this weapon
     const weaponCooldown = unit.weaponGlobalCooldown[ability.weaponName] ?? 0;
-    console.log(`[getAvailableAbilities] Ability ${ability.abilityId} (${ability.weaponName}): weaponGlobalCooldown=${weaponCooldown} (from unit.weaponGlobalCooldown), ability.globalCooldown=${ability.globalCooldown}`);
     if (weaponCooldown > 0) {
-      console.log(`[getAvailableAbilities] Ability ${ability.abilityId} blocked by weapon global cooldown (weapon: ${ability.weaponName}, ${weaponCooldown} turns remaining)`);
       return false;
     }
     
     // Check ammo
     if (!hasEnoughAmmo(unit, ability)) {
-      console.log(`[getAvailableAbilities] Ability ${ability.abilityId} has no ammo`);
       return false;
     }
 
@@ -1381,16 +1373,6 @@ export function aiSelectAction(
   const unitData = getUnitById(unit.unitId);
   const unitName = unitData?.identity?.name || `Unit ${unit.unitId}`;
   
-  // Log all abilities for this unit with their cooldown states
-  const allAbilities = getUnitAbilities(unit.unitId, unit.rank);
-  console.log(`[AI] ${unitName} (grid ${unit.gridId}) - All abilities:`, allAbilities.map(a => ({
-    id: a.abilityId,
-    weapon: a.weaponName,
-    cooldown: a.cooldown,
-    globalCooldown: a.globalCooldown
-  })));
-  console.log(`[AI] ${unitName} - Current ability cooldowns:`, unit.abilityCooldowns);
-  console.log(`[AI] ${unitName} - Current weapon global cooldowns:`, unit.weaponGlobalCooldown);
   
   const availableAbilities = getAvailableAbilities(
     unit,
