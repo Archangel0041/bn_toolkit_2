@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LanguageSelector } from "./LanguageSelector";
 import { ThemeToggle } from "./ThemeToggle";
 import { Link } from "react-router-dom";
-import { Sword, Shield, LogOut, User } from "lucide-react";
+import { Sword, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "./ui/button";
 import {
@@ -23,7 +23,7 @@ function DiscordIcon({ className }: { className?: string }) {
 }
 
 export function Header() {
-  const { user, hasAccess, signOut, signInWithDiscord, loading, displayName } = useAuth();
+  const { user, signOut, signInWithDiscord, loading, displayName } = useAuth();
   const [signingIn, setSigningIn] = useState(false);
   const { toast } = useToast();
 
@@ -51,14 +51,6 @@ export function Header() {
         <div className="flex items-center gap-2">
           {!loading && (
             <>
-              {hasAccess && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/admin" className="gap-2">
-                    <Shield className="h-4 w-4" />
-                    Admin
-                  </Link>
-                </Button>
-              )}
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
