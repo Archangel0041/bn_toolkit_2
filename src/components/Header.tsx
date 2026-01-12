@@ -24,7 +24,7 @@ function DiscordIcon({ className }: { className?: string }) {
 }
 
 export function Header() {
-  const { user, hasAccess, signOut, signInWithUsername, linkDiscord, isAnonymous, displayName, loading } = useAuth();
+  const { user, hasAccess, signOut, signInWithUsername, signInWithDiscord, linkDiscord, isAnonymous, displayName, loading } = useAuth();
   const [signingIn, setSigningIn] = useState(false);
   const [showUsernameDialog, setShowUsernameDialog] = useState(false);
   const { toast } = useToast();
@@ -53,6 +53,21 @@ export function Header() {
     if (error) {
       toast({
         title: 'Failed to link Discord',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDiscordSignIn = async () => {
+    setSigningIn(true);
+    setShowUsernameDialog(false);
+    const { error } = await signInWithDiscord();
+    setSigningIn(false);
+
+    if (error) {
+      toast({
+        title: 'Discord sign in failed',
         description: error.message,
         variant: 'destructive',
       });
@@ -145,6 +160,7 @@ export function Header() {
         open={showUsernameDialog}
         onOpenChange={setShowUsernameDialog}
         onSubmit={handleUsernameSubmit}
+        onDiscordSignIn={handleDiscordSignIn}
         loading={signingIn}
       />
     </>
