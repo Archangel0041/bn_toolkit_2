@@ -7,7 +7,9 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   hasAccess: boolean;
-  signInWithDiscord: () => Promise<{ error: Error | null }>;
+  isAnonymous: boolean;
+  signInAnonymously: () => Promise<{ error: Error | null }>;
+  linkDiscord: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshAccess: () => Promise<void>;
 }
@@ -19,6 +21,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+
+  const isAnonymous = user?.is_anonymous ?? false;
 
   const fetchAccess = async (userId: string) => {
     const { data, error } = await supabase
@@ -75,8 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithDiscord = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+  const signInAnonymously = async () => {
+    const { error } = await supabase.auth.signInAnonymously();
+    return { error: error || null };
+  };
+
+  const linkDiscord = async () => {
+    const { error } = await supabase.auth.linkIdentity({
       provider: 'discord',
       options: {
         redirectTo: `${window.location.origin}/`,
@@ -98,7 +107,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       loading,
       hasAccess,
-      signInWithDiscord,
+      isAnonymous,
+      signInAnonymously,
+      linkDiscord,
       signOut,
       refreshAccess,
     }}>
