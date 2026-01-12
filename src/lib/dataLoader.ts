@@ -32,7 +32,7 @@ export interface DataLoadingState {
   error: string | null;
 }
 
-// Fetch JSON from a storage bucket
+// Fetch JSON from a storage bucket using public URL
 async function fetchFromBucket(bucket: string, path: string): Promise<any> {
   const cacheKey = `${bucket}/${path}`;
   
@@ -49,17 +49,23 @@ async function fetchFromBucket(bucket: string, path: string): Promise<any> {
   // Create new loading promise
   const loadPromise = (async () => {
     try {
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .download(path);
+      console.log(`[DataLoader] Loading ${cacheKey}...`);
       
-      if (error) {
-        console.error(`Failed to load ${cacheKey}:`, error);
-        throw new Error(`Failed to load ${path}: ${error.message}`);
+      // Get public URL for the file
+      const { data: urlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(path);
+      
+      // Fetch using the public URL
+      const response = await fetch(urlData.publicUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      const text = await data.text();
-      const json = JSON.parse(text);
+      const json = await response.json();
+      
+      console.log(`[DataLoader] Successfully loaded ${cacheKey}`);
       
       // Cache the result
       dataCache.set(cacheKey, json);
@@ -67,6 +73,7 @@ async function fetchFromBucket(bucket: string, path: string): Promise<any> {
       
       return json;
     } catch (err) {
+      console.error(`[DataLoader] Failed to load ${cacheKey}:`, err);
       loadingPromises.delete(cacheKey);
       throw err;
     }
