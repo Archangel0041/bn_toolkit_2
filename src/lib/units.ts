@@ -1,43 +1,39 @@
-import battleUnitsData from "@/data/battle_units.json";
-import type { ParsedUnit, UnitConfig, IdentityConfig, AnimationConfig, StatsConfig, RequirementsConfig, HealingConfig, WeaponsConfig } from "@/types/units";
+/**
+ * Units - Helper functions for battle units
+ * 
+ * Uses game data from the global store (loaded from Supabase Storage)
+ */
 
-const rawData = battleUnitsData as Record<string, UnitConfig[]>;
+import { 
+  getAllUnits as getAllUnitsFromStore, 
+  getUnitById as getUnitByIdFromStore,
+  getAllTags as getAllTagsFromStore,
+  getAllSides as getAllSidesFromStore,
+} from "@/lib/gameDataStore";
+import type { ParsedUnit } from "@/types/units";
 
-function parseUnit(id: string, configs: UnitConfig[]): ParsedUnit {
-  const unit: ParsedUnit = {
-    id: parseInt(id),
-    identity: configs.find((c) => c._t === "battle_unit_identity_config") as IdentityConfig,
-  };
+// Re-export the types
+export type { ParsedUnit };
 
-  unit.animation = configs.find((c) => c._t === "battle_unit_animation_config") as AnimationConfig | undefined;
-  unit.statsConfig = configs.find((c) => c._t === "battle_unit_stats_config") as StatsConfig | undefined;
-  unit.requirements = configs.find((c) => c._t === "battle_unit_requirements_config") as RequirementsConfig | undefined;
-  unit.healing = configs.find((c) => c._t === "battle_unit_healing_config") as HealingConfig | undefined;
-  unit.weapons = configs.find((c) => c._t === "battle_unit_weapons_config") as WeaponsConfig | undefined;
+// Get all units - for backwards compatibility, returns the array directly
+export const allUnits: ParsedUnit[] = [];
 
-  return unit;
+// This will be populated when the store is initialized
+// For now, use the getter function
+export function getAllUnits(): ParsedUnit[] {
+  return getAllUnitsFromStore();
 }
 
-export const allUnits: ParsedUnit[] = Object.entries(rawData).map(([id, configs]) => parseUnit(id, configs));
-
 export function getUnitById(id: number): ParsedUnit | undefined {
-  return allUnits.find((u) => u.id === id);
+  return getUnitByIdFromStore(id);
 }
 
 export function getAllTags(): number[] {
-  const tags = new Set<number>();
-  allUnits.forEach((unit) => {
-    unit.identity.tags.forEach((tag) => tags.add(tag));
-  });
-  return Array.from(tags).sort((a, b) => a - b);
+  return getAllTagsFromStore();
 }
 
 export function getAllSides(): number[] {
-  const sides = new Set<number>();
-  allUnits.forEach((unit) => {
-    sides.add(unit.identity.side);
-  });
-  return Array.from(sides).sort((a, b) => a - b);
+  return getAllSidesFromStore();
 }
 
 export function filterUnits(

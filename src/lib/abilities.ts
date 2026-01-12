@@ -1,4 +1,10 @@
-import abilitiesData from "@/data/battle_abilities.json";
+/**
+ * Abilities - Helper functions for battle abilities
+ * 
+ * Uses game data from the global store (loaded from Supabase Storage)
+ */
+
+import { getAbilityById as getAbilityFromStore, getAllAbilities as getAllAbilitiesFromStore } from "@/lib/gameDataStore";
 
 export interface AbilityStats {
   ability_cooldown: number;
@@ -36,10 +42,8 @@ export interface Ability {
   veh_hitsound?: string;
 }
 
-const rawAbilities = abilitiesData as unknown as Record<string, Ability>;
-
 export function getAbilityById(id: number): Ability | undefined {
-  return rawAbilities[id.toString()];
+  return getAbilityFromStore(id);
 }
 
 export function getAbilityName(id: number, t: (key: string) => string): string {
@@ -49,5 +53,5 @@ export function getAbilityName(id: number, t: (key: string) => string): string {
 }
 
 export function getAllAbilities(): Record<string, Ability> {
-  return rawAbilities;
+  return getAllAbilitiesFromStore();
 }

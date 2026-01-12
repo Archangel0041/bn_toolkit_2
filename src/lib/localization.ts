@@ -1,61 +1,14 @@
-import type { SupportedLanguage, LocalizedFile, SharedDataFile } from "@/types/units";
+/**
+ * Localization - Text translation helpers
+ * 
+ * Uses game data from the global store (loaded from Supabase Storage)
+ */
 
-// Import all language files
-import sharedData from "@/data/GameText_Shared_Data.json";
-import enData from "@/data/GameText_en.json";
-import deData from "@/data/GameText_de.json";
-import esData from "@/data/GameText_es.json";
-import frData from "@/data/GameText_fr.json";
-import itData from "@/data/GameText_it.json";
-import jaData from "@/data/GameText_ja.json";
-import koData from "@/data/GameText_ko.json";
-import ruData from "@/data/GameText_ru.json";
-import zhHansData from "@/data/GameText_zh-Hans.json";
-import zhHantData from "@/data/GameText_zh-Hant.json";
-
-const shared = sharedData as unknown as SharedDataFile;
-
-const languageFiles: Record<SupportedLanguage, LocalizedFile> = {
-  en: enData as unknown as LocalizedFile,
-  de: deData as unknown as LocalizedFile,
-  es: esData as unknown as LocalizedFile,
-  fr: frData as unknown as LocalizedFile,
-  it: itData as unknown as LocalizedFile,
-  ja: jaData as unknown as LocalizedFile,
-  ko: koData as unknown as LocalizedFile,
-  ru: ruData as unknown as LocalizedFile,
-  "zh-Hans": zhHansData as unknown as LocalizedFile,
-  "zh-Hant": zhHantData as unknown as LocalizedFile,
-};
-
-// Build lookup maps for performance
-// Use string keys because IDs exceed Number.MAX_SAFE_INTEGER and lose precision as numbers
-const keyToIdMap = new Map<string, string>();
-shared.m_Entries.forEach((entry) => {
-  // Convert ID to string to preserve precision for large numbers
-  keyToIdMap.set(entry.m_Key, String(entry.m_Id));
-});
-
-const idToTextMaps: Record<SupportedLanguage, Map<string, string>> = {} as Record<SupportedLanguage, Map<string, string>>;
-
-Object.entries(languageFiles).forEach(([lang, file]) => {
-  const map = new Map<string, string>();
-  file.m_TableData.forEach((entry) => {
-    map.set(String(entry.m_Id), entry.m_Localized);
-  });
-  idToTextMaps[lang as SupportedLanguage] = map;
-});
+import type { SupportedLanguage } from "@/types/units";
+import { getLocalizedText as getLocalizedTextFromStore } from "@/lib/gameDataStore";
 
 export function getLocalizedText(key: string, language: SupportedLanguage): string {
-  const id = keyToIdMap.get(key);
-  if (id === undefined) return key;
-
-  const text = idToTextMaps[language]?.get(id);
-  if (text) return text;
-
-  // Fallback to English
-  const enText = idToTextMaps.en?.get(id);
-  return enText || key;
+  return getLocalizedTextFromStore(key, language);
 }
 
 export function detectBrowserLanguage(): SupportedLanguage {
