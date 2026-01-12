@@ -290,19 +290,20 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
 
     // Check if this is a random attack
     const isRandom = selectedAbility.targetArea?.random === true;
-    const targetAreaData = selectedAbility.targetArea?.data || [];
+    
+    // Determine target type for validation behavior
+    // target_type 2: movable reticle AOE - validate reticle position only, not individual targets
+    // target_type 1: fixed pattern - validate each position in pattern
+    // target_type 0/null: single target - validate clicked position only, splash is just shown
+    const targetType = selectedAbility.targetArea?.targetType ?? 0;
+    const isMovableReticleAOE = targetType === 2 && !selectedAbility.isSingleTarget;
+    const isFixedPattern = targetType === 1 || selectedAbility.isFixed;
     
     // For random attacks, calculate expected hits per tile
-    // The number of shots comes from shotsPerAttack * attacksPerUse, not targetArea.data.length
     let expectedHitsPerTile: Map<number, number> = new Map();
     if (isRandom) {
-      // All grid positions on enemy grid
       const allGridPositions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13];
-      
-      // Each shot independently targets a random tile
-      // Expected hits per tile = totalShots / numTiles
       const expectedHitsPerPosition = totalShots / allGridPositions.length;
-      
       for (const gridId of allGridPositions) {
         expectedHitsPerTile.set(gridId, expectedHitsPerPosition);
       }
@@ -311,9 +312,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     // Get affected positions based on ability type
     let affectedPositions: { gridId: number; damagePercent: number }[];
     
-    // Check if this is a "single-selection with splash" ability:
-    // - Has damageArea with non-center positions (splash)
-    // - targetArea is either missing, or only has center position (no movable reticle)
+    // Check if this is a "single-selection with splash" ability
     const hasNonCenterSplash = selectedAbility.damageArea?.some(d => d.x !== 0 || d.y !== 0) ?? false;
     const targetAreaHasOnlyCenter = !selectedAbility.targetArea || 
       (selectedAbility.targetArea.data.length === 1 && 
@@ -322,13 +321,11 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     const isSingleSelectionWithSplash = hasNonCenterSplash && targetAreaHasOnlyCenter;
     
     if (isRandom) {
-      // For random attacks, all enemy positions are potentially affected
       affectedPositions = targets.map(u => ({ gridId: u.gridId, damagePercent: 100 }));
     } else if (selectedAbility.isFixed && fixedAttackPositions.enemyGrid.length > 0) {
       affectedPositions = fixedAttackPositions.enemyGrid;
     } else if (isSingleSelectionWithSplash) {
-      // Single-selection with splash (like Legendary Sandworm's Maul)
-      // Calculate splash positions for ALL potential targets to show in preview
+      // Single-selection with splash - calculate for ALL potential targets
       const allSplashPositions: { gridId: number; damagePercent: number }[] = [];
       for (const target of targets.filter(t => !t.isDead)) {
         const syntheticTargetArea: TargetArea = {
@@ -337,10 +334,8 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
         };
         const splashPositions = getAffectedGridPositions(target.gridId, syntheticTargetArea, true, selectedAbility.damageArea);
         for (const pos of splashPositions) {
-          // Check if this position already exists
           const existing = allSplashPositions.find(p => p.gridId === pos.gridId);
           if (existing) {
-            // Take max damage percent (targets hit by multiple abilities would get multiple preview calculations)
             existing.damagePercent = Math.max(existing.damagePercent, pos.damagePercent);
           } else {
             allSplashPositions.push({ gridId: pos.gridId, damagePercent: pos.damagePercent });
@@ -353,6 +348,13 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     } else {
       // Pure single target - calculate for all valid targets
       affectedPositions = targets.map(u => ({ gridId: u.gridId, damagePercent: 100 }));
+    }
+
+    // For movable reticle AOE (target_type 2), check if the reticle itself is valid
+    // If valid, all positions in the pattern are automatically valid for damage display
+    let reticleIsValid = true;
+    if (isMovableReticleAOE && validReticlePositions) {
+      reticleIsValid = validReticlePositions.has(enemyReticleGridId);
     }
 
     return targets
@@ -370,7 +372,6 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
         const defense = targetStats?.defense || 0;
         const dodgeChance = calculateDodgeChance(defense, selectedAbility.offense);
 
-        // Calculate crit chance with bonuses (includes unit base crit + ability crit + tag bonuses with hierarchy)
         const critChance = calculateCritChance(
           selectedAbility.unitBaseCrit,
           selectedAbility.critPercent,
@@ -378,8 +379,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
           target.unitId
         );
         
-        // Check range (not applicable for random attacks)
-        // Use collapsed rows for proper range calculation
+        // Calculate range for display purposes
         const range = calculateRange(
           selectedUnit.gridId, 
           target.gridId, 
@@ -387,18 +387,43 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
           selectedUnit.isEnemy ? battleState.enemyCollapsedRows : battleState.friendlyCollapsedRows,
           selectedUnit.isEnemy ? battleState.friendlyCollapsedRows : battleState.enemyCollapsedRows
         );
-        const inRange = isRandom ? true : (range >= selectedAbility.minRange && range <= selectedAbility.maxRange);
         
-        // Check line of fire blocking (not applicable for random attacks)
-        const blockCheck = isRandom 
-          ? { isBlocked: false, blockedBy: undefined, reason: undefined }
-          : checkLineOfFire(
-              selectedUnit.gridId,
-              target.gridId,
-              selectedAbility.lineOfFire,
-              false,
-              blockingUnits
-            );
+        // Determine if position should show damage based on target type
+        let inRange = true;
+        let blockCheck: { isBlocked: boolean; blockedBy?: { unitId: number; gridId: number }; reason?: string } = { 
+          isBlocked: false, blockedBy: undefined, reason: undefined 
+        };
+        
+        if (isRandom) {
+          // Random attacks: always valid
+          inRange = true;
+        } else if (isMovableReticleAOE) {
+          // target_type 2: If reticle is valid, all affected positions show damage
+          // Don't validate individual positions - just check if affected by pattern
+          inRange = reticleIsValid && isAffected;
+        } else if (isFixedPattern) {
+          // target_type 1: Validate each position in pattern
+          inRange = range >= selectedAbility.minRange && range <= selectedAbility.maxRange;
+          blockCheck = checkLineOfFire(
+            selectedUnit.gridId,
+            target.gridId,
+            selectedAbility.lineOfFire,
+            false,
+            blockingUnits
+          );
+        } else if (selectedAbility.isSingleTarget || isSingleSelectionWithSplash) {
+          // target_type 0/null (single target with optional splash): 
+          // Only validate the primary target position, splash positions just show damage
+          // For splash: if the PRIMARY target (center) is valid, splash targets get damage preview
+          inRange = range >= selectedAbility.minRange && range <= selectedAbility.maxRange;
+          blockCheck = checkLineOfFire(
+            selectedUnit.gridId,
+            target.gridId,
+            selectedAbility.lineOfFire,
+            false,
+            blockingUnits
+          );
+        }
         
         // Calculate damage using current HP/armor values
         const adjustedMinDamage = Math.floor(selectedAbility.minDamage * (damagePercent / 100));
@@ -415,7 +440,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
           undefined,
           undefined,
           undefined,
-          true // Include breakdown for damage previews
+          true
         );
 
         const maxResult = calculateDamageWithArmor(
@@ -429,17 +454,14 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
           undefined,
           undefined,
           undefined,
-          true // Include breakdown for damage previews
+          true
         );
         
-        // Calculate effective shots for this tile
         let effectiveShots = totalShots;
         if (isRandom) {
-          // Use expected hits based on uniform random tile selection
           effectiveShots = expectedHitsPerTile.get(target.gridId) ?? 0;
         }
         
-        // Multiply by shots
         const multiplyResult = (result: DamageResult, shots: number): DamageResult => ({
           rawDamage: Math.floor(result.rawDamage * shots),
           armorDamage: Math.floor(result.armorDamage * shots),
@@ -449,7 +471,6 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
         });
         
         // Calculate status effect previews
-        // Use average expected damage (HP + armor combined) for DoT preview
         const avgTotalDamage = Math.floor(
           (minResult.hpDamage + minResult.armorDamage + maxResult.hpDamage + maxResult.armorDamage) / 2
         );
@@ -464,7 +485,6 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
           
           let dotDamage = 0;
           if (effect.dot_ability_damage_mult || effect.dot_bonus_damage) {
-            // DoT is based on actual damage dealt (scaled by multiplier and bonus)
             const baseDotDamage = Math.floor(avgTotalDamage * (effect.dot_ability_damage_mult || 0) + (effect.dot_bonus_damage || 0));
             dotDamage = baseDotDamage;
           }
@@ -482,13 +502,26 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
           });
         }
         
-        // For random attacks, show preview for all targetable units
-        // For single target abilities, only show preview if in range and not blocked
-        const shouldShow = isRandom 
-          ? canTarget
-          : (selectedAbility.isSingleTarget 
-              ? (canTarget && inRange && !blockCheck.isBlocked)
-              : isAffected);
+        // Determine if damage preview should be shown
+        let shouldShow: boolean;
+        if (isRandom) {
+          shouldShow = canTarget;
+        } else if (isMovableReticleAOE) {
+          // target_type 2: Show if reticle valid AND in affected pattern
+          shouldShow = reticleIsValid && isAffected;
+        } else if (isFixedPattern) {
+          // target_type 1: Validate each position
+          shouldShow = isAffected && canTarget && inRange && !blockCheck.isBlocked;
+        } else if (selectedAbility.isSingleTarget) {
+          // Single target: validate the target position
+          shouldShow = canTarget && inRange && !blockCheck.isBlocked;
+        } else if (isSingleSelectionWithSplash) {
+          // Single-selection with splash: show all affected positions
+          // Splash positions show damage without individual validation
+          shouldShow = isAffected;
+        } else {
+          shouldShow = isAffected;
+        }
         
         return {
           targetGridId: target.gridId,
@@ -517,7 +550,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
           damageType: selectedAbility.damageType,
         };
       });
-  }, [battleState, selectedUnit, selectedAbility, fixedAttackPositions, enemyReticleGridId, environmentalDamageMods]);
+  }, [battleState, selectedUnit, selectedAbility, fixedAttackPositions, enemyReticleGridId, environmentalDamageMods, validReticlePositions]);
 
   // Get valid targets for selected ability
   // For player units, use relaxed targeting (strictTagCheck=false) - allow placing reticle anywhere in range/LoF
