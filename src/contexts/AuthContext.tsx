@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: 'https://archangel04.com/',
         scopes: 'identify guilds.members.read',
       }
     });
