@@ -6,18 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Upload, Trash2, ArrowLeft, UserPlus, Copy, Check } from 'lucide-react';
+import { Shield, Upload, Trash2, ArrowLeft } from 'lucide-react';
 import { Header } from '@/components/Header';
 
 type AppRole = 'admin' | 'uploader';
 
 interface UserWithRoles {
   id: string;
-  email: string;
-  display_name: string;
   roles: AppRole[];
 }
 
@@ -26,16 +22,12 @@ export default function Admin() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth');
+      navigate('/');
     } else if (!authLoading && !isAdmin) {
       navigate('/');
       toast({
@@ -49,13 +41,13 @@ export default function Admin() {
   const fetchUsers = async () => {
     setLoading(true);
     
-    // Get all profiles
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, email, display_name');
+    // Get all roles and group by user
+    const { data: roles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_id, role');
     
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError);
+    if (rolesError) {
+      console.error('Error fetching roles:', rolesError);
       toast({
         title: 'Error',
         description: 'Failed to load users.',
@@ -65,23 +57,17 @@ export default function Admin() {
       return;
     }
 
-    // Get all roles
-    const { data: roles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('user_id, role');
-    
-    if (rolesError) {
-      console.error('Error fetching roles:', rolesError);
-    }
+    // Group roles by user_id
+    const userMap = new Map<string, AppRole[]>();
+    (roles || []).forEach(r => {
+      const existing = userMap.get(r.user_id) || [];
+      existing.push(r.role as AppRole);
+      userMap.set(r.user_id, existing);
+    });
 
-    // Combine profiles with roles
-    const usersWithRoles: UserWithRoles[] = (profiles || []).map(profile => ({
-      id: profile.id,
-      email: profile.email || '',
-      display_name: profile.display_name || '',
-      roles: (roles || [])
-        .filter(r => r.user_id === profile.id)
-        .map(r => r.role as AppRole),
+    const usersWithRoles: UserWithRoles[] = Array.from(userMap.entries()).map(([id, roles]) => ({
+      id,
+      roles,
     }));
 
     setUsers(usersWithRoles);
@@ -164,60 +150,6 @@ export default function Admin() {
     setActionLoading(null);
   };
 
-  const createInviteCode = async () => {
-    if (!inviteEmail.trim()) {
-      toast({
-        title: 'Email required',
-        description: 'Please enter the email of the person you want to invite.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setInviteLoading(true);
-    
-    const { data, error } = await supabase
-      .rpc('create_invite_code', { intended_email_param: inviteEmail.trim() });
-    
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create invite code.',
-        variant: 'destructive',
-      });
-    } else {
-      setGeneratedCode(data);
-      toast({
-        title: 'Invite created!',
-        description: 'Copy the invite message below to send to your invitee.',
-      });
-    }
-    
-    setInviteLoading(false);
-  };
-
-  const getInviteMessage = () => {
-    if (!generatedCode) return '';
-    const signupUrl = `${window.location.origin}/auth?code=${generatedCode}`;
-    return `You have been invited to create an account on archangel04.com!\n\nYour invite code: ${generatedCode}\n\nSign up here: ${signupUrl}`;
-  };
-
-  const copyInviteMessage = async () => {
-    const message = getInviteMessage();
-    await navigator.clipboard.writeText(message);
-    setCopied(true);
-    toast({
-      title: 'Copied!',
-      description: 'Invite message copied to clipboard.',
-    });
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const resetInviteForm = () => {
-    setInviteEmail('');
-    setGeneratedCode(null);
-  };
-
   if (authLoading || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -237,57 +169,6 @@ export default function Admin() {
           </Button>
         </div>
 
-        {/* Invite User Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Invite New User
-            </CardTitle>
-            <CardDescription>
-              Generate a single-use invite code for a new user.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!generatedCode ? (
-              <div className="flex gap-4 items-end">
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor="invite-email">Invitee Email</Label>
-                  <Input
-                    id="invite-email"
-                    type="email"
-                    placeholder="friend@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    disabled={inviteLoading}
-                  />
-                </div>
-                <Button onClick={createInviteCode} disabled={inviteLoading}>
-                  {inviteLoading ? 'Creating...' : 'Generate Invite'}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm font-medium mb-2">Invite Message:</p>
-                  <pre className="text-sm whitespace-pre-wrap text-muted-foreground">
-                    {getInviteMessage()}
-                  </pre>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={copyInviteMessage} variant="default">
-                    {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-                    {copied ? 'Copied!' : 'Copy Message'}
-                  </Button>
-                  <Button onClick={resetInviteForm} variant="outline">
-                    Create Another
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* User Management Card */}
         <Card>
           <CardHeader>
@@ -303,12 +184,12 @@ export default function Admin() {
             {loading ? (
               <p className="text-center py-8 text-muted-foreground">Loading users...</p>
             ) : users.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">No users found.</p>
+              <p className="text-center py-8 text-muted-foreground">No users with roles found.</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User</TableHead>
+                    <TableHead>User ID</TableHead>
                     <TableHead>Roles</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -317,10 +198,7 @@ export default function Admin() {
                   {users.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{u.display_name}</p>
-                          <p className="text-sm text-muted-foreground">{u.email}</p>
-                        </div>
+                        <p className="font-mono text-sm">{u.id.slice(0, 8)}...</p>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">

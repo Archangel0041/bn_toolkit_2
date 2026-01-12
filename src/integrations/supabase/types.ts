@@ -14,45 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      invite_codes: {
-        Row: {
-          code: string
-          created_at: string
-          created_by: string | null
-          current_uses: number
-          expires_at: string | null
-          id: string
-          intended_email: string | null
-          is_active: boolean
-          max_uses: number
-          used_by: string | null
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          created_by?: string | null
-          current_uses?: number
-          expires_at?: string | null
-          id?: string
-          intended_email?: string | null
-          is_active?: boolean
-          max_uses?: number
-          used_by?: string | null
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          created_by?: string | null
-          current_uses?: number
-          expires_at?: string | null
-          id?: string
-          intended_email?: string | null
-          is_active?: boolean
-          max_uses?: number
-          used_by?: string | null
-        }
-        Relationships: []
-      }
       parties: {
         Row: {
           created_at: string
@@ -77,30 +38,6 @@ export type Database = {
           units?: Json
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string
-          display_name: string | null
-          email: string | null
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          display_name?: string | null
-          email?: string | null
-          id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          display_name?: string | null
-          email?: string | null
-          id?: string
-          updated_at?: string
         }
         Relationships: []
       }
