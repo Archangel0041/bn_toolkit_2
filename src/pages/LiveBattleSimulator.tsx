@@ -71,6 +71,7 @@ const LiveBattleSimulator = () => {
     availableAbilities,
     selectedAbility,
     validTargets,
+    validTargetPositions,
     isProcessing,
     startBattle,
     executePlayerAction,
@@ -550,7 +551,14 @@ const LiveBattleSimulator = () => {
                       selectUnit(unit.gridId, true);
                     }
                   }}
+                  onEmptySlotClick={(gridId) => {
+                    // Allow attacking empty positions for single-target abilities
+                    if (battleState.isPlayerTurn && selectedAbility && selectedAbility.isSingleTarget) {
+                      executePlayerAction(gridId);
+                    }
+                  }}
                   highlightedGridIds={battleState.isPlayerTurn && selectedAbility ? highlightedGridIds : undefined}
+                  validTargetPositions={battleState.isPlayerTurn && selectedAbility?.isSingleTarget ? validTargetPositions : undefined}
                   lastActionGridIds={enemyLastActionGridIds}
                   damagePreviews={damagePreviews}
                   reticleGridId={enemyReticleGridId}

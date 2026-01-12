@@ -534,6 +534,42 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     );
   }, [battleState, selectedUnit, selectedAbility]);
 
+  // Get valid target positions (grid IDs) for player units - includes empty positions
+  // This allows players to target empty grid positions within range/LoF
+  const validTargetPositions = useMemo<Set<number>>(() => {
+    if (!battleState || !selectedUnit || !selectedAbility || selectedUnit.isEnemy) return new Set();
+    
+    // For AOE abilities with reticle, use validReticlePositions instead
+    if (!selectedAbility.isSingleTarget && !selectedAbility.isFixed) return new Set();
+    
+    // Get collapsed rows for proper range calculation
+    const attackerCollapsedRows = selectedUnit.isEnemy ? battleState.enemyCollapsedRows : battleState.friendlyCollapsedRows;
+    const targetCollapsedRows = selectedUnit.isEnemy ? battleState.friendlyCollapsedRows : battleState.enemyCollapsedRows;
+    
+    const targetUnits = battleState.enemyUnits;
+    const blockingUnits = getBlockingUnits(
+      targetUnits.filter(u => !u.isDead).map(u => ({ unit_id: u.unitId, grid_id: u.gridId })),
+      true
+    );
+    
+    const targetingInfo = getTargetingInfo(
+      selectedUnit.gridId,
+      selectedAbility.minRange,
+      selectedAbility.maxRange,
+      selectedAbility.lineOfFire,
+      selectedUnit.isEnemy,
+      blockingUnits,
+      attackerCollapsedRows,
+      targetCollapsedRows
+    );
+    
+    return new Set(
+      targetingInfo
+        .filter(t => t.inRange && !t.isBlocked)
+        .map(t => t.gridId)
+    );
+  }, [battleState, selectedUnit, selectedAbility]);
+
   // Execute player action
   const executePlayerAction = useCallback((targetGridId: number) => {
     if (!battleState || !selectedUnit || !selectedAbility || isProcessing) return;
@@ -1003,6 +1039,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     availableAbilities,
     selectedAbility,
     validTargets,
+    validTargetPositions,
     isProcessing,
     startBattle,
     executePlayerAction,

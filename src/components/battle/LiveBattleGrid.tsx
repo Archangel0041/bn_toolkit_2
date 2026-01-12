@@ -16,7 +16,9 @@ interface LiveBattleGridProps {
   units: LiveBattleUnit[];
   selectedUnitGridId: number | null;
   onUnitClick?: (unit: LiveBattleUnit) => void;
+  onEmptySlotClick?: (gridId: number) => void; // For targeting empty positions
   highlightedGridIds?: Set<number>;
+  validTargetPositions?: Set<number>; // Valid target positions for single-target abilities (includes empty slots)
   lastActionGridIds?: { attacker?: number; targets?: number[] };
   // Damage preview support (like BattleGrid)
   damagePreviews?: DamagePreview[];
@@ -46,7 +48,9 @@ export function LiveBattleGrid({
   units,
   selectedUnitGridId,
   onUnitClick,
+  onEmptySlotClick,
   highlightedGridIds,
+  validTargetPositions,
   lastActionGridIds,
   damagePreviews = [],
   targetArea,
@@ -221,6 +225,9 @@ export function LiveBattleGrid({
 
     // Empty slot (or dead unit that finished animating - treat as empty)
     if (!unit || (unit.isDead && !isRecentlyDead)) {
+      // Check if this is a valid target position for single-target abilities
+      const isValidSingleTarget = validTargetPositions?.has(gridId);
+      
       const handleEmptySlotClick = () => {
         // If clicking on reticle center, execute the attack
         if (isReticleCenter && onReticleConfirm) {
@@ -229,6 +236,11 @@ export function LiveBattleGrid({
         }
         if (showReticle && onReticleMove) {
           onReticleMove(gridId);
+          return;
+        }
+        // For single-target abilities targeting empty positions
+        if (isValidSingleTarget && onEmptySlotClick) {
+          onEmptySlotClick(gridId);
         }
       };
 
@@ -253,11 +265,16 @@ export function LiveBattleGrid({
             showReticle && isAffectedByPattern && !isReticleCenter && "border-orange-500 border-solid bg-orange-500/10",
             isFixedPatternTile && affectedPos?.damagePercent === 100 && "border-red-500 border-solid border-2 bg-red-500/20",
             isFixedPatternTile && affectedPos?.damagePercent !== 100 && "border-orange-500 border-solid bg-orange-500/15",
-            isDraggingReticle && isReticleCenter && "opacity-50"
+            isDraggingReticle && isReticleCenter && "opacity-50",
+            // Single-target valid position styling
+            isValidSingleTarget && !showReticle && "border-yellow-500/50 border-solid bg-yellow-500/10 cursor-crosshair hover:bg-yellow-500/20"
           )}
         >
           {isReticleCenter && (
             <Crosshair className="w-6 h-6 text-yellow-500" />
+          )}
+          {isValidSingleTarget && !isReticleCenter && !showReticle && (
+            <Crosshair className="w-5 h-5 text-yellow-500/60" />
           )}
           {isAffectedByPattern && (
             <span className={cn(
