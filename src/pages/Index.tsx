@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { UnitFilters } from "@/components/units/UnitFilters";
 import { UnitGrid } from "@/components/units/UnitGrid";
 import { CompareBar } from "@/components/units/CompareBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAllUnits, getAllTags, filterUnits } from "@/lib/units";
+import { preloadUnitImages, preloadUnitImagesBackground } from "@/lib/unitImages";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { EncounterLookup } from "@/components/encounters/EncounterLookup";
 import { BossStrikeLookup } from "@/components/bossStrikes/BossStrikeLookup";
@@ -58,6 +59,16 @@ const Index = () => {
     villain: filteredUnits.filter(u => u.identity.side === UnitSide.Villain),
     test: filteredUnits.filter(u => u.identity.side === UnitSide.Test),
   }), [filteredUnits]);
+
+  // Preload first visible unit images on mount
+  useEffect(() => {
+    if (unitsBySide.player.length > 0) {
+      // High priority: preload first 16 player units (visible in grid)
+      preloadUnitImages(unitsBySide.player, 16);
+      // Background: preload next batch
+      preloadUnitImagesBackground(unitsBySide.player.slice(16), 32);
+    }
+  }, [unitsBySide.player]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
