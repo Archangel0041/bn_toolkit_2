@@ -98,22 +98,20 @@ export async function fetchAndCacheIcon(url: string): Promise<string | null> {
   return null;
 }
 
-// Config caching functions
+// Config caching functions - use localStorage since Cache API requires http:// URLs
 export async function getCachedConfig<T>(key: string): Promise<T | null> {
   try {
-    if (!('caches' in window)) return null;
+    const cacheKey = `config_cache_${key}`;
+    const stored = localStorage.getItem(cacheKey);
+    if (!stored) return null;
     
-    const cache = await caches.open(CONFIG_CACHE_NAME);
-    const cacheKey = `config://${key}`;
-    const response = await cache.match(cacheKey);
-    
-    if (response) {
-      if (await isExpired(cacheKey)) {
-        await cache.delete(cacheKey);
-        return null;
-      }
-      return await response.json();
+    const parsed = JSON.parse(stored);
+    // Check expiry
+    if (Date.now() - parsed.timestamp > CONFIG_EXPIRY_MS) {
+      localStorage.removeItem(cacheKey);
+      return null;
     }
+    return parsed.data;
   } catch (e) {
     console.warn('Failed to get cached config:', e);
   }
@@ -122,13 +120,14 @@ export async function getCachedConfig<T>(key: string): Promise<T | null> {
 
 export async function cacheConfig<T>(key: string, data: T): Promise<void> {
   try {
-    if (!('caches' in window)) return;
-    
-    const cache = await caches.open(CONFIG_CACHE_NAME);
-    const cacheKey = `config://${key}`;
-    await cache.put(cacheKey, new Response(JSON.stringify(data)));
-    await setMetadata(cacheKey, CONFIG_EXPIRY_MS);
+    const cacheKey = `config_cache_${key}`;
+    const stored = {
+      data,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(stored));
   } catch (e) {
+    // localStorage might be full
     console.warn('Failed to cache config:', e);
   }
 }

@@ -42,6 +42,9 @@ const store: GameDataStore = {
   idToTextMaps: null,
 };
 
+// Track if we've already logged initialization (avoid StrictMode double-log)
+let hasLoggedInit = false;
+
 // Initialize the store with loaded data
 export function initializeGameDataStore(data: {
   battleUnits: Record<string, UnitConfig[]>;
@@ -69,7 +72,10 @@ export function initializeGameDataStore(data: {
   // Build lookup maps for localization
   buildLocalizationMaps();
   
-  console.log("[GameDataStore] Store initialized with data from Supabase Storage");
+  if (!hasLoggedInit) {
+    console.log("[GameDataStore] Store initialized with data from Supabase Storage");
+    hasLoggedInit = true;
+  }
 }
 
 // Add language data to existing store (for lazy loading)
