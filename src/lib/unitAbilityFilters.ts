@@ -26,11 +26,26 @@ export const TargetCategoryLabels: Record<number, string> = {
   [UnitTag.Metal]: "Metal",
 };
 
-// Get all abilities for a unit
+// Cache for unit abilities to avoid recalculating
+const unitAbilitiesCache = new Map<number, { id: number; ability: Ability }[]>();
+
+// Cache for expanded target tags to avoid recalculating
+const expandedTargetsCache = new Map<string, number[]>();
+
+// Get all abilities for a unit (with caching)
 export function getUnitAbilities(unit: ParsedUnit): { id: number; ability: Ability }[] {
+  const cacheKey = unit.identity.id;
+  
+  if (unitAbilitiesCache.has(cacheKey)) {
+    return unitAbilitiesCache.get(cacheKey)!;
+  }
+  
   const abilities: { id: number; ability: Ability }[] = [];
   
-  if (!unit.weapons) return abilities;
+  if (!unit.weapons) {
+    unitAbilitiesCache.set(cacheKey, abilities);
+    return abilities;
+  }
   
   for (const weapon of Object.values(unit.weapons.weapons)) {
     for (const abilityId of weapon.abilities) {
@@ -41,7 +56,21 @@ export function getUnitAbilities(unit: ParsedUnit): { id: number; ability: Abili
     }
   }
   
+  unitAbilitiesCache.set(cacheKey, abilities);
   return abilities;
+}
+
+// Helper to get expanded targets with caching
+function getCachedExpandedTargets(targets: number[]): number[] {
+  const cacheKey = targets.sort((a, b) => a - b).join(",");
+  
+  if (expandedTargetsCache.has(cacheKey)) {
+    return expandedTargetsCache.get(cacheKey)!;
+  }
+  
+  const expanded = expandTargetTags(targets);
+  expandedTargetsCache.set(cacheKey, expanded);
+  return expanded;
 }
 
 // Check if unit can target a specific category
@@ -52,7 +81,7 @@ export function unitCanTargetCategory(unit: ParsedUnit, targetTag: number): bool
     const targets = ability.stats.targets || [];
     if (targets.length === 0) return true; // No restrictions means can target anything
     
-    const expandedTargets = expandTargetTags(targets);
+    const expandedTargets = getCachedExpandedTargets(targets);
     if (expandedTargets.includes(targetTag)) {
       return true;
     }
