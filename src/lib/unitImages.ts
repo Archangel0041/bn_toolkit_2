@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { preloadImagesIntoCache } from "@/lib/imageCache";
 import type { ParsedUnit } from "@/types/units";
 
 const BUCKET_NAME = "Art";
@@ -20,10 +21,11 @@ export function getUnitImageUrl(iconName: string, useBackIcon: boolean = false):
 }
 
 /**
- * Preload unit images using link preload for high-priority loading
- * This uses the browser's native preloading mechanism for optimal performance
+ * Preload unit images into the persistent cache
+ * Uses Cache Storage API so images persist across page refreshes
  */
 export function preloadUnitImages(units: ParsedUnit[], count: number = 20): void {
+  const urls: string[] = [];
   const unitsToPreload = units.slice(0, count);
   
   unitsToPreload.forEach(unit => {
@@ -34,38 +36,38 @@ export function preloadUnitImages(units: ParsedUnit[], count: number = 20): void
     if (!url || preloadedImages.has(url)) return;
     
     preloadedImages.add(url);
-    
-    // Use link preload for high-priority images
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'image';
-    link.href = url;
-    link.crossOrigin = 'anonymous';
-    document.head.appendChild(link);
+    urls.push(url);
   });
+  
+  if (urls.length > 0) {
+    // Preload into persistent cache
+    preloadImagesIntoCache(urls);
+  }
 }
 
 /**
- * Preload images in the background using Image objects (lower priority)
+ * Preload images in the background (lower priority)
  */
 export function preloadUnitImagesBackground(units: ParsedUnit[], count: number = 50): void {
+  const urls: string[] = [];
   const unitsToPreload = units.slice(0, count);
+  
+  unitsToPreload.forEach(unit => {
+    const iconName = unit.identity?.icon;
+    if (!iconName) return;
+    
+    const url = getUnitImageUrl(iconName);
+    if (!url || preloadedImages.has(url)) return;
+    
+    preloadedImages.add(url);
+    urls.push(url);
+  });
+  
+  if (urls.length === 0) return;
   
   // Use requestIdleCallback for background loading
   const loadImages = () => {
-    unitsToPreload.forEach(unit => {
-      const iconName = unit.identity?.icon;
-      if (!iconName) return;
-      
-      const url = getUnitImageUrl(iconName);
-      if (!url || preloadedImages.has(url)) return;
-      
-      preloadedImages.add(url);
-      
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = url;
-    });
+    preloadImagesIntoCache(urls);
   };
   
   if ('requestIdleCallback' in window) {
