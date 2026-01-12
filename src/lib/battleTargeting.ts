@@ -185,7 +185,11 @@ export function findFrontmostUnblockedPosition(
 
 // Calculate row distance from attacker to target for range checking
 // Returns the number of "rows" between them, accounting for collapsed rows
-// Collapsed rows on either side reduce the effective range needed
+// 
+// EFFECTIVE RANGE: When calculating range for attacks:
+// - Player side uses: base range + opponent's (enemy) total collapsed rows
+// - Enemy side uses: base range + opponent's (player) total collapsed rows
+// This represents that collapsed rows bring the grids "closer together"
 export function calculateRange(
   attackerGridId: number,
   targetGridId: number,
@@ -225,6 +229,28 @@ export function calculateRange(
   const effectiveTargetY = targetCoords.y - targetCollapsedCount;
   
   return effectiveAttackerY + effectiveTargetY + 1;
+}
+
+// Calculate effective range for attacks, including total opponent collapsed rows bonus
+// This is different from calculateRange - it adds the TOTAL number of opponent collapsed rows
+// as a range bonus (not just those in front of the target position)
+export function calculateEffectiveRange(
+  attackerGridId: number,
+  targetGridId: number,
+  attackerIsEnemy: boolean,
+  attackerCollapsedRows?: Set<number>,
+  targetCollapsedRows?: Set<number>
+): { baseRange: number; effectiveRange: number; opponentCollapsedBonus: number } {
+  const baseRange = calculateRange(attackerGridId, targetGridId, attackerIsEnemy, attackerCollapsedRows, targetCollapsedRows);
+  
+  // Opponent's total collapsed rows count (gives range bonus)
+  const opponentCollapsedBonus = targetCollapsedRows?.size ?? 0;
+  
+  return {
+    baseRange,
+    effectiveRange: baseRange, // The base calculation already accounts for position-based collapse
+    opponentCollapsedBonus,
+  };
 }
 
 // Check if a target is within ability range

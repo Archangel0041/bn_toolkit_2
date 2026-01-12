@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sword, Shield, Skull, Zap, Wind, Target, Flame, Droplets, TrendingUp } from "lucide-react";
+import { Sword, Shield, Skull, Zap, Wind, Target, Flame, Droplets, TrendingUp, Ban, CircleOff, ShieldOff } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { BattleAction, BattleTurn, TurnSummary } from "@/types/liveBattle";
 
@@ -24,13 +24,18 @@ function ActionIcon({ type, statusEffectName }: { type: BattleAction["type"]; st
     case "status_applied":
       return <Zap className="h-3 w-3 text-purple-500" />;
     case "status_tick":
-      // Use appropriate icon based on status effect type
       if (statusEffectName?.toLowerCase().includes("poison") || statusEffectName?.toLowerCase().includes("fire")) {
         return <Flame className="h-3 w-3 text-orange-500" />;
       }
       return <Droplets className="h-3 w-3 text-green-500" />;
     case "skip":
       return <Shield className="h-3 w-3 text-gray-400" />;
+    case "miss":
+      return <CircleOff className="h-3 w-3 text-gray-500" />;
+    case "out_of_range":
+      return <Ban className="h-3 w-3 text-orange-400" />;
+    case "blocked":
+      return <ShieldOff className="h-3 w-3 text-yellow-600" />;
     default:
       return null;
   }
