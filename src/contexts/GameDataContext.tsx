@@ -273,10 +273,27 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
   );
 }
 
+// Default fallback for HMR edge cases
+const defaultContext: GameDataContextType = {
+  data: null,
+  isLoading: true,
+  isLoaded: false,
+  error: null,
+  loadProgress: 0,
+  reload: async () => {},
+  getUnitById: () => undefined,
+  getAbilityById: () => undefined,
+  getEncounterById: () => undefined,
+  getAllUnits: () => [],
+  getAllAbilities: () => ({}),
+};
+
 export function useGameData() {
   const context = useContext(GameDataContext);
+  // Return default loading state during HMR transitions instead of throwing
   if (context === undefined) {
-    throw new Error("useGameData must be used within a GameDataProvider");
+    console.warn("[useGameData] Context undefined - returning loading state (likely HMR transition)");
+    return defaultContext;
   }
   return context;
 }
