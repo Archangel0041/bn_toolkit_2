@@ -43,26 +43,23 @@ export type Database = {
       }
       user_roles: {
         Row: {
-          created_at: string
-          discord_username: string
-          granted_by: string | null
-          has_access: boolean
+          created_at: string | null
+          discord_username: string | null
+          has_access: boolean | null
           id: string
           user_id: string
         }
         Insert: {
-          created_at?: string
-          discord_username: string
-          granted_by?: string | null
-          has_access?: boolean
+          created_at?: string | null
+          discord_username?: string | null
+          has_access?: boolean | null
           id?: string
           user_id: string
         }
         Update: {
-          created_at?: string
-          discord_username?: string
-          granted_by?: string | null
-          has_access?: boolean
+          created_at?: string | null
+          discord_username?: string | null
+          has_access?: boolean | null
           id?: string
           user_id?: string
         }
@@ -73,23 +70,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      can_upload: { Args: { _user_id: string }; Returns: boolean }
-      create_invite_code: {
-        Args: { intended_email_param: string }
-        Returns: string
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      use_invite_code: { Args: { invite_code: string }; Returns: boolean }
-      validate_invite_code: { Args: { invite_code: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "admin" | "uploader"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -216,8 +200,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["admin", "uploader"],
-    },
+    Enums: {},
   },
 } as const
