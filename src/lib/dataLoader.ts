@@ -1,6 +1,11 @@
 /**
  * Data Loader - Fetches game data from Supabase Storage buckets
  * 
+ * Features:
+ * - Persistent localStorage caching for config data
+ * - Memory caching for fast repeated access
+ * - Cache versioning to invalidate stale data
+ * 
  * Config bucket paths:
  * - battle/battle_units.json
  * - battle/battle_abilities.json
@@ -22,8 +27,14 @@ import { supabase } from "@/integrations/supabase/client";
 const CONFIG_BUCKET = "config";
 const LOCALIZATIONS_BUCKET = "Localizations";
 
-// Cache for loaded data
-const dataCache = new Map<string, any>();
+// Cache version - increment this to invalidate all cached data
+const CACHE_VERSION = "1.0.0";
+const CACHE_PREFIX = "gamedata_cache_";
+const CACHE_VERSION_KEY = "gamedata_cache_version";
+const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// Memory cache for loaded data (fastest access)
+const memoryCache = new Map<string, any>();
 const loadingPromises = new Map<string, Promise<any>>();
 
 export interface DataLoadingState {
@@ -32,13 +43,105 @@ export interface DataLoadingState {
   error: string | null;
 }
 
-// Fetch JSON from a storage bucket using public URL
-async function fetchFromBucket(bucket: string, path: string): Promise<any> {
+interface CachedItem {
+  data: any;
+  timestamp: number;
+  version: string;
+}
+
+// Check and clear cache if version mismatch
+function checkCacheVersion(): void {
+  try {
+    const storedVersion = localStorage.getItem(CACHE_VERSION_KEY);
+    if (storedVersion !== CACHE_VERSION) {
+      console.log(`[DataLoader] Cache version mismatch (${storedVersion} vs ${CACHE_VERSION}), clearing cache...`);
+      clearLocalStorageCache();
+      localStorage.setItem(CACHE_VERSION_KEY, CACHE_VERSION);
+    }
+  } catch (err) {
+    console.warn("[DataLoader] Failed to check cache version:", err);
+  }
+}
+
+// Clear all localStorage cache entries
+function clearLocalStorageCache(): void {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(CACHE_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log(`[DataLoader] Cleared ${keysToRemove.length} cached items`);
+  } catch (err) {
+    console.warn("[DataLoader] Failed to clear localStorage cache:", err);
+  }
+}
+
+// Get from localStorage cache
+function getFromLocalStorage(cacheKey: string): any | null {
+  try {
+    const stored = localStorage.getItem(CACHE_PREFIX + cacheKey);
+    if (!stored) return null;
+    
+    const cached: CachedItem = JSON.parse(stored);
+    
+    // Check version
+    if (cached.version !== CACHE_VERSION) {
+      localStorage.removeItem(CACHE_PREFIX + cacheKey);
+      return null;
+    }
+    
+    // Check expiry
+    if (Date.now() - cached.timestamp > CACHE_EXPIRY_MS) {
+      localStorage.removeItem(CACHE_PREFIX + cacheKey);
+      return null;
+    }
+    
+    return cached.data;
+  } catch (err) {
+    console.warn(`[DataLoader] Failed to read from localStorage (${cacheKey}):`, err);
+    return null;
+  }
+}
+
+// Save to localStorage cache
+function saveToLocalStorage(cacheKey: string, data: any): void {
+  try {
+    const cached: CachedItem = {
+      data,
+      timestamp: Date.now(),
+      version: CACHE_VERSION,
+    };
+    localStorage.setItem(CACHE_PREFIX + cacheKey, JSON.stringify(cached));
+  } catch (err) {
+    // localStorage might be full or disabled
+    console.warn(`[DataLoader] Failed to save to localStorage (${cacheKey}):`, err);
+  }
+}
+
+// Initialize cache version check
+checkCacheVersion();
+
+// Fetch JSON from a storage bucket using public URL with caching
+async function fetchFromBucket(bucket: string, path: string, useLocalStorage = true): Promise<any> {
   const cacheKey = `${bucket}/${path}`;
   
-  // Return cached data if available
-  if (dataCache.has(cacheKey)) {
-    return dataCache.get(cacheKey);
+  // Check memory cache first (fastest)
+  if (memoryCache.has(cacheKey)) {
+    return memoryCache.get(cacheKey);
+  }
+  
+  // Check localStorage cache (persistent)
+  if (useLocalStorage) {
+    const localCached = getFromLocalStorage(cacheKey);
+    if (localCached !== null) {
+      console.log(`[DataLoader] Loaded ${cacheKey} from local cache`);
+      memoryCache.set(cacheKey, localCached);
+      return localCached;
+    }
   }
   
   // Return existing promise if already loading
@@ -49,7 +152,7 @@ async function fetchFromBucket(bucket: string, path: string): Promise<any> {
   // Create new loading promise
   const loadPromise = (async () => {
     try {
-      console.log(`[DataLoader] Loading ${cacheKey}...`);
+      console.log(`[DataLoader] Fetching ${cacheKey} from server...`);
       
       // Get public URL for the file
       const { data: urlData } = supabase.storage
@@ -65,10 +168,16 @@ async function fetchFromBucket(bucket: string, path: string): Promise<any> {
       
       const json = await response.json();
       
-      console.log(`[DataLoader] Successfully loaded ${cacheKey}`);
+      console.log(`[DataLoader] Successfully fetched ${cacheKey}`);
       
-      // Cache the result
-      dataCache.set(cacheKey, json);
+      // Cache in memory
+      memoryCache.set(cacheKey, json);
+      
+      // Cache in localStorage for persistence
+      if (useLocalStorage) {
+        saveToLocalStorage(cacheKey, json);
+      }
+      
       loadingPromises.delete(cacheKey);
       
       return json;
@@ -151,17 +260,61 @@ export async function loadLocalizationData(lang: string) {
   return { shared, langData };
 }
 
-// Clear cache (useful for refreshing data)
+// Clear all caches (memory + localStorage)
 export function clearDataCache() {
-  dataCache.clear();
+  memoryCache.clear();
+  clearLocalStorageCache();
+  console.log("[DataLoader] All caches cleared");
 }
 
-// Check if data is cached
+// Clear only memory cache (keeps localStorage)
+export function clearMemoryCache() {
+  memoryCache.clear();
+}
+
+// Check if data is cached in memory
 export function isDataCached(bucket: string, path: string): boolean {
-  return dataCache.has(`${bucket}/${path}`);
+  return memoryCache.has(`${bucket}/${path}`);
 }
 
-// Get cached data directly (returns undefined if not cached)
+// Check if data is cached in localStorage
+export function isDataCachedLocally(bucket: string, path: string): boolean {
+  return getFromLocalStorage(`${bucket}/${path}`) !== null;
+}
+
+// Get cached data directly from memory (returns undefined if not cached)
 export function getCachedData<T>(bucket: string, path: string): T | undefined {
-  return dataCache.get(`${bucket}/${path}`);
+  return memoryCache.get(`${bucket}/${path}`);
+}
+
+// Force refresh a specific cache key
+export async function refreshCacheKey(bucket: string, path: string): Promise<any> {
+  const cacheKey = `${bucket}/${path}`;
+  memoryCache.delete(cacheKey);
+  try {
+    localStorage.removeItem(CACHE_PREFIX + cacheKey);
+  } catch {}
+  return fetchFromBucket(bucket, path);
+}
+
+// Get cache stats for debugging
+export function getCacheStats(): { memoryCount: number; localStorageCount: number; localStorageSize: string } {
+  let localStorageCount = 0;
+  let localStorageSize = 0;
+  
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(CACHE_PREFIX)) {
+        localStorageCount++;
+        localStorageSize += (localStorage.getItem(key) || "").length * 2; // UTF-16 chars = 2 bytes
+      }
+    }
+  } catch {}
+  
+  return {
+    memoryCount: memoryCache.size,
+    localStorageCount,
+    localStorageSize: `${(localStorageSize / 1024 / 1024).toFixed(2)} MB`,
+  };
 }
