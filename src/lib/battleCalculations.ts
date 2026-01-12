@@ -349,6 +349,9 @@ export function getUnitAbilities(unitId: number, rank: number): AbilityInfo[] {
       const attackDirection = ability.stats.attack_direction || 1;
       const lineOfFire = ability.stats.line_of_fire ?? 1; // Default to Direct
 
+      // Debug logging for range issue
+      console.log(`[getUnitAbilities] Unit ${unitId} ability ${abilityId}: min_range=${ability.stats.min_range}, max_range=${ability.stats.max_range}`);
+      
       abilities.push({
         abilityId,
         weaponName,
