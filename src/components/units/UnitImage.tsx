@@ -1,6 +1,9 @@
-import { useState, memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { getUnitImageUrl } from "@/lib/unitImages";
 import { cn } from "@/lib/utils";
+
+// Track already-loaded unit image URLs (prevents skeleton flash on remount)
+const loadedUnitImageUrls = new Set<string>();
 
 interface UnitImageProps {
   iconName: string;
