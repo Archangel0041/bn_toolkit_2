@@ -23,18 +23,32 @@ function DiscordIcon({ className }: { className?: string }) {
 }
 
 export function Header() {
-  const { user, hasAccess, signOut, signInWithDiscord, loading } = useAuth();
+  const { user, hasAccess, signOut, signInAnonymously, linkDiscord, isAnonymous, loading } = useAuth();
   const [signingIn, setSigningIn] = useState(false);
   const { toast } = useToast();
 
-  const handleDiscordSignIn = async () => {
+  const handleAnonymousSignIn = async () => {
     setSigningIn(true);
-    const { error } = await signInWithDiscord();
+    const { error } = await signInAnonymously();
     setSigningIn(false);
 
     if (error) {
       toast({
         title: 'Sign in failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleLinkDiscord = async () => {
+    setSigningIn(true);
+    const { error } = await linkDiscord();
+    setSigningIn(false);
+
+    if (error) {
+      toast({
+        title: 'Failed to link Discord',
         description: error.message,
         variant: 'destructive',
       });
@@ -73,10 +87,12 @@ export function Header() {
                         <User className="h-4 w-4" />
                       )}
                       <span className="hidden sm:inline">
-                        {user.user_metadata?.custom_claims?.global_name || 
-                         user.user_metadata?.full_name || 
-                         user.user_metadata?.name || 
-                         'User'}
+                        {isAnonymous 
+                          ? 'Guest' 
+                          : (user.user_metadata?.custom_claims?.global_name || 
+                             user.user_metadata?.full_name || 
+                             user.user_metadata?.name || 
+                             'User')}
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
@@ -90,12 +106,20 @@ export function Header() {
                         />
                       )}
                       <span className="text-muted-foreground">
-                        {user.user_metadata?.custom_claims?.global_name || 
-                         user.user_metadata?.full_name || 
-                         user.email}
+                        {isAnonymous 
+                          ? 'Guest User' 
+                          : (user.user_metadata?.custom_claims?.global_name || 
+                             user.user_metadata?.full_name || 
+                             user.email)}
                       </span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    {isAnonymous && (
+                      <DropdownMenuItem onClick={handleLinkDiscord} disabled={signingIn}>
+                        <DiscordIcon className="h-4 w-4 mr-2" />
+                        {signingIn ? 'Linking...' : 'Link Discord Account'}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={() => signOut()}>
                       <LogOut className="h-4 w-4 mr-2" />
                       Sign Out
@@ -107,11 +131,11 @@ export function Header() {
                   variant="outline" 
                   size="sm" 
                   className="gap-2"
-                  onClick={handleDiscordSignIn}
+                  onClick={handleAnonymousSignIn}
                   disabled={signingIn}
                 >
-                  <DiscordIcon className="h-4 w-4" />
-                  {signingIn ? 'Signing in...' : 'Sign in with Discord'}
+                  <User className="h-4 w-4" />
+                  {signingIn ? 'Signing in...' : 'Continue as Guest'}
                 </Button>
               )}
             </>
