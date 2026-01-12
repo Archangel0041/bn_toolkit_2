@@ -2,7 +2,7 @@
  * Data Loader - Fetches game data from Supabase Storage buckets
  * 
  * Features:
- * - Persistent localStorage caching for config data
+ * - Cache Storage API for persistent config caching
  * - Memory caching for fast repeated access
  * - Cache versioning to invalidate stale data
  * 
@@ -23,12 +23,13 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { getCachedConfig, cacheConfig } from "@/lib/cacheStorage";
 
 const CONFIG_BUCKET = "config";
 const LOCALIZATIONS_BUCKET = "Localizations";
 
 // Cache version - increment this to invalidate all cached data
-const CACHE_VERSION = "1.0.0";
+const CACHE_VERSION = "1.0.1";
 const CACHE_PREFIX = "gamedata_cache_";
 const CACHE_VERSION_KEY = "gamedata_cache_version";
 const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -126,7 +127,7 @@ function saveToLocalStorage(cacheKey: string, data: any): void {
 checkCacheVersion();
 
 // Fetch JSON from a storage bucket using public URL with caching
-async function fetchFromBucket(bucket: string, path: string, useLocalStorage = true): Promise<any> {
+async function fetchFromBucket(bucket: string, path: string, usePersistentCache = true): Promise<any> {
   const cacheKey = `${bucket}/${path}`;
   
   // Check memory cache first (fastest)
@@ -134,12 +135,23 @@ async function fetchFromBucket(bucket: string, path: string, useLocalStorage = t
     return memoryCache.get(cacheKey);
   }
   
-  // Check localStorage cache (persistent)
-  if (useLocalStorage) {
+  // Check Cache Storage first (preferred), then fall back to localStorage
+  if (usePersistentCache) {
+    // Try Cache Storage API first
+    const cacheStorageData = await getCachedConfig(cacheKey);
+    if (cacheStorageData !== null) {
+      console.log(`[DataLoader] Loaded ${cacheKey} from Cache Storage`);
+      memoryCache.set(cacheKey, cacheStorageData);
+      return cacheStorageData;
+    }
+    
+    // Fall back to localStorage (legacy)
     const localCached = getFromLocalStorage(cacheKey);
     if (localCached !== null) {
-      console.log(`[DataLoader] Loaded ${cacheKey} from local cache`);
+      console.log(`[DataLoader] Loaded ${cacheKey} from localStorage cache`);
       memoryCache.set(cacheKey, localCached);
+      // Migrate to Cache Storage
+      await cacheConfig(cacheKey, localCached);
       return localCached;
     }
   }
@@ -173,8 +185,10 @@ async function fetchFromBucket(bucket: string, path: string, useLocalStorage = t
       // Cache in memory
       memoryCache.set(cacheKey, json);
       
-      // Cache in localStorage for persistence
-      if (useLocalStorage) {
+      // Cache in Cache Storage for persistence (preferred)
+      if (usePersistentCache) {
+        await cacheConfig(cacheKey, json);
+        // Also save to localStorage as backup
         saveToLocalStorage(cacheKey, json);
       }
       
@@ -260,10 +274,13 @@ export async function loadLocalizationData(lang: string) {
   return { shared, langData };
 }
 
-// Clear all caches (memory + localStorage)
-export function clearDataCache() {
+// Clear all caches (memory + localStorage + Cache Storage)
+export async function clearDataCache() {
   memoryCache.clear();
   clearLocalStorageCache();
+  // Also clear Cache Storage
+  const { clearAllCaches } = await import("@/lib/cacheStorage");
+  await clearAllCaches();
   console.log("[DataLoader] All caches cleared");
 }
 
