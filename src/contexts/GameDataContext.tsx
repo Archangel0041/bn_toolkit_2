@@ -17,8 +17,10 @@ import {
   loadGameTextSharedData,
   loadGameTextLanguage,
   clearDataCache,
+  getCoreDataFromMemory,
+  getLanguageDataFromMemory,
 } from "@/lib/dataLoader";
-import { initializeGameDataStore } from "@/lib/gameDataStore";
+import { initializeGameDataStore, isGameDataStoreInitialized } from "@/lib/gameDataStore";
 import type { Ability } from "@/lib/abilities";
 import type { ParsedUnit, UnitConfig, IdentityConfig, AnimationConfig, StatsConfig, RequirementsConfig, HealingConfig, WeaponsConfig, SharedDataFile, LocalizedFile, SupportedLanguage } from "@/types/units";
 import type { EncountersData } from "@/types/encounters";
@@ -89,6 +91,49 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadProgress, setLoadProgress] = useState(0);
+
+  // Try to restore from memory cache synchronously on mount
+  const tryRestoreFromMemory = useCallback((): boolean => {
+    const coreData = getCoreDataFromMemory();
+    if (!coreData) return false;
+    
+    // Check if all language data is also in memory
+    const languageData: Record<SupportedLanguage, LocalizedFile> = {} as any;
+    for (const lang of SUPPORTED_LANGUAGES) {
+      const langData = getLanguageDataFromMemory(lang);
+      if (!langData) return false;
+      languageData[lang] = langData;
+    }
+    
+    // Parse units
+    const parsedUnits = Object.entries(coreData.battleUnits).map(([id, configs]) => 
+      parseUnit(id, configs as UnitConfig[])
+    );
+    
+    const gameData: GameData = {
+      battleUnits: coreData.battleUnits,
+      battleAbilities: coreData.battleAbilities,
+      battleEncounters: coreData.battleEncounters,
+      battleConfig: coreData.battleConfig,
+      statusEffects: coreData.statusEffects,
+      statusEffectFamilies: coreData.statusEffectFamilies,
+      bossStrikeConfig: { boss_strikes: {} }, // Will be loaded async
+      sharedData: coreData.sharedData,
+      languageData,
+      parsedUnits,
+    };
+    
+    // Initialize store if not already
+    if (!isGameDataStoreInitialized()) {
+      initializeGameDataStore(gameData);
+    }
+    
+    setData(gameData);
+    setIsLoading(false);
+    setLoadProgress(100);
+    console.log("[GameDataContext] Restored from memory cache instantly");
+    return true;
+  }, []);
 
   const loadAllData = useCallback(async () => {
     setIsLoading(true);
@@ -171,10 +216,13 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
     }
   }, []);
 
-  // Load data on mount
+  // Load data on mount - try memory first
   useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
+    // Try instant restore from memory cache first
+    if (!tryRestoreFromMemory()) {
+      loadAllData();
+    }
+  }, [loadAllData, tryRestoreFromMemory]);
 
   // Convenience accessors
   const getUnitById = useCallback((id: number): ParsedUnit | undefined => {
