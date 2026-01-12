@@ -10,6 +10,7 @@ interface AuthContextType {
   isAnonymous: boolean;
   displayName: string | null;
   signInWithUsername: (username: string) => Promise<{ error: Error | null }>;
+  signInWithDiscord: () => Promise<{ error: Error | null }>;
   linkDiscord: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshAccess: () => Promise<void>;
@@ -129,6 +130,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   };
 
+  const signInWithDiscord = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'discord',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        scopes: 'identify guilds.members.read',
+      }
+    });
+    
+    return { error: error || null };
+  };
+
   const linkDiscord = async () => {
     const { error } = await supabase.auth.linkIdentity({
       provider: 'discord',
@@ -155,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAnonymous,
       displayName,
       signInWithUsername,
+      signInWithDiscord,
       linkDiscord,
       signOut,
       refreshAccess,
