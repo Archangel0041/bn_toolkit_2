@@ -152,7 +152,9 @@ export function findFrontmostUnblockedPosition(
   maxRange: number,
   lineOfFire: number,
   attackerIsEnemy: boolean,
-  targetUnits: BlockingUnit[]
+  targetUnits: BlockingUnit[],
+  attackerCollapsedRows?: Set<number>,
+  targetCollapsedRows?: Set<number>
 ): number | null {
   const attackerCoords = GRID_ID_TO_COORDS[attackerGridId];
   if (!attackerCoords) return null;
@@ -167,8 +169,8 @@ export function findFrontmostUnblockedPosition(
       const gridId = COORDS_TO_GRID_ID[coordKey];
       if (gridId === undefined) continue;
       
-      // Check if in range
-      const range = calculateRange(attackerGridId, gridId, attackerIsEnemy);
+      // Check if in range (with collapsed rows)
+      const range = calculateRange(attackerGridId, gridId, attackerIsEnemy, attackerCollapsedRows, targetCollapsedRows);
       if (range < minRange || range > maxRange) continue;
       
       // Check if blocked
@@ -281,7 +283,9 @@ export function getTargetingInfo(
   maxRange: number,
   lineOfFire: number,
   attackerIsEnemy: boolean,
-  targetUnits: BlockingUnit[]
+  targetUnits: BlockingUnit[],
+  attackerCollapsedRows?: Set<number>,
+  targetCollapsedRows?: Set<number>
 ): TargetingInfo[] {
   const result: TargetingInfo[] = [];
   
@@ -289,7 +293,7 @@ export function getTargetingInfo(
   const allGridIds = Object.keys(GRID_ID_TO_COORDS).map(k => parseInt(k));
   
   for (const gridId of allGridIds) {
-    const range = calculateRange(attackerGridId, gridId, attackerIsEnemy);
+    const range = calculateRange(attackerGridId, gridId, attackerIsEnemy, attackerCollapsedRows, targetCollapsedRows);
     const inRange = range >= minRange && range <= maxRange;
     
     const blockCheck = checkLineOfFire(

@@ -195,13 +195,19 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       true // Always use EncounterUnit format (grid_id) since we're mapping with grid_id
     );
     
+    // Get collapsed rows for proper range calculation
+    const attackerCollapsedRows = selectedUnit.isEnemy ? battleState.enemyCollapsedRows : battleState.friendlyCollapsedRows;
+    const targetCollapsedRows = selectedUnit.isEnemy ? battleState.friendlyCollapsedRows : battleState.enemyCollapsedRows;
+    
     const frontmostPosition = findFrontmostUnblockedPosition(
       selectedUnit.gridId,
       selectedAbility.minRange,
       selectedAbility.maxRange,
       selectedAbility.lineOfFire,
       selectedUnit.isEnemy,
-      blockingUnits
+      blockingUnits,
+      attackerCollapsedRows,
+      targetCollapsedRows
     );
     
     if (frontmostPosition !== null) {
@@ -248,13 +254,19 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       true // Always use EncounterUnit format (grid_id) since we're mapping with grid_id
     );
     
+    // Get collapsed rows for proper range calculation
+    const attackerCollapsedRows = selectedUnit.isEnemy ? battleState.enemyCollapsedRows : battleState.friendlyCollapsedRows;
+    const targetCollapsedRows = selectedUnit.isEnemy ? battleState.friendlyCollapsedRows : battleState.enemyCollapsedRows;
+    
     const targetingInfo = getTargetingInfo(
       selectedUnit.gridId,
       selectedAbility.minRange,
       selectedAbility.maxRange,
       selectedAbility.lineOfFire,
       selectedUnit.isEnemy,
-      blockingUnits
+      blockingUnits,
+      attackerCollapsedRows,
+      targetCollapsedRows
     );
     
     return new Set(
@@ -367,7 +379,14 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
         );
         
         // Check range (not applicable for random attacks)
-        const range = calculateRange(selectedUnit.gridId, target.gridId, false);
+        // Use collapsed rows for proper range calculation
+        const range = calculateRange(
+          selectedUnit.gridId, 
+          target.gridId, 
+          selectedUnit.isEnemy,
+          selectedUnit.isEnemy ? battleState.enemyCollapsedRows : battleState.friendlyCollapsedRows,
+          selectedUnit.isEnemy ? battleState.friendlyCollapsedRows : battleState.enemyCollapsedRows
+        );
         const inRange = isRandom ? true : (range >= selectedAbility.minRange && range <= selectedAbility.maxRange);
         
         // Check line of fire blocking (not applicable for random attacks)
