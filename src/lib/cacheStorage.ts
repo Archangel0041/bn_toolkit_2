@@ -14,6 +14,10 @@ const METADATA_CACHE_NAME = 'cache-metadata-v1';
 
 async function getMetadata(url: string): Promise<CacheMetadata | null> {
   try {
+    // Only use Cache API for http/https URLs
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return null;
+    }
     const cache = await caches.open(METADATA_CACHE_NAME);
     const response = await cache.match(url);
     if (response) {
@@ -27,6 +31,10 @@ async function getMetadata(url: string): Promise<CacheMetadata | null> {
 
 async function setMetadata(url: string, expiryMs: number): Promise<void> {
   try {
+    // Only use Cache API for http/https URLs
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return;
+    }
     const cache = await caches.open(METADATA_CACHE_NAME);
     const metadata: CacheMetadata = {
       timestamp: Date.now(),
