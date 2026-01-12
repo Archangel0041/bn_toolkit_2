@@ -14,7 +14,6 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import Index from "./pages/Index";
 import UnitDetail from "./pages/UnitDetail";
 import Compare from "./pages/Compare";
-import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 // Lazy-load custom formation page
@@ -99,7 +98,7 @@ function AppContent() {
                     </Suspense>
                   } 
                 />
-                <Route path="/admin" element={<Admin />} />
+                
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
