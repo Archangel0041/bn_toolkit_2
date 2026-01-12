@@ -225,7 +225,14 @@ export function getAvailableAbilities(
       return false;
     }
 
-    // Check if there's at least one valid target
+    // For player units, skip target validation - let them use any ability that's off cooldown
+    // Only enemies need strict target validation
+    if (!unit.isEnemy) {
+      console.log(`[getAvailableAbilities] Ability ${ability.abilityId} available for player (no target validation)`);
+      return true;
+    }
+
+    // Check if there's at least one valid target (for enemy AI only)
     const targets = unit.isEnemy ? allFriendlies : allEnemies;
     const aliveTargets = targets.filter(t => !t.isDead);
     
