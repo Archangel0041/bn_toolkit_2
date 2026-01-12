@@ -612,6 +612,7 @@ const LiveBattleSimulator = () => {
                           weaponReloadCooldown={selectedUnit.weaponReloadCooldown}
                           abilityChargeProgress={selectedUnit.abilityChargeProgress}
                           disabled={!battleState.isPlayerTurn || battleState.isBattleOver}
+                          unitId={selectedUnit.unitId}
                         />
                       )}
                     </div>
