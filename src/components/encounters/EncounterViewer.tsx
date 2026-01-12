@@ -11,6 +11,7 @@ import type { Encounter } from "@/types/encounters";
 import type { BossStrike } from "@/types/bossStrike";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { isLovableEnvironment } from "@/components/ProtectedRoute";
 import bsPointsIcon from "@/assets/bs_points_icon.png";
 
 interface EncounterViewerProps {
@@ -36,6 +37,9 @@ export function EncounterViewer({ encounter, encounterId, bossStrike, backPath, 
   const basePoints = bossStrike?.default_progress_cost?.awarded_points ?? 0;
   const pointsPerWave = basePoints > 0 ? Math.floor(basePoints / waves.length) : 0;
 
+  // Show simulate button if user is logged in OR we're in Lovable environment
+  const canSimulate = user || isLovableEnvironment();
+
   const handleSimulate = () => {
     navigate(`/battle/${encounterId}`, { 
       state: { from: backPath || location.pathname } 
@@ -50,7 +54,7 @@ export function EncounterViewer({ encounter, encounterId, bossStrike, backPath, 
           <Badge variant="outline">ID: {encounterId}</Badge>
           {encounter.level && <Badge variant="secondary">Lv. {encounter.level}</Badge>}
           {waves.length > 1 && <Badge>{waves.length} Waves</Badge>}
-          {user && (
+          {canSimulate && (
             <Button variant="outline" size="sm" className="ml-auto gap-1" onClick={handleSimulate}>
               <Swords className="h-4 w-4" />
               Simulate
