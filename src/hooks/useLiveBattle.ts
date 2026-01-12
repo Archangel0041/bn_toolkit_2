@@ -106,12 +106,12 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       
       const actions: BattleAction[] = [];
       
-      // 1. Collapse rows if needed
+      // 1. Process status effects for PLAYER units only (DoT damage ticks at start of their turn)
+      actions.push(...processStatusEffects(newState.friendlyUnits, environmentalDamageMods));
+      
+      // 2. Collapse rows if needed
       newState.friendlyCollapsedRows = collapseGrid(newState.friendlyUnits, newState.friendlyCollapsedRows);
       newState.enemyCollapsedRows = collapseGrid(newState.enemyUnits, newState.enemyCollapsedRows);
-      
-      // 2. Process status effects (DoT damage)
-      actions.push(...processStatusEffects([...newState.friendlyUnits, ...newState.enemyUnits], environmentalDamageMods));
       
       // 3. Reduce cooldowns for player units (before action selection) - stunned units skip this
       reduceCooldowns(newState.friendlyUnits);
@@ -811,7 +811,10 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
 
     const actions: BattleAction[] = [];
 
-    // 2. Detect collapsed rows (status effects already processed at start of player turn)
+    // 1. Process status effects for ENEMY units only (DoT damage ticks at start of their turn)
+    actions.push(...processStatusEffects(newState.enemyUnits, environmentalDamageMods));
+
+    // 2. Detect collapsed rows
     // Pass previous collapsed rows to ensure only 1 row collapses per turn
     newState.friendlyCollapsedRows = collapseGrid(newState.friendlyUnits, newState.friendlyCollapsedRows);
     newState.enemyCollapsedRows = collapseGrid(newState.enemyUnits, newState.enemyCollapsedRows);
