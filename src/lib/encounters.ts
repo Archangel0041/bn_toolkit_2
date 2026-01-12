@@ -1,14 +1,18 @@
-import encountersData from "@/data/battle_encounters.json";
-import type { Encounter, EncountersData, EncounterUnit } from "@/types/encounters";
+/**
+ * Encounters - Helper functions for battle encounters
+ * 
+ * Uses game data from the global store (loaded from Supabase Storage)
+ */
 
-const rawData = encountersData as unknown as EncountersData;
+import { getEncounterById as getEncounterFromStore, getAllEncounterIds as getAllEncounterIdsFromStore } from "@/lib/gameDataStore";
+import type { Encounter, EncounterUnit } from "@/types/encounters";
 
 export function getEncounterById(id: number | string): Encounter | undefined {
-  return rawData.armies[String(id)];
+  return getEncounterFromStore(id);
 }
 
 export function getAllEncounterIds(): string[] {
-  return Object.keys(rawData.armies).sort((a, b) => parseInt(a) - parseInt(b));
+  return getAllEncounterIdsFromStore();
 }
 
 export function getEncounterWaves(encounter: Encounter): EncounterUnit[][] {

@@ -1,4 +1,10 @@
-import battleConfigData from "@/data/battle_config.json";
+/**
+ * Battle Config - Helper functions for battle configuration
+ * 
+ * Uses game data from the global store (loaded from Supabase Storage)
+ */
+
+import { getBattleConfig, getClassType as getClassTypeFromStore, getAllClassTypes as getAllClassTypesFromStore } from "@/lib/gameDataStore";
 
 interface ClassType {
   damage_mods: Record<string, number>;
@@ -6,22 +12,8 @@ interface ClassType {
   icon: string;
 }
 
-interface BattleConfig {
-  classes: {
-    class_types: Record<string, ClassType>;
-    configs: {
-      good_vs_cutoff: number;
-      weak_vs_cutoff: number;
-    };
-  };
-  layouts: Record<string, unknown>;
-  settings: Record<string, unknown>;
-}
-
-const config = battleConfigData as BattleConfig;
-
 export function getClassType(classId: number): ClassType | undefined {
-  return config.classes.class_types[classId.toString()];
+  return getClassTypeFromStore(classId);
 }
 
 export function getClassDisplayName(classId: number): string {
@@ -40,8 +32,10 @@ export function getClassIcon(classId: number): string {
 }
 
 export function getAllClassTypes(): { id: number; classType: ClassType }[] {
-  return Object.entries(config.classes.class_types).map(([id, classType]) => ({
-    id: parseInt(id),
-    classType,
-  }));
+  return getAllClassTypesFromStore() as { id: number; classType: ClassType }[];
+}
+
+// Export the raw config for advanced usage
+export function getRawBattleConfig(): any {
+  return getBattleConfig();
 }

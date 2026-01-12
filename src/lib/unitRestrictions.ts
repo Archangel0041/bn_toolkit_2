@@ -1,4 +1,10 @@
-import battleConfig from "@/data/battle_config.json";
+/**
+ * Unit Restrictions - Deploy limits and party restrictions
+ * 
+ * Uses game data from the global store (loaded from Supabase Storage)
+ */
+
+import { getBattleConfig } from "@/lib/gameDataStore";
 import { getUnitById } from "@/lib/units";
 import type { PartyUnit } from "@/types/battleSimulator";
 import type { Encounter } from "@/types/encounters";
@@ -13,7 +19,8 @@ interface UnitTagMetadata {
 export function getTagDeployLimits(): Map<number, { limit: number; stringId: string }> {
   const limits = new Map<number, { limit: number; stringId: string }>();
   
-  const metadata = (battleConfig as any).settings?.unit_tag_metadata || {};
+  const battleConfig = getBattleConfig();
+  const metadata = battleConfig?.settings?.unit_tag_metadata || {};
   
   for (const [tagIdStr, data] of Object.entries(metadata)) {
     const tagData = data as UnitTagMetadata;

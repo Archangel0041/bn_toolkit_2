@@ -8,7 +8,9 @@ import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CompareProvider } from "@/contexts/CompareContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { GameDataProvider, useGameData } from "@/contexts/GameDataContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import Index from "./pages/Index";
 import UnitDetail from "./pages/UnitDetail";
 import Compare from "./pages/Compare";
@@ -29,49 +31,80 @@ function SimulatorLoader() {
   );
 }
 
+// Inner app that requires game data to be loaded
+function AppContent() {
+  const { isLoading, loadProgress, error } = useGameData();
+
+  if (isLoading) {
+    return <LoadingScreen progress={loadProgress} message="Loading game data..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-semibold text-destructive">Failed to load game data</h2>
+          <p className="text-muted-foreground">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <LanguageProvider>
+      <CompareProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/unit/:id" element={<UnitDetail />} />
+                <Route path="/compare/:id1/:id2" element={<Compare />} />
+                <Route 
+                  path="/battle/:encounterId" 
+                  element={
+                    <ProtectedRoute>
+                      <Suspense fallback={<SimulatorLoader />}>
+                        <BattleSimulator />
+                      </Suspense>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/live-battle/:encounterId" 
+                  element={
+                    <ProtectedRoute>
+                      <Suspense fallback={<SimulatorLoader />}>
+                        <LiveBattleSimulator />
+                      </Suspense>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </CompareProvider>
+    </LanguageProvider>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <LanguageProvider>
-        <CompareProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/unit/:id" element={<UnitDetail />} />
-                  <Route path="/compare/:id1/:id2" element={<Compare />} />
-                  <Route 
-                    path="/battle/:encounterId" 
-                    element={
-                      <ProtectedRoute>
-                        <Suspense fallback={<SimulatorLoader />}>
-                          <BattleSimulator />
-                        </Suspense>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/live-battle/:encounterId" 
-                    element={
-                      <ProtectedRoute>
-                        <Suspense fallback={<SimulatorLoader />}>
-                          <LiveBattleSimulator />
-                        </Suspense>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route path="/admin" element={<Admin />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </AuthProvider>
-        </CompareProvider>
-      </LanguageProvider>
+      <GameDataProvider>
+        <AppContent />
+      </GameDataProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
