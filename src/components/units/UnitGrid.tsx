@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { UnitCard } from "./UnitCard";
 import type { ParsedUnit } from "@/types/units";
 
@@ -5,7 +6,7 @@ interface UnitGridProps {
   units: ParsedUnit[];
 }
 
-export function UnitGrid({ units }: UnitGridProps) {
+export const UnitGrid = memo(function UnitGrid({ units }: UnitGridProps) {
   if (units.length === 0) {
     return (
       <div className="text-center py-12">
@@ -21,4 +22,4 @@ export function UnitGrid({ units }: UnitGridProps) {
       ))}
     </div>
   );
-}
+});
