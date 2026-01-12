@@ -562,7 +562,12 @@ const LiveBattleSimulator = () => {
                   lastActionGridIds={enemyLastActionGridIds}
                   damagePreviews={damagePreviews}
                   reticleGridId={enemyReticleGridId}
-                  onReticleMove={setEnemyReticleGridId}
+                  onReticleMove={(gridId) => {
+                    // Only allow reticle movement to valid positions
+                    if (validReticlePositions?.has(gridId)) {
+                      setEnemyReticleGridId(gridId);
+                    }
+                  }}
                   onReticleConfirm={() => {
                     // Execute AOE attack at current reticle position
                     if (selectedAbility && enemyReticleGridId !== undefined) {
