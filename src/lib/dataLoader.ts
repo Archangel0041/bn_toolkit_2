@@ -294,6 +294,51 @@ export function isDataCached(bucket: string, path: string): boolean {
   return memoryCache.has(`${bucket}/${path}`);
 }
 
+// Check if all core data is in memory (synchronous check)
+export function isAllCoreDataInMemory(): boolean {
+  const requiredKeys = [
+    `${CONFIG_BUCKET}/battle/battle_units.json`,
+    `${CONFIG_BUCKET}/battle/battle_abilities.json`,
+    `${CONFIG_BUCKET}/battle/battle_encounters.json`,
+    `${CONFIG_BUCKET}/battle/battle_config.json`,
+    `${CONFIG_BUCKET}/status_effects.json`,
+    `${CONFIG_BUCKET}/status_effect_families.json`,
+    `${LOCALIZATIONS_BUCKET}/tables/GameText Shared Data.json`,
+  ];
+  return requiredKeys.every(key => memoryCache.has(key));
+}
+
+// Get all cached core data synchronously (returns null if any missing)
+export function getCoreDataFromMemory(): {
+  battleUnits: Record<string, any[]>;
+  battleAbilities: Record<string, any>;
+  battleEncounters: any;
+  battleConfig: any;
+  statusEffects: Record<string, any>;
+  statusEffectFamilies: Record<string, any>;
+  sharedData: any;
+} | null {
+  const battleUnits = memoryCache.get(`${CONFIG_BUCKET}/battle/battle_units.json`);
+  const battleAbilities = memoryCache.get(`${CONFIG_BUCKET}/battle/battle_abilities.json`);
+  const battleEncounters = memoryCache.get(`${CONFIG_BUCKET}/battle/battle_encounters.json`);
+  const battleConfig = memoryCache.get(`${CONFIG_BUCKET}/battle/battle_config.json`);
+  const statusEffects = memoryCache.get(`${CONFIG_BUCKET}/status_effects.json`);
+  const statusEffectFamilies = memoryCache.get(`${CONFIG_BUCKET}/status_effect_families.json`);
+  const sharedData = memoryCache.get(`${LOCALIZATIONS_BUCKET}/tables/GameText Shared Data.json`);
+  
+  if (!battleUnits || !battleAbilities || !battleEncounters || !battleConfig || 
+      !statusEffects || !statusEffectFamilies || !sharedData) {
+    return null;
+  }
+  
+  return { battleUnits, battleAbilities, battleEncounters, battleConfig, statusEffects, statusEffectFamilies, sharedData };
+}
+
+// Get language data from memory
+export function getLanguageDataFromMemory(lang: string): any | null {
+  return memoryCache.get(`${LOCALIZATIONS_BUCKET}/tables/GameText_${lang}.json`) || null;
+}
+
 // Check if data is cached in localStorage
 export function isDataCachedLocally(bucket: string, path: string): boolean {
   return getFromLocalStorage(`${bucket}/${path}`) !== null;
