@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { UsernameDialog } from "./UsernameDialog";
 
 function DiscordIcon({ className }: { className?: string }) {
   return (
@@ -24,44 +23,12 @@ function DiscordIcon({ className }: { className?: string }) {
 }
 
 export function Header() {
-  const { user, hasAccess, signOut, signInWithUsername, signInWithDiscord, linkDiscord, isAnonymous, displayName, loading } = useAuth();
+  const { user, hasAccess, signOut, signInWithDiscord, loading, displayName } = useAuth();
   const [signingIn, setSigningIn] = useState(false);
-  const [showUsernameDialog, setShowUsernameDialog] = useState(false);
   const { toast } = useToast();
-
-  const handleUsernameSubmit = async (username: string) => {
-    setSigningIn(true);
-    const { error } = await signInWithUsername(username);
-    setSigningIn(false);
-
-    if (error) {
-      toast({
-        title: 'Sign in failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      setShowUsernameDialog(false);
-    }
-  };
-
-  const handleLinkDiscord = async () => {
-    setSigningIn(true);
-    const { error } = await linkDiscord();
-    setSigningIn(false);
-
-    if (error) {
-      toast({
-        title: 'Failed to link Discord',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
 
   const handleDiscordSignIn = async () => {
     setSigningIn(true);
-    setShowUsernameDialog(false);
     const { error } = await signInWithDiscord();
     setSigningIn(false);
 
@@ -75,94 +42,79 @@ export function Header() {
   };
 
   return (
-    <>
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-            <Sword className="h-6 w-6" />
-            <span>Battle Nations Toolkit</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            {!loading && (
-              <>
-                {hasAccess && (
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to="/admin" className="gap-2">
-                      <Shield className="h-4 w-4" />
-                      Admin
-                    </Link>
-                  </Button>
-                )}
-                {user ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        {user.user_metadata?.avatar_url ? (
-                          <img 
-                            src={user.user_metadata.avatar_url} 
-                            alt="Avatar" 
-                            className="h-5 w-5 rounded-full"
-                          />
-                        ) : (
-                          <User className="h-4 w-4" />
-                        )}
-                        <span className="hidden sm:inline">
-                          {displayName || 'User'}
-                        </span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem disabled className="flex items-center gap-2">
-                        {user.user_metadata?.avatar_url && (
-                          <img 
-                            src={user.user_metadata.avatar_url} 
-                            alt="Avatar" 
-                            className="h-6 w-6 rounded-full"
-                          />
-                        )}
-                        <span className="text-muted-foreground">
-                          {displayName || user.email}
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      {isAnonymous && (
-                        <DropdownMenuItem onClick={handleLinkDiscord} disabled={signingIn}>
-                          <DiscordIcon className="h-4 w-4 mr-2" />
-                          {signingIn ? 'Linking...' : 'Link Discord Account'}
-                        </DropdownMenuItem>
+    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-14 items-center justify-between px-4">
+        <Link to="/" className="flex items-center gap-2 font-bold text-xl">
+          <Sword className="h-6 w-6" />
+          <span>Battle Nations Toolkit</span>
+        </Link>
+        <div className="flex items-center gap-2">
+          {!loading && (
+            <>
+              {hasAccess && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/admin" className="gap-2">
+                    <Shield className="h-4 w-4" />
+                    Admin
+                  </Link>
+                </Button>
+              )}
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      {user.user_metadata?.avatar_url ? (
+                        <img 
+                          src={user.user_metadata.avatar_url} 
+                          alt="Avatar" 
+                          className="h-5 w-5 rounded-full"
+                        />
+                      ) : (
+                        <DiscordIcon className="h-4 w-4" />
                       )}
-                      <DropdownMenuItem onClick={() => signOut()}>
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Sign Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => setShowUsernameDialog(true)}
-                  >
-                    <User className="h-4 w-4" />
-                    Sign In
-                  </Button>
-                )}
-              </>
-            )}
-            <ThemeToggle />
-            <LanguageSelector />
-          </div>
+                      <span className="hidden sm:inline">
+                        {displayName || 'User'}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem disabled className="flex items-center gap-2">
+                      {user.user_metadata?.avatar_url && (
+                        <img 
+                          src={user.user_metadata.avatar_url} 
+                          alt="Avatar" 
+                          className="h-6 w-6 rounded-full"
+                        />
+                      )}
+                      <span className="text-muted-foreground">
+                        {displayName || user.email}
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => signOut()}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={handleDiscordSignIn}
+                  disabled={signingIn}
+                >
+                  <DiscordIcon className="h-4 w-4" />
+                  {signingIn ? 'Signing in...' : 'Sign in with Discord'}
+                </Button>
+              )}
+            </>
+          )}
+          <ThemeToggle />
+          <LanguageSelector />
         </div>
-      </header>
-      
-      <UsernameDialog 
-        open={showUsernameDialog}
-        onOpenChange={setShowUsernameDialog}
-        onSubmit={handleUsernameSubmit}
-        onDiscordSignIn={handleDiscordSignIn}
-        loading={signingIn}
-      />
-    </>
+      </div>
+    </header>
   );
 }
