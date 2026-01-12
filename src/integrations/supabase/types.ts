@@ -70,7 +70,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      validate_party_units: { Args: { units_json: Json }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
