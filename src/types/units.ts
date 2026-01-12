@@ -122,7 +122,7 @@ export interface ParsedUnit {
 export type SupportedLanguage = "en" | "de" | "es" | "fr" | "it" | "ja" | "ko" | "ru" | "zh-Hans" | "zh-Hant";
 
 export interface LocalizedEntry {
-  m_Id: number;
+  m_Id: string; // String to preserve precision for large IDs (> Number.MAX_SAFE_INTEGER)
   m_Localized: string;
   m_Metadata: { m_Items: unknown[] };
 }
@@ -134,7 +134,7 @@ export interface LocalizedFile {
 }
 
 export interface SharedDataEntry {
-  m_Id: number;
+  m_Id: string; // String to preserve precision for large IDs (> Number.MAX_SAFE_INTEGER)
   m_Key: string;
   m_Metadata: { m_Items: unknown[] };
 }

@@ -29,7 +29,22 @@ const CONFIG_BUCKET = "config";
 const LOCALIZATIONS_BUCKET = "Localizations";
 
 // Cache version - increment this to invalidate all cached data
-const CACHE_VERSION = "1.0.1";
+const CACHE_VERSION = "1.0.2"; // Bumped for BigInt ID fix
+
+/**
+ * Custom JSON parser that preserves large numeric m_Id values as strings.
+ * JavaScript's Number type loses precision for integers > 2^53-1 (9007199254740991).
+ * Localization IDs like 13738077887266816 exceed this limit.
+ */
+function parseJsonWithBigIntIds(jsonText: string): any {
+  // Replace numeric m_Id values with string versions before parsing
+  // Match: "m_Id": followed by a number with 15+ digits (to avoid breaking small IDs)
+  const fixedJson = jsonText.replace(
+    /"m_Id"\s*:\s*(\d{15,})/g,
+    '"m_Id": "$1"'
+  );
+  return JSON.parse(fixedJson);
+}
 const CACHE_PREFIX = "gamedata_cache_";
 const CACHE_VERSION_KEY = "gamedata_cache_version";
 const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -127,7 +142,7 @@ function saveToLocalStorage(cacheKey: string, data: any): void {
 checkCacheVersion();
 
 // Fetch JSON from a storage bucket using public URL with caching
-async function fetchFromBucket(bucket: string, path: string, usePersistentCache = true): Promise<any> {
+async function fetchFromBucket(bucket: string, path: string, usePersistentCache = true, useBigIntParser = false): Promise<any> {
   const cacheKey = `${bucket}/${path}`;
   
   // Check memory cache first (fastest)
@@ -178,7 +193,10 @@ async function fetchFromBucket(bucket: string, path: string, usePersistentCache 
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      const json = await response.json();
+      // Use custom parser for localization files to preserve large numeric IDs
+      const json = useBigIntParser 
+        ? parseJsonWithBigIntIds(await response.text())
+        : await response.json();
       
       console.log(`[DataLoader] Successfully fetched ${cacheKey}`);
       
@@ -243,13 +261,13 @@ export async function loadStatusEffectFamilies(): Promise<any> {
   return fetchFromBucket(CONFIG_BUCKET, "status_effect_families.json");
 }
 
-// Localization loaders
+// Localization loaders - use BigInt parser to preserve large numeric IDs
 export async function loadGameTextSharedData(): Promise<any> {
-  return fetchFromBucket(LOCALIZATIONS_BUCKET, "tables/GameText Shared Data.json");
+  return fetchFromBucket(LOCALIZATIONS_BUCKET, "tables/GameText Shared Data.json", true, true);
 }
 
 export async function loadGameTextLanguage(lang: string): Promise<any> {
-  return fetchFromBucket(LOCALIZATIONS_BUCKET, `tables/GameText_${lang}.json`);
+  return fetchFromBucket(LOCALIZATIONS_BUCKET, `tables/GameText_${lang}.json`, true, true);
 }
 
 // Load all core battle data at once
