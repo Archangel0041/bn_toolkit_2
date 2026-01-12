@@ -41,7 +41,7 @@ export interface ActiveStatusEffect {
 }
 
 // Battle action types
-export type BattleActionType = "attack" | "skip" | "dodge" | "crit" | "status_applied" | "status_tick" | "death";
+export type BattleActionType = "attack" | "skip" | "dodge" | "crit" | "status_applied" | "status_tick" | "death" | "miss" | "out_of_range" | "blocked";
 
 export interface BattleAction {
   type: BattleActionType;

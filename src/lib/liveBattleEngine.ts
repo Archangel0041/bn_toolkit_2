@@ -225,14 +225,10 @@ export function getAvailableAbilities(
       return false;
     }
 
-    // For player units, skip target validation - let them use any ability that's off cooldown
-    // Only enemies need strict target validation
-    if (!unit.isEnemy) {
-      console.log(`[getAvailableAbilities] Ability ${ability.abilityId} available for player (no target validation)`);
-      return true;
-    }
-
-    // Check if there's at least one valid target (for enemy AI only)
+    // Check if there's at least one valid target based on range and line of fire
+    // For player units: skip tag/unit type validation, but check range and LoF
+    // For enemy units: full validation including tag checking
+    const isPlayerUnit = !unit.isEnemy;
     const targets = unit.isEnemy ? allFriendlies : allEnemies;
     const aliveTargets = targets.filter(t => !t.isDead);
     
@@ -247,13 +243,21 @@ export function getAvailableAbilities(
       for (const target of aliveTargets) {
         const range = calculateRange(unit.gridId, target.gridId, unit.isEnemy, attackerCollapsedRows, targetCollapsedRows);
         if (range >= ability.minRange && range <= ability.maxRange) {
-          if (canTargetUnit(target.unitId, ability.targets)) {
+          // For players, skip tag validation; for enemies, require it
+          if (isPlayerUnit || canTargetUnit(target.unitId, ability.targets)) {
             if (range < closestRange) {
               closestRange = range;
             }
           }
         }
       }
+      
+      // For player units: if no valid targets in range, still allow ability (they can try)
+      if (isPlayerUnit) {
+        console.log(`[getAvailableAbilities] Ability ${ability.abilityId} available for player (range/LoF check only)`);
+        return true;
+      }
+      
       if (closestRange === Infinity) {
         console.log(`[getAvailableAbilities] Ability ${ability.abilityId} (Contact) has no valid targets`);
         return false;
@@ -267,6 +271,12 @@ export function getAvailableAbilities(
       aliveTargets.map(u => ({ unit_id: u.unitId, grid_id: u.gridId })),
       true
     );
+
+    // For player units: allow ability if it's off cooldown (they can attempt attacks even if blocked)
+    if (isPlayerUnit) {
+      console.log(`[getAvailableAbilities] Ability ${ability.abilityId} available for player (range/LoF check only)`);
+      return true;
+    }
 
     for (const target of aliveTargets) {
       if (!canTargetUnit(target.unitId, ability.targets)) continue;
@@ -530,8 +540,44 @@ export function executeAttack(
 
     if (reticleBlockCheck.isBlocked) {
       console.log(`[executeAttack] AOE/Splash attack blocked - reticle at grid ${targetGridId} is blocked by unit ${reticleBlockCheck.blockedBy?.unitId}`);
+      // Add visual feedback for blocked attack (player only)
+      if (!attacker.isEnemy) {
+        const blockerUnit = reticleBlockCheck.blockedBy ? getUnitById(reticleBlockCheck.blockedBy.unitId) : null;
+        const blockerName = blockerUnit?.identity?.name || "enemy unit";
+        actions.push({
+          type: "blocked",
+          attackerGridId: attacker.gridId,
+          attackerName,
+          targetGridId,
+          abilityId: ability.abilityId,
+          abilityName,
+          message: `Attack blocked by ${blockerName}!`,
+        });
+      }
       return actions; // Entire AOE/splash attack is blocked
     }
+  }
+
+  // Check if primary target is in range (for player visual feedback)
+  const attackerCollapsedRows = attacker.isEnemy ? state.enemyCollapsedRows : state.friendlyCollapsedRows;
+  const targetCollapsedRows = attacker.isEnemy ? state.friendlyCollapsedRows : state.enemyCollapsedRows;
+  const rangeToTarget = calculateRange(attacker.gridId, targetGridId, attacker.isEnemy, attackerCollapsedRows, targetCollapsedRows);
+  
+  if (rangeToTarget < ability.minRange || rangeToTarget > ability.maxRange) {
+    console.log(`[executeAttack] Target at grid ${targetGridId} is out of range (${rangeToTarget}, ability range: ${ability.minRange}-${ability.maxRange})`);
+    // Add visual feedback for out of range (player only)
+    if (!attacker.isEnemy) {
+      actions.push({
+        type: "out_of_range",
+        attackerGridId: attacker.gridId,
+        attackerName,
+        targetGridId,
+        abilityId: ability.abilityId,
+        abilityName,
+        message: `Target out of range! (${rangeToTarget} vs ${ability.minRange}-${ability.maxRange})`,
+      });
+    }
+    return actions;
   }
 
   for (const pos of affectedPositions) {
@@ -581,6 +627,23 @@ export function executeAttack(
 
       if (blockCheck.isBlocked) {
         console.log(`[executeAttack] Skipping target at grid ${target.gridId} - blocked by unit ${blockCheck.blockedBy?.unitId}`);
+        // Add visual feedback for blocked attack (player only)
+        if (!attacker.isEnemy) {
+          const blockerUnit = blockCheck.blockedBy ? getUnitById(blockCheck.blockedBy.unitId) : null;
+          const blockerName = blockerUnit?.identity?.name || "enemy unit";
+          const targetUnit = getUnitById(target.unitId);
+          const blockedTargetName = targetUnit?.identity?.name || `Unit ${target.unitId}`;
+          actions.push({
+            type: "blocked",
+            attackerGridId: attacker.gridId,
+            attackerName,
+            targetGridId: target.gridId,
+            targetName: blockedTargetName,
+            abilityId: ability.abilityId,
+            abilityName,
+            message: `Attack on ${blockedTargetName} blocked by ${blockerName}!`,
+          });
+        }
         continue; // Skip this individual target
       }
     }
@@ -770,6 +833,27 @@ export function executeAttack(
           message: `${effectName} applied for ${effect.duration} turns`,
         });
       }
+    }
+  }
+  
+  // If no damage was dealt and no targets were hit, add a "miss" action for player feedback
+  const damageActions = actions.filter(a => a.type === "attack");
+  if (damageActions.length === 0 && !attacker.isEnemy) {
+    // Check if there was at least one target in the affected positions
+    const hadPotentialTargets = affectedPositions.some(pos => 
+      allTargets.some(u => u.gridId === pos.gridId && !u.isDead)
+    );
+    
+    if (!hadPotentialTargets) {
+      actions.push({
+        type: "miss",
+        attackerGridId: attacker.gridId,
+        attackerName,
+        targetGridId,
+        abilityId: ability.abilityId,
+        abilityName,
+        message: `No targets hit!`,
+      });
     }
   }
   
