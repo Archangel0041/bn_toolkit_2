@@ -1,8 +1,8 @@
 // Cache Storage utility for icons and configs
 const ICON_CACHE_NAME = 'game-icons-v1';
 const CONFIG_CACHE_NAME = 'game-configs-v1';
-const ICON_EXPIRY_MS = 24 * 60 * 60 * 1000; // 1 day
-const CONFIG_EXPIRY_MS = 24 * 60 * 60 * 1000; // 1 day
+const ICON_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (increased from 1 day)
+const CONFIG_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 interface CacheMetadata {
   timestamp: number;
@@ -11,6 +11,54 @@ interface CacheMetadata {
 
 // Store metadata in a separate cache
 const METADATA_CACHE_NAME = 'cache-metadata-v1';
+
+// Request persistent storage to prevent browser from evicting our cache
+let persistentStorageRequested = false;
+
+export async function requestPersistentStorage(): Promise<boolean> {
+  if (persistentStorageRequested) return true;
+  
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      const isPersisted = await navigator.storage.persisted();
+      if (!isPersisted) {
+        const granted = await navigator.storage.persist();
+        console.log(`[Cache] Persistent storage ${granted ? 'granted' : 'denied'}`);
+        persistentStorageRequested = true;
+        return granted;
+      }
+      persistentStorageRequested = true;
+      return true;
+    }
+  } catch (e) {
+    console.warn('[Cache] Failed to request persistent storage:', e);
+  }
+  return false;
+}
+
+// Get storage quota information
+export async function getStorageQuota(): Promise<{
+  usage: number;
+  quota: number;
+  usagePercent: number;
+  persistent: boolean;
+} | null> {
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      const estimate = await navigator.storage.estimate();
+      const persistent = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+      return {
+        usage: estimate.usage || 0,
+        quota: estimate.quota || 0,
+        usagePercent: estimate.quota ? Math.round((estimate.usage || 0) / estimate.quota * 100) : 0,
+        persistent
+      };
+    }
+  } catch (e) {
+    console.warn('[Cache] Failed to get storage quota:', e);
+  }
+  return null;
+}
 
 async function getMetadata(url: string): Promise<CacheMetadata | null> {
   try {

@@ -21,6 +21,7 @@ import {
   getLanguageDataFromMemory,
 } from "@/lib/dataLoader";
 import { initializeGameDataStore, isGameDataStoreInitialized, addLanguageToStore } from "@/lib/gameDataStore";
+import { requestPersistentStorage, getStorageQuota } from "@/lib/cacheStorage";
 import type { Ability } from "@/lib/abilities";
 import type { ParsedUnit, UnitConfig, IdentityConfig, AnimationConfig, StatsConfig, RequirementsConfig, HealingConfig, WeaponsConfig, SharedDataFile, LocalizedFile, SupportedLanguage } from "@/types/units";
 import type { EncountersData } from "@/types/encounters";
@@ -168,6 +169,16 @@ export function GameDataProvider({ children }: GameDataProviderProps) {
     setLoadProgress(0);
 
     try {
+      // Request persistent storage to prevent cache eviction
+      requestPersistentStorage().then(async (granted) => {
+        if (granted) {
+          const quota = await getStorageQuota();
+          if (quota) {
+            console.log(`[Cache] Storage: ${(quota.usage / 1024 / 1024).toFixed(1)}MB / ${(quota.quota / 1024 / 1024).toFixed(0)}MB (${quota.usagePercent}%), persistent: ${quota.persistent}`);
+          }
+        }
+      });
+
       // Load core battle data first (most critical)
       setLoadProgress(10);
       const [battleUnits, battleAbilities, battleEncounters, battleConfig] = await Promise.all([
