@@ -14,10 +14,13 @@ interface UnitImageProps {
 
 // Memoize to prevent unnecessary re-renders
 export const UnitImage = memo(function UnitImage({ iconName, alt, className, fallbackClassName }: UnitImageProps) {
-  const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  
   const imageUrl = getUnitImageUrl(iconName);
+  
+  // If this image was already loaded before, skip the loading state entirely
+  const alreadyCached = imageUrl ? loadedUnitImageUrls.has(imageUrl) : false;
+  
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(!alreadyCached);
 
   if (!imageUrl || hasError) {
     return (
@@ -42,7 +45,10 @@ export const UnitImage = memo(function UnitImage({ iconName, alt, className, fal
         decoding="async"
         crossOrigin="anonymous"
         className={cn("w-full h-full object-cover", isLoading && "opacity-0")}
-        onLoad={() => setIsLoading(false)}
+        onLoad={() => {
+          loadedUnitImageUrls.add(imageUrl);
+          setIsLoading(false);
+        }}
         onError={() => {
           setIsLoading(false);
           setHasError(true);
