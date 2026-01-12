@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ interface UnitCardProps {
   unit: ParsedUnit;
 }
 
-export function UnitCard({ unit }: UnitCardProps) {
+export const UnitCard = memo(function UnitCard({ unit }: UnitCardProps) {
   const { t } = useLanguage();
   const { addToCompare, removeFromCompare, isInCompare, compareUnits } = useCompare();
 
@@ -33,7 +34,7 @@ export function UnitCard({ unit }: UnitCardProps) {
   // Get class display name
   const classDisplayName = t(getClassDisplayName(unit.identity.class_name));
 
-  const handleCompareClick = (e: React.MouseEvent) => {
+  const handleCompareClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (inCompare) {
@@ -41,7 +42,7 @@ export function UnitCard({ unit }: UnitCardProps) {
     } else if (canAddToCompare) {
       addToCompare(unit);
     }
-  };
+  }, [inCompare, canAddToCompare, addToCompare, removeFromCompare, unit.id]);
 
   return (
     <Link to={`/unit/${unit.id}`}>
@@ -134,4 +135,4 @@ export function UnitCard({ unit }: UnitCardProps) {
       </Card>
     </Link>
   );
-}
+});
