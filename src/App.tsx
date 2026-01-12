@@ -17,6 +17,9 @@ import Compare from "./pages/Compare";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
+// Lazy-load custom formation page
+const CustomFormation = lazy(() => import("./pages/CustomFormation"));
+
 // Lazy-load simulator pages - only for authenticated users
 const BattleSimulator = lazy(() => import("./pages/BattleSimulator"));
 const LiveBattleSimulator = lazy(() => import("./pages/LiveBattleSimulator"));
@@ -86,6 +89,14 @@ function AppContent() {
                         <LiveBattleSimulator />
                       </Suspense>
                     </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/custom-formation" 
+                  element={
+                    <Suspense fallback={<SimulatorLoader />}>
+                      <CustomFormation />
+                    </Suspense>
                   } 
                 />
                 <Route path="/admin" element={<Admin />} />

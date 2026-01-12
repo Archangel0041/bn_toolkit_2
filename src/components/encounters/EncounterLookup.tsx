@@ -1,49 +1,102 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EncounterViewer } from "./EncounterViewer";
+import { EncounterFilters, EncounterFilterState, defaultEncounterFilters } from "./EncounterFilters";
 import { getEncounterById, getAllEncounterIds, getEncounterWaves } from "@/lib/encounters";
 import { getEncounterIconUrl } from "@/lib/resourceImages";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
+import { Play, Plus } from "lucide-react";
 
 const ITEMS_PER_PAGE = 50;
 
 export function EncounterLookup() {
   const { t } = useLanguage();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAuth();
   const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const allEncounters = useMemo(() => {
+  // Calculate max values for filter ranges
+  const { allEncounters, maxLevel, maxWaves } = useMemo(() => {
     const ids = getAllEncounterIds();
-    return ids.map(id => {
+    let maxLvl = 0;
+    let maxWv = 1;
+    
+    const encounters = ids.map(id => {
       const encounter = getEncounterById(id);
-      return { id, encounter };
+      const waveCount = encounter ? getEncounterWaves(encounter).length : 0;
+      
+      if (encounter?.level && encounter.level > maxLvl) maxLvl = encounter.level;
+      if (waveCount > maxWv) maxWv = waveCount;
+      
+      return { id, encounter, waveCount };
     });
+    
+    return { allEncounters: encounters, maxLevel: maxLvl, maxWaves: maxWv };
   }, []);
+
+  // Initialize filters with calculated max values
+  const [filters, setFilters] = useState<EncounterFilterState>(() => ({
+    ...defaultEncounterFilters,
+    levelRange: [0, maxLevel],
+    waveCountRange: [1, maxWaves],
+  }));
+
+  // Update filter ranges when data changes
+  useEffect(() => {
+    setFilters(prev => ({
+      ...prev,
+      levelRange: [prev.levelRange[0], Math.max(prev.levelRange[1], maxLevel)],
+      waveCountRange: [prev.waveCountRange[0], Math.max(prev.waveCountRange[1], maxWaves)],
+    }));
+  }, [maxLevel, maxWaves]);
   
   const filteredEncounters = useMemo(() => {
-    if (!searchQuery) return allEncounters;
-    
-    const query = searchQuery.toLowerCase();
-    return allEncounters.filter(({ id, encounter }) => {
-      const idMatch = id.includes(query);
-      const nameMatch = encounter?.name && t(encounter.name).toLowerCase().includes(query);
-      return idMatch || nameMatch;
+    return allEncounters.filter(({ id, encounter, waveCount }) => {
+      // Search filter
+      if (filters.searchQuery) {
+        const query = filters.searchQuery.toLowerCase();
+        const idMatch = id.includes(query);
+        const nameMatch = encounter?.name && t(encounter.name).toLowerCase().includes(query);
+        if (!idMatch && !nameMatch) return false;
+      }
+      
+      // Level range filter
+      const level = encounter?.level || 0;
+      if (level < filters.levelRange[0] || level > filters.levelRange[1]) return false;
+      
+      // Wave count filter
+      const waves = waveCount || 1;
+      if (waves < filters.waveCountRange[0] || waves > filters.waveCountRange[1]) return false;
+      
+      // Multi-wave filter
+      if (filters.hasMultipleWaves === true && waves <= 1) return false;
+      if (filters.hasMultipleWaves === false && waves > 1) return false;
+      
+      // Unit filter - check if encounter contains any of the selected units
+      if (filters.containsUnitIds.length > 0 && encounter) {
+        const encounterUnitIds = new Set(
+          (encounter.units || []).map(u => u.unit_id)
+        );
+        const hasAnyUnit = filters.containsUnitIds.some(id => encounterUnitIds.has(id));
+        if (!hasAnyUnit) return false;
+      }
+      
+      return true;
     });
-  }, [searchQuery, allEncounters, t]);
+  }, [filters, allEncounters, t]);
 
-  // Reset visible count when search changes
+  // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE);
-  }, [searchQuery]);
+  }, [filters]);
 
   const visibleEncounters = useMemo(() => {
     return filteredEncounters.slice(0, visibleCount);
@@ -71,38 +124,40 @@ export function EncounterLookup() {
 
   const selectedEncounter = selectedEncounterId ? getEncounterById(selectedEncounterId) : null;
 
-  const handleSearch = () => {
-    if (searchQuery && getEncounterById(searchQuery)) {
-      setSelectedEncounterId(searchQuery);
-    }
-  };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Find Encounter</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle>Find Encounter</CardTitle>
+            {user && (
+              <Link to="/custom-formation">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Custom Formation
+                </Button>
+              </Link>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Search by ID or name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            />
-            <Button onClick={handleSearch}>
-              <Search className="h-4 w-4" />
-            </Button>
+          <EncounterFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            maxLevel={maxLevel}
+            maxWaves={maxWaves}
+          />
+          
+          <div className="text-xs text-muted-foreground">
+            Showing {Math.min(visibleCount, filteredEncounters.length)} of {filteredEncounters.length} encounters
           </div>
           
           <ScrollArea className="h-[400px] border rounded-md" ref={scrollRef}>
             <div className="p-2 space-y-1">
-              {visibleEncounters.map(({ id, encounter }) => {
+              {visibleEncounters.map(({ id, encounter, waveCount }) => {
                 const encounterName = encounter?.name ? t(encounter.name) : null;
                 const displayName = encounterName && encounterName !== encounter?.name ? encounterName : null;
                 const encounterIcon = encounter?.icon;
-                const waveCount = encounter ? getEncounterWaves(encounter).length : 0;
                 
                 return (
                   <div
@@ -133,6 +188,17 @@ export function EncounterLookup() {
                         )}
                       </div>
                     </div>
+                    {user && (
+                      <Link
+                        to={`/battle/${id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="shrink-0"
+                      >
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Play className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 );
               })}
