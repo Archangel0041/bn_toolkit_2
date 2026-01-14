@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const lastFetchRef = useRef<{ userId: string; timestamp: number } | null>(null);
 
   // Check if user signed up with our custom email pattern (not linked to Discord yet)
   const isAnonymous = user?.email?.endsWith('@archangel04.com') && 
@@ -49,7 +50,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ? user.email.replace('@archangel04.com', '') 
       : null);
 
-  const fetchAccess = async (userId: string) => {
+  const fetchAccess = async (userId: string, force = false) => {
+    // Dedupe: skip if same user was fetched within last 5 seconds
+    const now = Date.now();
+    if (!force && lastFetchRef.current?.userId === userId && now - lastFetchRef.current.timestamp < 5000) {
+      return;
+    }
+    lastFetchRef.current = { userId, timestamp: now };
+
     const { data, error } = await supabase
       .from('user_roles')
       .select('has_access')
@@ -67,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAccess = async () => {
     if (user) {
-      await fetchAccess(user.id);
+      await fetchAccess(user.id, true); // Force refresh
     }
   };
 
