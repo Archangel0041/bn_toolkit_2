@@ -1,1 +1,4 @@
-project_id = "rxdukflkvkihwdhzxlyf"
+project_id = "ybegrvsvhfdlqsxqzbji"
+
+[functions.discord-access-sync]
+verify_jwt = false
