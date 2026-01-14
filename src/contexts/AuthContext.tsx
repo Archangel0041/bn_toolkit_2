@@ -14,6 +14,7 @@ interface AuthContextType {
   linkDiscord: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshAccess: () => Promise<void>;
+  manualSync: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -212,6 +213,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setHasAccess(false);
   };
 
+  const manualSync = async () => {
+    if (!session?.access_token || !session?.provider_token) {
+      console.log('Manual sync: No session or provider token available');
+      console.log('Session:', session);
+      console.log('Access token:', session?.access_token?.substring(0, 20));
+      console.log('Provider token:', session?.provider_token?.substring(0, 20));
+      return;
+    }
+    console.log('Manual sync triggered');
+    await syncDiscordAccess(session.access_token, session.provider_token);
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -225,6 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       linkDiscord,
       signOut,
       refreshAccess,
+      manualSync,
     }}>
       {children}
     </AuthContext.Provider>
