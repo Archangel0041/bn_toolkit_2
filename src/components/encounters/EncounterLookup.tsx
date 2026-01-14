@@ -17,7 +17,7 @@ const ITEMS_PER_PAGE = 50;
 
 export function EncounterLookup() {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, hasAccess } = useAuth();
   const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -130,7 +130,7 @@ export function EncounterLookup() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle>Find Encounter</CardTitle>
-            {user && (
+            {user && hasAccess && (
               <Link to="/custom-formation">
                 <Button variant="outline" size="sm" className="gap-2">
                   <Plus className="h-4 w-4" />
@@ -188,7 +188,7 @@ export function EncounterLookup() {
                         )}
                       </div>
                     </div>
-                    {user && (
+                    {user && hasAccess && (
                       <Link
                         to={`/battle/${id}`}
                         onClick={(e) => e.stopPropagation()}

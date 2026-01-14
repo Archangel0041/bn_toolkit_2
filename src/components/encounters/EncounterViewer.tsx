@@ -24,7 +24,7 @@ interface EncounterViewerProps {
 
 export function EncounterViewer({ encounter, encounterId, bossStrike, backPath, backLabel }: EncounterViewerProps) {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, hasAccess } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const waves = getEncounterWaves(encounter);
@@ -37,8 +37,8 @@ export function EncounterViewer({ encounter, encounterId, bossStrike, backPath, 
   const basePoints = bossStrike?.default_progress_cost?.awarded_points ?? 0;
   const pointsPerWave = basePoints > 0 ? Math.floor(basePoints / waves.length) : 0;
 
-  // Show simulate button if user is logged in OR we're in Lovable environment
-  const canSimulate = user || isLovableEnvironment();
+  // Show simulate button if user has access OR we're in Lovable environment
+  const canSimulate = (user && hasAccess) || isLovableEnvironment();
 
   const handleSimulate = () => {
     navigate(`/battle/${encounterId}`, { 
