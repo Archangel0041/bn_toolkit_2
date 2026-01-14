@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LanguageSelector } from "./LanguageSelector";
 import { ThemeToggle } from "./ThemeToggle";
 import { Link } from "react-router-dom";
-import { Sword, LogOut } from "lucide-react";
+import { Sword, LogOut, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "./ui/button";
 import {
@@ -23,9 +23,20 @@ function DiscordIcon({ className }: { className?: string }) {
 }
 
 export function Header() {
-  const { user, signOut, signInWithDiscord, loading, displayName } = useAuth();
+  const { user, signOut, signInWithDiscord, loading, displayName, manualSync } = useAuth();
   const [signingIn, setSigningIn] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const { toast } = useToast();
+
+  const handleSync = async () => {
+    setSyncing(true);
+    await manualSync();
+    setSyncing(false);
+    toast({
+      title: 'Sync complete',
+      description: 'Check console for details',
+    });
+  };
 
   const handleDiscordSignIn = async () => {
     setSigningIn(true);
@@ -83,6 +94,10 @@ export function Header() {
                       </span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSync} disabled={syncing}>
+                      <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                      {syncing ? 'Syncing...' : 'Sync Discord'}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => signOut()}>
                       <LogOut className="h-4 w-4 mr-2" />
                       Sign Out
