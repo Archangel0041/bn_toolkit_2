@@ -17,7 +17,7 @@ function isLovableEnvironment(): boolean {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, loading, hasAccess } = useAuth();
 
   // Allow access in Lovable environment without auth
   if (isLovableEnvironment()) {
@@ -34,6 +34,23 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <Navigate to="/" replace />;
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-semibold text-destructive">Access Denied</h2>
+          <p className="text-muted-foreground">You don't have access to this feature.</p>
+          <a 
+            href="/" 
+            className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            Go Home
+          </a>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
