@@ -111,6 +111,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Check if this is an OAuth callback (has code in URL) - only sync on fresh OAuth
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasOAuthCode = urlParams.has('code');
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -121,15 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const isDiscordUser = session.user.app_metadata?.providers?.includes('discord');
           
-          // ONLY sync on actual SIGNED_IN event with Discord (fresh login)
-          if (event === 'SIGNED_IN' && isDiscordUser && session.access_token && session.provider_token) {
+          // ONLY sync on actual SIGNED_IN event with Discord AND OAuth code in URL (fresh login)
+          if (event === 'SIGNED_IN' && hasOAuthCode && isDiscordUser && session.access_token && session.provider_token) {
             setTimeout(() => {
               syncDiscordAccess(session.access_token, session.provider_token!);
               // Clean up the URL after processing OAuth callback
-              const urlParams = new URLSearchParams(window.location.search);
-              if (urlParams.has('code')) {
-                window.history.replaceState({}, '', window.location.pathname);
-              }
+              window.history.replaceState({}, '', window.location.pathname);
             }, 0);
           } else {
             // For all other events, just fetch access from the table
