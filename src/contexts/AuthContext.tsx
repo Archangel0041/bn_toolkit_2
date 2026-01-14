@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const syncTriggeredRef = useRef(false);
 
   // Check if user signed up with our custom email pattern (not linked to Discord yet)
   const isAnonymous = user?.email?.endsWith('@archangel04.com') && 
@@ -113,7 +114,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const isDiscordUser = session.user.app_metadata?.providers?.includes('discord');
           
-          if (event === 'SIGNED_IN' && isDiscordUser && session.access_token && session.provider_token) {
+          if (event === 'SIGNED_IN' && isDiscordUser && session.access_token && session.provider_token && !syncTriggeredRef.current) {
+            // Mark sync as triggered to prevent duplicates
+            syncTriggeredRef.current = true;
             // Trigger Discord access sync for new sign-ins
             setTimeout(() => {
               syncDiscordAccess(session.access_token, session.provider_token!);
@@ -122,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 window.history.replaceState({}, '', window.location.pathname);
               }
             }, 0);
-          } else {
+          } else if (!syncTriggeredRef.current) {
             // For existing sessions, just fetch access from the table
             setTimeout(() => {
               fetchAccess(session.user.id);
@@ -130,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           setHasAccess(false);
+          syncTriggeredRef.current = false;
         }
       }
     );
@@ -144,11 +148,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const isDiscordUser = session.user.app_metadata?.providers?.includes('discord');
         
         // If we have an OAuth code and provider token, this is a fresh OAuth callback
-        if (hasOAuthCode && isDiscordUser && session.access_token && session.provider_token) {
+        // Only sync if not already triggered
+        if (hasOAuthCode && isDiscordUser && session.access_token && session.provider_token && !syncTriggeredRef.current) {
+          syncTriggeredRef.current = true;
           syncDiscordAccess(session.access_token, session.provider_token);
           // Clean up the URL
           window.history.replaceState({}, '', window.location.pathname);
-        } else {
+        } else if (!syncTriggeredRef.current) {
           fetchAccess(session.user.id);
         }
       }
