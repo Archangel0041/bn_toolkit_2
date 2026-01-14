@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -35,7 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
-  const syncTriggeredRef = useRef(false);
 
   // Check if user signed up with our custom email pattern (not linked to Discord yet)
   const isAnonymous = user?.email?.endsWith('@archangel04.com') && 
@@ -99,10 +98,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Check if this is an OAuth callback (has code in URL)
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasOAuthCode = urlParams.has('code');
-    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -110,53 +105,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Check if this is a sign-in event with Discord
         if (session?.user) {
           const isDiscordUser = session.user.app_metadata?.providers?.includes('discord');
           
-          if (event === 'SIGNED_IN' && isDiscordUser && session.access_token && session.provider_token && !syncTriggeredRef.current) {
-            // Mark sync as triggered to prevent duplicates
-            syncTriggeredRef.current = true;
-            // Trigger Discord access sync for new sign-ins
+          // ONLY sync on actual SIGNED_IN event with Discord (fresh login)
+          if (event === 'SIGNED_IN' && isDiscordUser && session.access_token && session.provider_token) {
             setTimeout(() => {
               syncDiscordAccess(session.access_token, session.provider_token!);
               // Clean up the URL after processing OAuth callback
-              if (hasOAuthCode) {
+              const urlParams = new URLSearchParams(window.location.search);
+              if (urlParams.has('code')) {
                 window.history.replaceState({}, '', window.location.pathname);
               }
             }, 0);
-          } else if (!syncTriggeredRef.current) {
-            // For existing sessions, just fetch access from the table
+          } else {
+            // For all other events, just fetch access from the table
             setTimeout(() => {
               fetchAccess(session.user.id);
             }, 0);
           }
         } else {
           setHasAccess(false);
-          syncTriggeredRef.current = false;
         }
       }
     );
 
-    // THEN check for existing session
+    // THEN check for existing session (no sync here, just fetch access)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
       
       if (session?.user) {
-        const isDiscordUser = session.user.app_metadata?.providers?.includes('discord');
-        
-        // If we have an OAuth code and provider token, this is a fresh OAuth callback
-        // Only sync if not already triggered
-        if (hasOAuthCode && isDiscordUser && session.access_token && session.provider_token && !syncTriggeredRef.current) {
-          syncTriggeredRef.current = true;
-          syncDiscordAccess(session.access_token, session.provider_token);
-          // Clean up the URL
-          window.history.replaceState({}, '', window.location.pathname);
-        } else if (!syncTriggeredRef.current) {
-          fetchAccess(session.user.id);
-        }
+        fetchAccess(session.user.id);
       }
     });
 
