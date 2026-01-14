@@ -16,12 +16,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronDown, X, Filter, Search } from "lucide-react";
+import { ChevronDown, X, Filter, Search, Heart, Shield, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAllUnits, getUnitById } from "@/lib/units";
 import { UnitImage } from "@/components/units/UnitImage";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { UnitSide } from "@/data/gameEnums";
+import { UnitSide, UnitSideLabels, UnitClassLabels } from "@/data/gameEnums";
+import type { ParsedUnit } from "@/types/units";
 
 export interface EncounterFilterState {
   searchQuery: string;
@@ -242,35 +243,77 @@ export const EncounterFilters = forwardRef<HTMLDivElement, EncounterFiltersProps
                     className="h-8"
                   />
                 </div>
-                <ScrollArea className="h-60">
+                <ScrollArea className="h-72">
                   <div className="p-2 space-y-1">
-                    {filteredHostileUnits.map(unit => (
-                      <button
-                        key={unit.id}
-                        onClick={() => handleAddUnit(unit.id)}
-                        disabled={filters.containsUnitIds.includes(unit.id)}
-                        className={cn(
-                          "flex items-center gap-2 w-full p-2 rounded-md text-left transition-colors",
-                          filters.containsUnitIds.includes(unit.id)
-                            ? "bg-secondary opacity-50"
-                            : "hover:bg-muted"
-                        )}
-                      >
-                        <UnitImage
-                          iconName={unit.identity.icon}
-                          alt={t(unit.identity.name)}
-                          className="w-8 h-8 rounded shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">
-                            {t(unit.identity.name)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            ID: {unit.id}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
+                    {filteredHostileUnits.map(unit => {
+                      const stats = unit.statsConfig?.stats;
+                      const ranks = stats?.length ?? 0;
+                      const maxStats = stats?.[stats.length - 1];
+                      const minStats = stats?.[0];
+                      const className = UnitClassLabels[unit.identity.class_name] ?? "Unknown";
+                      const sideName = UnitSideLabels[unit.identity.side] ?? "Unknown";
+                      
+                      return (
+                        <button
+                          key={unit.id}
+                          onClick={() => handleAddUnit(unit.id)}
+                          disabled={filters.containsUnitIds.includes(unit.id)}
+                          className={cn(
+                            "flex items-center gap-3 w-full p-2 rounded-md text-left transition-colors",
+                            filters.containsUnitIds.includes(unit.id)
+                              ? "bg-secondary opacity-50"
+                              : "hover:bg-muted"
+                          )}
+                        >
+                          <UnitImage
+                            iconName={unit.identity.icon}
+                            alt={t(unit.identity.name)}
+                            className="w-10 h-10 rounded shrink-0"
+                          />
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium truncate">
+                                {t(unit.identity.name)}
+                              </p>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                                {className}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="opacity-60">#{unit.id}</span>
+                              <span className="opacity-60">•</span>
+                              <span>{sideName}</span>
+                              {ranks > 1 && (
+                                <>
+                                  <span className="opacity-60">•</span>
+                                  <span>R1-R{ranks}</span>
+                                </>
+                              )}
+                            </div>
+                            {maxStats && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="flex items-center gap-0.5 text-red-500">
+                                  <Heart className="h-3 w-3" />
+                                  {minStats?.hp !== maxStats.hp 
+                                    ? `${minStats?.hp ?? maxStats.hp}-${maxStats.hp}`
+                                    : maxStats.hp}
+                                </span>
+                                {maxStats.armor_hp && maxStats.armor_hp > 0 && (
+                                  <span className="flex items-center gap-0.5 text-blue-500">
+                                    <Shield className="h-3 w-3" />
+                                    {maxStats.armor_hp}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-0.5 text-yellow-500">
+                                  <Zap className="h-3 w-3" />
+                                  {maxStats.power}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               </PopoverContent>
