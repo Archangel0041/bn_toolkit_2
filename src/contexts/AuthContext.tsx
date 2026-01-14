@@ -70,12 +70,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Sync Discord access by calling edge function
-  const syncDiscordAccess = async (accessToken: string) => {
+  const syncDiscordAccess = async (accessToken: string, providerToken: string) => {
     try {
       console.log('Syncing Discord access...');
       const { data, error } = await supabase.functions.invoke('discord-access-sync', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
+        },
+        body: {
+          provider_token: providerToken,
         },
       });
       
@@ -103,10 +106,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const isDiscordUser = session.user.app_metadata?.providers?.includes('discord');
           
-          if (event === 'SIGNED_IN' && isDiscordUser && session.access_token) {
+          if (event === 'SIGNED_IN' && isDiscordUser && session.access_token && session.provider_token) {
             // Trigger Discord access sync for new sign-ins
             setTimeout(() => {
-              syncDiscordAccess(session.access_token);
+              syncDiscordAccess(session.access_token, session.provider_token!);
             }, 0);
           } else {
             // For existing sessions, just fetch access from the table
