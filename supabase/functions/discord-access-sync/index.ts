@@ -24,6 +24,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Parse request body to get provider token
+    let providerToken: string | null = null;
+    try {
+      const body = await req.json();
+      providerToken = body.provider_token;
+    } catch {
+      // Body might be empty or not JSON
+    }
+
+    if (!providerToken) {
+      console.error('No Discord provider token in request body');
+      return new Response(
+        JSON.stringify({ has_access: false, reason: 'No Discord token provided - please re-login with Discord' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -65,33 +82,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    const discordUserId = discordIdentity.id;
     const discordUsername = user.user_metadata?.custom_claims?.global_name || 
                            user.user_metadata?.full_name || 
                            user.user_metadata?.name ||
                            discordIdentity.identity_data?.username || 
                            'Unknown';
     
-    console.log('Discord user ID:', discordUserId, 'Username:', discordUsername);
+    console.log('Discord username:', discordUsername);
 
-    // Check if user is a member of the Discord guild
-    const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
     const guildId = Deno.env.get('DISCORD_GUILD_ID');
 
-    if (!botToken || !guildId) {
-      console.error('Missing DISCORD_BOT_TOKEN or DISCORD_GUILD_ID');
+    if (!guildId) {
+      console.error('Missing DISCORD_GUILD_ID');
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check guild membership via Discord API
+    // Use the user's own OAuth token to check their guild membership
+    // This uses the guilds.members.read scope
+    console.log('Checking guild membership with provider token...');
     const memberResponse = await fetch(
-      `https://discord.com/api/v10/guilds/${guildId}/members/${discordUserId}`,
+      `https://discord.com/api/v10/users/@me/guilds/${guildId}/member`,
       {
         headers: {
-          'Authorization': `Bot ${botToken}`,
+          'Authorization': `Bearer ${providerToken}`,
         },
       }
     );
@@ -108,6 +124,7 @@ Deno.serve(async (req) => {
     } else {
       const errorText = await memberResponse.text();
       console.error('Discord API error:', memberResponse.status, errorText);
+      reason = 'Failed to verify guild membership';
     }
 
     // Use service role to update user_roles table (bypasses RLS)
