@@ -134,6 +134,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Check access on every page load/visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        fetchAccess(user.id);
+      }
+    };
+
+    // Check access on mount if user exists
+    if (user) {
+      fetchAccess(user.id);
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
+
   const signInWithUsername = async (username: string) => {
     const email = `${username.toLowerCase()}@archangel04.com`;
     const password = generateRandomPassword();
