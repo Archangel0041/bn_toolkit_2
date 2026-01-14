@@ -72,7 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Sync Discord access by calling edge function
-  const syncDiscordAccess = async (accessToken: string, providerToken: string) => {
+  const syncDiscordAccess = async (accessToken: string, providerToken: string | undefined) => {
+    if (!providerToken) {
+      console.warn('Skipping sync: provider token is undefined');
+      return;
+    }
+    
     try {
       toast.info('Syncing Discord access...');
       
