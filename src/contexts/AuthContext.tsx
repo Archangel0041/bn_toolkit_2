@@ -98,6 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state change:', event);
+        console.log('Session:', session);
+        console.log('Provider token:', session?.provider_token);
+        console.log('Provider refresh token:', session?.provider_refresh_token);
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -105,13 +110,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check if this is a sign-in event with Discord
         if (session?.user) {
           const isDiscordUser = session.user.app_metadata?.providers?.includes('discord');
+          console.log('Is Discord user:', isDiscordUser);
           
           if (event === 'SIGNED_IN' && isDiscordUser && session.access_token && session.provider_token) {
+            console.log('Triggering Discord access sync with provider token');
             // Trigger Discord access sync for new sign-ins
             setTimeout(() => {
               syncDiscordAccess(session.access_token, session.provider_token!);
             }, 0);
           } else {
+            console.log('Fetching access from table (no provider token or not SIGNED_IN event)');
             // For existing sessions, just fetch access from the table
             setTimeout(() => {
               fetchAccess(session.user.id);
