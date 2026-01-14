@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -73,6 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sync Discord access by calling edge function
   const syncDiscordAccess = async (accessToken: string, providerToken: string) => {
     try {
+      toast.info('Syncing Discord access...');
+      
       const { data, error } = await supabase.functions.invoke('discord-access-sync', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -82,12 +85,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.error('Error syncing Discord access:', error);
+        toast.error('Failed to sync Discord access');
         return;
       }
       
       setHasAccess(data?.has_access ?? false);
+      toast.success(data?.has_access ? 'Access granted!' : 'Sync complete - no access');
     } catch (err) {
       console.error('Failed to sync Discord access:', err);
+      toast.error('Failed to sync Discord access');
     }
   };
 
