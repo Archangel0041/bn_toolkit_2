@@ -98,15 +98,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.error('Error syncing Discord access:', error);
-        toast.error('Failed to sync Discord access');
         return;
       }
       
       setHasAccess(data?.has_access ?? false);
-      toast.success(data?.has_access ? 'Access granted!' : 'Sync complete - no access');
     } catch (err) {
       console.error('Failed to sync Discord access:', err);
-      toast.error('Failed to sync Discord access');
     }
   };
 
