@@ -92,6 +92,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Check if this is an OAuth callback (has code in URL)
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasOAuthCode = urlParams.has('code');
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -107,6 +111,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Trigger Discord access sync for new sign-ins
             setTimeout(() => {
               syncDiscordAccess(session.access_token, session.provider_token!);
+              // Clean up the URL after processing OAuth callback
+              if (hasOAuthCode) {
+                window.history.replaceState({}, '', window.location.pathname);
+              }
             }, 0);
           } else {
             // For existing sessions, just fetch access from the table
@@ -127,7 +135,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       
       if (session?.user) {
-        fetchAccess(session.user.id);
+        const isDiscordUser = session.user.app_metadata?.providers?.includes('discord');
+        
+        // If we have an OAuth code and provider token, this is a fresh OAuth callback
+        if (hasOAuthCode && isDiscordUser && session.access_token && session.provider_token) {
+          syncDiscordAccess(session.access_token, session.provider_token);
+          // Clean up the URL
+          window.history.replaceState({}, '', window.location.pathname);
+        } else {
+          fetchAccess(session.user.id);
+        }
       }
     });
 
