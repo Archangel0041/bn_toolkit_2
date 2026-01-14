@@ -26,11 +26,16 @@ Deno.serve(async (req) => {
 
     // Parse request body to get provider token
     let providerToken: string | null = null;
+    let rawBody: string | null = null;
     try {
-      const body = await req.json();
+      rawBody = await req.text();
+      console.log('Raw request body:', rawBody);
+      const body = JSON.parse(rawBody);
+      console.log('Parsed body:', JSON.stringify(body));
       providerToken = body.provider_token;
-    } catch {
-      // Body might be empty or not JSON
+      console.log('Provider token present:', !!providerToken);
+    } catch (e) {
+      console.error('Failed to parse body:', e);
     }
 
     if (!providerToken) {
