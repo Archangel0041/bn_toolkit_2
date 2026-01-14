@@ -73,32 +73,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sync Discord access by calling edge function
   const syncDiscordAccess = async (accessToken: string, providerToken: string) => {
     try {
-      console.log('Syncing Discord access...');
-      console.log('Access token length:', accessToken?.length);
-      console.log('Provider token length:', providerToken?.length);
-      console.log('Provider token first 20 chars:', providerToken?.substring(0, 20));
-      
-      const requestBody = {
-        provider_token: providerToken,
-      };
-      console.log('Request body:', JSON.stringify(requestBody));
-      
       const { data, error } = await supabase.functions.invoke('discord-access-sync', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-        body: requestBody,
+        body: { provider_token: providerToken },
       });
-      
-      console.log('Response data:', data);
-      console.log('Response error:', error);
       
       if (error) {
         console.error('Error syncing Discord access:', error);
         return;
       }
       
-      console.log('Discord access sync result:', data);
       setHasAccess(data?.has_access ?? false);
     } catch (err) {
       console.error('Failed to sync Discord access:', err);
@@ -109,11 +95,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state change:', event);
-        console.log('Session:', session);
-        console.log('Provider token:', session?.provider_token);
-        console.log('Provider refresh token:', session?.provider_refresh_token);
-        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -121,16 +102,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check if this is a sign-in event with Discord
         if (session?.user) {
           const isDiscordUser = session.user.app_metadata?.providers?.includes('discord');
-          console.log('Is Discord user:', isDiscordUser);
           
           if (event === 'SIGNED_IN' && isDiscordUser && session.access_token && session.provider_token) {
-            console.log('Triggering Discord access sync with provider token');
             // Trigger Discord access sync for new sign-ins
             setTimeout(() => {
               syncDiscordAccess(session.access_token, session.provider_token!);
             }, 0);
           } else {
-            console.log('Fetching access from table (no provider token or not SIGNED_IN event)');
             // For existing sessions, just fetch access from the table
             setTimeout(() => {
               fetchAccess(session.user.id);
@@ -215,13 +193,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const manualSync = async () => {
     if (!session?.access_token || !session?.provider_token) {
-      console.log('Manual sync: No session or provider token available');
-      console.log('Session:', session);
-      console.log('Access token:', session?.access_token?.substring(0, 20));
-      console.log('Provider token:', session?.provider_token?.substring(0, 20));
       return;
     }
-    console.log('Manual sync triggered');
     await syncDiscordAccess(session.access_token, session.provider_token);
   };
 
