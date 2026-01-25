@@ -482,10 +482,12 @@ export function executeAttack(
     );
     console.log(`[executeAttack-fixed] Attacker gridId=${attacker.gridId}, isEnemy=${attacker.isEnemy}, isAttackerFriendly=${!attacker.isEnemy}`);
     console.log(`[executeAttack-fixed] Raw positions:`, JSON.stringify(fixedPos.map(p => ({ gridId: p.gridId, damagePercent: p.damagePercent, isOnEnemyGrid: p.isOnEnemyGrid }))));
-    // Filter to only hit positions on the ENEMY grid (from attacker's perspective)
-    const enemyPositions = fixedPos.filter(p => p.isOnEnemyGrid);
-    console.log(`[executeAttack-fixed] Enemy grid positions only:`, JSON.stringify(enemyPositions.map(p => ({ gridId: p.gridId, damagePercent: p.damagePercent }))));
-    affectedPositions = enemyPositions.map(p => ({ gridId: p.gridId, damagePercent: p.damagePercent }));
+    // Filter to only hit positions on the OPPONENT's grid (from attacker's perspective)
+    // isOnEnemyGrid is from a "friendly perspective" - for enemy attackers, we want positions where isOnEnemyGrid=false (friendly grid)
+    // For friendly attackers, we want positions where isOnEnemyGrid=true (enemy grid)
+    const opponentPositions = fixedPos.filter(p => attacker.isEnemy ? !p.isOnEnemyGrid : p.isOnEnemyGrid);
+    console.log(`[executeAttack-fixed] Opponent grid positions only:`, JSON.stringify(opponentPositions.map(p => ({ gridId: p.gridId, damagePercent: p.damagePercent }))));
+    affectedPositions = opponentPositions.map(p => ({ gridId: p.gridId, damagePercent: p.damagePercent }));
   } else if (ability.targetArea) {
     // AOE with movable reticle - hits positions around selected target
     affectedPositions = getAffectedGridPositions(targetGridId, ability.targetArea, !attacker.isEnemy, ability.damageArea);
