@@ -15,8 +15,7 @@ const TAG_HIERARCHY: Record<number, number[]> = {
 };
 
 // Tags that should be excluded from targeting consideration
-// Metal (26) - abilities don't need to specifically target Metal to hit metal units
-const EXCLUDED_TARGETING_TAGS = new Set([26]);
+const EXCLUDED_TARGETING_TAGS = new Set<number>();
 
 // Get all descendant tags for a given tag (recursive)
 function getDescendantTags(tag: number, visited = new Set<number>()): number[] {
