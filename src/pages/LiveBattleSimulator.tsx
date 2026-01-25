@@ -636,6 +636,7 @@ const LiveBattleSimulator = () => {
                   }}
                   lastActionGridIds={friendlyLastActionGridIds}
                   damagePreviews={[]}
+                  fixedAttackPositions={fixedAttackPositions.friendlyGrid}
                   attackAnimationTrigger={attackAnimationTrigger}
                   recentlyDeadGridIds={recentlyDeadGridIds.friendly}
                   collapsedRows={battleState.friendlyCollapsedRows}
