@@ -400,31 +400,49 @@ export default function UnitDetail() {
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1 text-sm">
                               <StatRow 
                                 label="Min Damage" 
-                                value={ability.stats.shots_per_attack > 1 ? `${minDamage} (x${ability.stats.shots_per_attack})` : minDamage} 
+                                value={
+                                  <span>
+                                    {ability.stats.shots_per_attack > 1 ? `${minDamage} (x${ability.stats.shots_per_attack})` : minDamage}
+                                    <span className="text-muted-foreground text-xs ml-1">
+                                      ({weapon.stats.base_damage_min}{damageFromWeapon && damageFromWeapon !== 1 ? `×${damageFromWeapon}` : ''}×{1 + 2 * currentPower / 100})
+                                    </span>
+                                  </span>
+                                }
                                 highlight 
                               />
                               <StatRow 
                                 label="Max Damage" 
-                                value={ability.stats.shots_per_attack > 1 ? `${maxDamage} (x${ability.stats.shots_per_attack})` : maxDamage} 
+                                value={
+                                  <span>
+                                    {ability.stats.shots_per_attack > 1 ? `${maxDamage} (x${ability.stats.shots_per_attack})` : maxDamage}
+                                    <span className="text-muted-foreground text-xs ml-1">
+                                      ({weapon.stats.base_damage_max}{damageFromWeapon && damageFromWeapon !== 1 ? `×${damageFromWeapon}` : ''}×{1 + 2 * currentPower / 100})
+                                    </span>
+                                  </span>
+                                }
                                 highlight 
                               />
-                              <StatRow label="Offense" value={offense} highlight />
+                              <StatRow 
+                                label="Offense" 
+                                value={
+                                  <span>
+                                    {offense}
+                                    <span className="text-muted-foreground text-xs ml-1">({totalAttack}+{stats?.accuracy || 0})</span>
+                                  </span>
+                                }
+                                highlight 
+                              />
                               <StatRow label="Attack" value={`${totalAttack} (${weaponBaseAtk}+${ability.stats.attack})`} />
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="flex justify-between py-1 font-medium text-primary cursor-help">
-                                      <span className="text-muted-foreground">Crit %</span>
-                                      <span>{(stats?.critical || 0) + ability.stats.critical_hit_percent}%</span>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="text-xs">
-                                      Unit: {stats?.critical || 0}% + Ability: {ability.stats.critical_hit_percent}%
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <StatRow 
+                                label="Crit %" 
+                                value={
+                                  <span>
+                                    {(stats?.critical || 0) + ability.stats.critical_hit_percent}%
+                                    <span className="text-muted-foreground text-xs ml-1">({stats?.critical || 0}+{ability.stats.critical_hit_percent})</span>
+                                  </span>
+                                }
+                                highlight 
+                              />
                               <StatRow label="Cooldown" value={ability.stats.ability_cooldown} />
                               <StatRow label="Ammo Required" value={ability.stats.ammo_required} />
                               <StatRow label="Range" value={`${ability.stats.min_range}-${ability.stats.max_range}`} />
