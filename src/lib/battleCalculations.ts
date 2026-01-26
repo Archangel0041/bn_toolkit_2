@@ -22,17 +22,21 @@ function getBlockerInfo(blockedBy?: BlockingUnit): { blockedByUnitName?: string;
 }
 
 // Calculate damage at rank: 
-// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon), else use baseDamage
-// If damageFromUnit exists: scaledPower = floor(damageFromUnit * power), else scaledPower = power * 2
-// Result: floor(scaledBase * (1 + scaledPower / 100))
+// Formula: base_damage * damage_from_weapon * (1 + 2 * damage_from_unit * power / 100)
+// Floor after each multiplication involving decimal values (damage_from_weapon, damage_from_unit)
 export function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number, damageFromUnit?: number): number {
+  // Step 1: Apply damage_from_weapon multiplier (floor if it's a decimal multiplier)
   const scaledBase = damageFromWeapon !== undefined && damageFromWeapon !== 1 
     ? Math.floor(baseDamage * damageFromWeapon) 
     : baseDamage;
-  const scaledPower = damageFromUnit !== undefined 
-    ? Math.floor(damageFromUnit * power) 
-    : power * 2;
-  return Math.floor(scaledBase * (1 + scaledPower / 100));
+  
+  // Step 2: Calculate power contribution: 2 * damage_from_unit * power (floor if damage_from_unit is decimal)
+  const powerMultiplier = damageFromUnit !== undefined && damageFromUnit !== 1
+    ? Math.floor(2 * damageFromUnit * power)
+    : 2 * power;
+  
+  // Step 3: Final calculation
+  return Math.floor(scaledBase * (1 + powerMultiplier / 100));
 }
 
 // Calculate dodge chance: defense - offense + 5 (only positive values)
