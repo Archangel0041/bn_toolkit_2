@@ -404,7 +404,7 @@ export default function UnitDetail() {
                               />
                               <StatRow label="Offense" value={offense} highlight />
                               <StatRow label="Attack" value={`${totalAttack} (${weaponBaseAtk}+${ability.stats.attack})`} />
-                              <StatRow label="Crit %" value={`${ability.stats.critical_hit_percent}%`} />
+                              <StatRow label="Crit %" value={`${(stats?.critical || 0) + ability.stats.critical_hit_percent}%`} />
                               <StatRow label="Cooldown" value={ability.stats.ability_cooldown} />
                               <StatRow label="Ammo Required" value={ability.stats.ammo_required} />
                               <StatRow label="Range" value={`${ability.stats.min_range}-${ability.stats.max_range}`} />
