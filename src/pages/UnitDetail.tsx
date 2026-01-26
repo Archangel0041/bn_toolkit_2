@@ -447,11 +447,11 @@ export default function UnitDetail() {
                                 <TooltipTrigger asChild>
                                   <div className="flex justify-between py-1 font-medium text-primary">
                                     <span className="text-muted-foreground">Crit %</span>
-                                    <span>{(stats?.critical || 0) + ability.stats.critical_hit_percent}%</span>
+                                    <span>{(stats?.critical || 0) + weapon.stats.base_crit_percent + ability.stats.critical_hit_percent}%</span>
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="text-xs">Unit: {stats?.critical || 0}% + Ability: {ability.stats.critical_hit_percent}%</p>
+                                  <p className="text-xs">Unit: {stats?.critical || 0}% + Weapon: {weapon.stats.base_crit_percent}% + Ability: {ability.stats.critical_hit_percent}%</p>
                                 </TooltipContent>
                               </Tooltip>
                               <StatRow label="Cooldown" value={ability.stats.ability_cooldown} />
