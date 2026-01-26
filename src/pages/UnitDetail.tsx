@@ -324,180 +324,187 @@ export default function UnitDetail() {
             </StatSection>
           )}
 
-          {/* Abilities */}
+          {/* Weapons & Abilities */}
           {unit.weapons?.weapons && Object.keys(unit.weapons.weapons).length > 0 && (
-            <StatSection title="Abilities" icon={<Swords className="h-4 w-4" />} defaultOpen>
-              <div className="space-y-4">
-                {Object.entries(unit.weapons.weapons).flatMap(([weaponKey, weapon]) =>
-                  weapon.abilities.map((abilId) => {
-                    const ability = getAbilityById(abilId);
-                    if (!ability) return null;
-                    const abilityIconUrl = getAbilityImageUrl(ability.icon);
-                    const damageType = ability.stats.damage_type;
-                    const damageTypeName = getDamageTypeName(damageType);
-                    const damageTypeIconUrl = getDamageTypeIconUrl(damageType);
+            <StatSection title="Weapons & Abilities" icon={<Swords className="h-4 w-4" />} defaultOpen>
+              <div className="space-y-6">
+                {Object.entries(unit.weapons.weapons).map(([weaponKey, weapon]) => (
+                  <div key={weaponKey} className="border rounded-lg overflow-hidden">
+                    {/* Weapon Header */}
+                    <div className="bg-muted/70 p-3 border-b">
+                      <h4 className="font-medium mb-2">{t(weapon.name)}</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm">
+                        <StatRow label="Base Min" value={weapon.stats.base_damage_min} />
+                        <StatRow label="Base Max" value={weapon.stats.base_damage_max} />
+                        <StatRow label="Base Attack" value={weapon.stats.base_atk} />
+                        <StatRow label="Base Crit" value={`${weapon.stats.base_crit_percent}%`} />
+                        <StatRow label="Ammo" value={weapon.stats.ammo === -1 ? "∞" : weapon.stats.ammo} />
+                        <StatRow label="Reload" value={weapon.stats.reload_time ? `${weapon.stats.reload_time}t` : "-"} />
+                      </div>
+                    </div>
                     
-                    // Calculate damage at current rank using power
-                    const currentPower = stats?.power || 0;
-                    const damageFromWeapon = (ability.stats as any)?.damage_from_weapon as number | undefined;
-                    const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, currentPower, damageFromWeapon);
-                    const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, currentPower, damageFromWeapon);
-                    
-                    // Total attack = weapon base_atk + ability attack
-                    const weaponBaseAtk = weapon.stats.base_atk || 0;
-                    const totalAttack = weaponBaseAtk + ability.stats.attack;
-                    // Calculate offense = total attack + unit accuracy
-                    const offense = totalAttack + (stats?.accuracy || 0);
-                    
-                    return (
-                      <div key={`${weaponKey}-${abilId}`} className="p-4 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3 mb-3">
-                          {abilityIconUrl && (
-                            <img 
-                              src={abilityIconUrl} 
-                              alt="" 
-                              className="h-10 w-10 rounded object-cover"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          )}
-                          <div className="flex-1">
-                            <h4 className="font-medium">{t(ability.name)}</h4>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              {damageTypeIconUrl && (
+                    {/* Abilities for this weapon */}
+                    <div className="divide-y">
+                      {weapon.abilities.map((abilId) => {
+                        const ability = getAbilityById(abilId);
+                        if (!ability) return null;
+                        const abilityIconUrl = getAbilityImageUrl(ability.icon);
+                        const damageType = ability.stats.damage_type;
+                        const damageTypeName = getDamageTypeName(damageType);
+                        const damageTypeIconUrl = getDamageTypeIconUrl(damageType);
+                        
+                        // Calculate damage at current rank using power
+                        const currentPower = stats?.power || 0;
+                        const damageFromWeapon = (ability.stats as any)?.damage_from_weapon as number | undefined;
+                        const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, currentPower, damageFromWeapon);
+                        const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, currentPower, damageFromWeapon);
+                        
+                        // Total attack = weapon base_atk + ability attack
+                        const weaponBaseAtk = weapon.stats.base_atk || 0;
+                        const totalAttack = weaponBaseAtk + ability.stats.attack;
+                        // Calculate offense = total attack + unit accuracy
+                        const offense = totalAttack + (stats?.accuracy || 0);
+                        
+                        return (
+                          <div key={abilId} className="p-4 bg-background">
+                            <div className="flex items-center gap-3 mb-3">
+                              {abilityIconUrl && (
                                 <img 
-                                  src={damageTypeIconUrl} 
+                                  src={abilityIconUrl} 
                                   alt="" 
-                                  className="h-4 w-4 object-contain"
+                                  className="h-10 w-10 rounded object-cover"
                                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
                               )}
-                              <span>{damageTypeName} Damage</span>
+                              <div className="flex-1">
+                                <h4 className="font-medium">{t(ability.name)}</h4>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  {damageTypeIconUrl && (
+                                    <img 
+                                      src={damageTypeIconUrl} 
+                                      alt="" 
+                                      className="h-4 w-4 object-contain"
+                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                  )}
+                                  <span>{damageTypeName} Damage</span>
+                                </div>
+                              </div>
                             </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1 text-sm">
+                              <StatRow 
+                                label="Min Damage" 
+                                value={ability.stats.shots_per_attack > 1 ? `${minDamage} (x${ability.stats.shots_per_attack})` : minDamage} 
+                                highlight 
+                              />
+                              <StatRow 
+                                label="Max Damage" 
+                                value={ability.stats.shots_per_attack > 1 ? `${maxDamage} (x${ability.stats.shots_per_attack})` : maxDamage} 
+                                highlight 
+                              />
+                              <StatRow label="Offense" value={offense} highlight />
+                              <StatRow label="Attack" value={`${totalAttack} (${weaponBaseAtk}+${ability.stats.attack})`} />
+                              <StatRow label="Crit %" value={`${ability.stats.critical_hit_percent}%`} />
+                              <StatRow label="Cooldown" value={ability.stats.ability_cooldown} />
+                              <StatRow label="Ammo Required" value={ability.stats.ammo_required} />
+                              <StatRow label="Range" value={`${ability.stats.min_range}-${ability.stats.max_range}`} />
+                              {getLineOfFireLabel(ability.stats.line_of_fire) && (
+                                <StatRow label="Line of Fire" value={getLineOfFireLabel(ability.stats.line_of_fire)!} />
+                              )}
+                              {ability.stats.armor_piercing_percent > 0 && (
+                                <StatRow label="Armor Pierce" value={`${Math.round(ability.stats.armor_piercing_percent * 100)}%`} />
+                              )}
+                            </div>
+                            
+                            {/* Targets */}
+                            {ability.stats.targets && ability.stats.targets.length > 0 && (() => {
+                              const { canTarget, cannotTarget } = getTargetingCategories(ability.stats.targets);
+                              return (
+                                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm text-muted-foreground">Targets:</span>
+                                  {canTarget.map(cat => (
+                                    <Badge 
+                                      key={cat.label} 
+                                      variant="outline" 
+                                      className={cn("text-xs", cat.color)}
+                                    >
+                                      ✓ {cat.label}
+                                    </Badge>
+                                  ))}
+                                  {cannotTarget.map(cat => (
+                                    <Badge 
+                                      key={cat.label} 
+                                      variant="outline" 
+                                      className="text-xs bg-muted/50 text-muted-foreground line-through"
+                                    >
+                                      {cat.label}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                            
+                            {/* Critical Bonuses */}
+                            {(() => {
+                              const critBonuses = (ability.stats as any)?.critical_bonuses as Record<string, number> | undefined;
+                              if (!critBonuses || Object.keys(critBonuses).length === 0) return null;
+                              return (
+                                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-sm text-muted-foreground">Crit Bonus:</span>
+                                  {Object.entries(critBonuses).map(([tagId, bonus]) => {
+                                    const tagLabel = UnitTagLabels[parseInt(tagId)] || `Tag ${tagId}`;
+                                    return (
+                                      <Badge 
+                                        key={tagId} 
+                                        variant="outline" 
+                                        className="text-xs bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/50"
+                                      >
+                                        +{bonus}% vs {tagLabel}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()}
+                            
+                            {ability.stats.status_effects && Object.keys(ability.stats.status_effects).length > 0 && (
+                              <div className="mt-3 pt-3 border-t">
+                                <p className="text-xs text-muted-foreground mb-2">Inflicts Status Effects:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {Object.entries(ability.stats.status_effects).map(([effectId, chance]) => {
+                                    const id = parseInt(effectId);
+                                    const displayName = getEffectDisplayNameTranslated(id);
+                                    const color = getEffectColor(id);
+                                    const iconUrl = getEffectIconUrl(id);
+                                    const duration = getEffectDuration(id);
+                                    return (
+                                      <div 
+                                        key={effectId} 
+                                        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-muted border"
+                                        style={{ borderColor: color, borderLeftWidth: 3 }}
+                                      >
+                                        {iconUrl && (
+                                          <img 
+                                            src={iconUrl} 
+                                            alt="" 
+                                            className="h-4 w-4 object-contain"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                          />
+                                        )}
+                                        <span className="text-foreground font-medium">{displayName}</span>
+                                        <span className="text-muted-foreground">({chance}%{duration > 0 ? `, ${duration}t` : ""})</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1 text-sm">
-                          <StatRow 
-                            label="Min Damage" 
-                            value={ability.stats.shots_per_attack > 1 ? `${minDamage} (x${ability.stats.shots_per_attack})` : minDamage} 
-                            highlight 
-                          />
-                          <StatRow 
-                            label="Max Damage" 
-                            value={ability.stats.shots_per_attack > 1 ? `${maxDamage} (x${ability.stats.shots_per_attack})` : maxDamage} 
-                            highlight 
-                          />
-                          <StatRow label="Offense" value={offense} highlight />
-                          <StatRow label="Attack" value={`${totalAttack} (${weaponBaseAtk}+${ability.stats.attack})`} />
-                          <StatRow label="Crit %" value={`${ability.stats.critical_hit_percent}%`} />
-                          <StatRow label="Cooldown" value={ability.stats.ability_cooldown} />
-                          <StatRow label="Ammo Required" value={ability.stats.ammo_required} />
-                          <StatRow label="Range" value={`${ability.stats.min_range}-${ability.stats.max_range}`} />
-                          {getLineOfFireLabel(ability.stats.line_of_fire) && (
-                            <StatRow label="Line of Fire" value={getLineOfFireLabel(ability.stats.line_of_fire)!} />
-                          )}
-                          {ability.stats.armor_piercing_percent > 0 && (
-                            <StatRow label="Armor Pierce" value={`${Math.round(ability.stats.armor_piercing_percent * 100)}%`} />
-                          )}
-                        </div>
-                        
-                        {/* Targets */}
-                        {ability.stats.targets && ability.stats.targets.length > 0 && (() => {
-                          const { canTarget, cannotTarget } = getTargetingCategories(ability.stats.targets);
-                          return (
-                            <div className="mt-2 flex items-center gap-2 flex-wrap">
-                              <span className="text-sm text-muted-foreground">Targets:</span>
-                              {canTarget.map(cat => (
-                                <Badge 
-                                  key={cat.label} 
-                                  variant="outline" 
-                                  className={cn("text-xs", cat.color)}
-                                >
-                                  ✓ {cat.label}
-                                </Badge>
-                              ))}
-                              {cannotTarget.map(cat => (
-                                <Badge 
-                                  key={cat.label} 
-                                  variant="outline" 
-                                  className="text-xs bg-muted/50 text-muted-foreground line-through"
-                                >
-                                  {cat.label}
-                                </Badge>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                        
-                        {/* Critical Bonuses */}
-                        {(() => {
-                          const critBonuses = (ability.stats as any)?.critical_bonuses as Record<string, number> | undefined;
-                          if (!critBonuses || Object.keys(critBonuses).length === 0) return null;
-                          return (
-                            <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                              <span className="text-sm text-muted-foreground">Crit Bonus:</span>
-                              {Object.entries(critBonuses).map(([tagId, bonus]) => {
-                                const tagLabel = UnitTagLabels[parseInt(tagId)] || `Tag ${tagId}`;
-                                return (
-                                  <Badge 
-                                    key={tagId} 
-                                    variant="outline" 
-                                    className="text-xs bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/50"
-                                  >
-                                    +{bonus}% vs {tagLabel}
-                                  </Badge>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
-                        
-                        {/* Weapon Stats */}
-                        <div className="mt-3 pt-3 border-t">
-                          <p className="text-xs text-muted-foreground mb-2">Weapon: {t(weapon.name)}</p>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm">
-                            <StatRow label="Base Min" value={weapon.stats.base_damage_min} />
-                            <StatRow label="Base Max" value={weapon.stats.base_damage_max} />
-                            <StatRow label="Ammo" value={weapon.stats.ammo === -1 ? "∞" : weapon.stats.ammo} />
-                            <StatRow label="Reload" value={weapon.stats.reload_time ?? "-"} />
-                          </div>
-                        </div>
-                        
-                        {ability.stats.status_effects && Object.keys(ability.stats.status_effects).length > 0 && (
-                          <div className="mt-3 pt-3 border-t">
-                            <p className="text-xs text-muted-foreground mb-2">Inflicts Status Effects:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(ability.stats.status_effects).map(([effectId, chance]) => {
-                                const id = parseInt(effectId);
-                                const displayName = getEffectDisplayNameTranslated(id);
-                                const color = getEffectColor(id);
-                                const iconUrl = getEffectIconUrl(id);
-                                const duration = getEffectDuration(id);
-                                return (
-                                  <div 
-                                    key={effectId} 
-                                    className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-muted border"
-                                    style={{ borderColor: color, borderLeftWidth: 3 }}
-                                  >
-                                    {iconUrl && (
-                                      <img 
-                                        src={iconUrl} 
-                                        alt="" 
-                                        className="h-4 w-4 object-contain"
-                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                      />
-                                    )}
-                                    <span className="text-foreground font-medium">{displayName}</span>
-                                    <span className="text-muted-foreground">({chance}%{duration > 0 ? `, ${duration}t` : ""})</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </StatSection>
           )}
