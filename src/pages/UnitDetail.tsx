@@ -94,14 +94,17 @@ function capitalize(str: string): string {
 }
 
 // Calculate damage at rank: 
-// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon) * (1 + 2 * power/100), then floor
-// Otherwise: Base Damage * (1 + 2 * power/100), then floor
-function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number): number {
-  if (damageFromWeapon !== undefined && damageFromWeapon !== 1) {
-    const scaledBase = Math.floor(baseDamage * damageFromWeapon);
-    return Math.floor(scaledBase * (1 + 2 * 0.01 * power));
-  }
-  return Math.floor(baseDamage * (1 + 2 * 0.01 * power));
+// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon), else use baseDamage
+// If damageFromUnit exists: scaledPower = floor(damageFromUnit * power), else scaledPower = power * 2
+// Result: floor(scaledBase * (1 + scaledPower / 100))
+function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number, damageFromUnit?: number): number {
+  const scaledBase = damageFromWeapon !== undefined && damageFromWeapon !== 1 
+    ? Math.floor(baseDamage * damageFromWeapon) 
+    : baseDamage;
+  const scaledPower = damageFromUnit !== undefined 
+    ? Math.floor(damageFromUnit * power) 
+    : power * 2;
+  return Math.floor(scaledBase * (1 + scaledPower / 100));
 }
 
 interface StatWithChangeProps {
@@ -362,8 +365,11 @@ export default function UnitDetail() {
                         // Calculate damage at current rank using power
                         const currentPower = stats?.power || 0;
                         const damageFromWeapon = (ability.stats as any)?.damage_from_weapon as number | undefined;
-                        const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, currentPower, damageFromWeapon);
-                        const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, currentPower, damageFromWeapon);
+                        const damageFromUnit = (ability.stats as any)?.damage_from_unit as number | undefined;
+                        const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, currentPower, damageFromWeapon, damageFromUnit);
+                        const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, currentPower, damageFromWeapon, damageFromUnit);
+                        // Pre-calculate scaled power for tooltips
+                        const scaledPower = damageFromUnit !== undefined ? Math.floor(damageFromUnit * currentPower) : currentPower * 2;
                         
                         // Total attack = weapon base_atk + ability attack
                         const weaponBaseAtk = weapon.stats.base_atk || 0;
@@ -414,7 +420,10 @@ export default function UnitDetail() {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="text-xs">Base: {weapon.stats.base_damage_min}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + 2 × {currentPower}/100)</p>
+                                  <p className="text-xs">
+                                    Base: {weapon.stats.base_damage_min}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + {damageFromUnit !== undefined ? `floor(${damageFromUnit} × ${currentPower})` : `2 × ${currentPower}`}/100)
+                                    {damageFromUnit !== undefined && ` = ${scaledPower}`}
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                               <Tooltip>
@@ -423,9 +432,12 @@ export default function UnitDetail() {
                                     <span className="text-muted-foreground">Max Damage</span>
                                     <span>{ability.stats.shots_per_attack > 1 ? `${maxDamage} (x${ability.stats.shots_per_attack})` : maxDamage}</span>
                                   </div>
-                                </TooltipTrigger>
+                              </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="text-xs">Base: {weapon.stats.base_damage_max}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + 2 × {currentPower}/100)</p>
+                                  <p className="text-xs">
+                                    Base: {weapon.stats.base_damage_max}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + {damageFromUnit !== undefined ? `floor(${damageFromUnit} × ${currentPower})` : `2 × ${currentPower}`}/100)
+                                    {damageFromUnit !== undefined && ` = ${scaledPower}`}
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                               <Tooltip>
