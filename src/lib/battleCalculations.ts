@@ -21,8 +21,14 @@ function getBlockerInfo(blockedBy?: BlockingUnit): { blockedByUnitName?: string;
   };
 }
 
-// Calculate damage at rank: Damage = Base Damage * (1 + 2 * 0.01 * Power)
-export function calculateDamageAtRank(baseDamage: number, power: number): number {
+// Calculate damage at rank: 
+// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon) * (1 + 2 * power/100), then floor
+// Otherwise: Base Damage * (1 + 2 * power/100), then floor
+export function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number): number {
+  if (damageFromWeapon !== undefined && damageFromWeapon !== 1) {
+    const scaledBase = Math.floor(baseDamage * damageFromWeapon);
+    return Math.floor(scaledBase * (1 + 2 * 0.01 * power));
+  }
   return Math.floor(baseDamage * (1 + 2 * 0.01 * power));
 }
 
@@ -283,8 +289,9 @@ export function getUnitAbilities(unitId: number, rank: number): AbilityInfo[] {
       const ability = getAbilityById(abilityId);
       if (!ability) return;
 
-      const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, power);
-      const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, power);
+      const damageFromWeapon = (ability.stats as any)?.damage_from_weapon as number | undefined;
+      const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, power, damageFromWeapon);
+      const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, power, damageFromWeapon);
       // Total attack = weapon base_atk + ability attack
       const totalAttack = (weapon.stats.base_atk || 0) + ability.stats.attack;
       const offense = totalAttack + accuracy;

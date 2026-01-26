@@ -87,8 +87,14 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// Calculate damage at rank: Damage = Base Damage * (1 + 2 * 0.01 * Power)
-function calculateDamageAtRank(baseDamage: number, power: number): number {
+// Calculate damage at rank: 
+// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon) * (1 + 2 * power/100), then floor
+// Otherwise: Base Damage * (1 + 2 * power/100), then floor
+function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number): number {
+  if (damageFromWeapon !== undefined && damageFromWeapon !== 1) {
+    const scaledBase = Math.floor(baseDamage * damageFromWeapon);
+    return Math.floor(scaledBase * (1 + 2 * 0.01 * power));
+  }
   return Math.floor(baseDamage * (1 + 2 * 0.01 * power));
 }
 
@@ -333,8 +339,9 @@ export default function UnitDetail() {
                     
                     // Calculate damage at current rank using power
                     const currentPower = stats?.power || 0;
-                    const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, currentPower);
-                    const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, currentPower);
+                    const damageFromWeapon = (ability.stats as any)?.damage_from_weapon as number | undefined;
+                    const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, currentPower, damageFromWeapon);
+                    const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, currentPower, damageFromWeapon);
                     
                     // Total attack = weapon base_atk + ability attack
                     const weaponBaseAtk = weapon.stats.base_atk || 0;

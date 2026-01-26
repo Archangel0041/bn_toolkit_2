@@ -22,8 +22,14 @@ interface EncounterGridProps {
   backLabel?: string;
 }
 
-// Calculate damage at rank: Damage = Base Damage * (1 + 2 * 0.01 * Power)
-function calculateDamageAtRank(baseDamage: number, power: number): number {
+// Calculate damage at rank: 
+// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon) * (1 + 2 * power/100), then floor
+// Otherwise: Base Damage * (1 + 2 * power/100), then floor
+function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number): number {
+  if (damageFromWeapon !== undefined && damageFromWeapon !== 1) {
+    const scaledBase = Math.floor(baseDamage * damageFromWeapon);
+    return Math.floor(scaledBase * (1 + 2 * 0.01 * power));
+  }
   return Math.floor(baseDamage * (1 + 2 * 0.01 * power));
 }
 
@@ -73,8 +79,9 @@ export function EncounterGrid({ units, showPlayerUnits, compact = false, backPat
       weapon.abilities.map(abilId => {
         const ability = getAbilityById(abilId);
         if (!ability) return null;
-        const minDmg = calculateDamageAtRank(weapon.stats.base_damage_min, stats?.power || 0);
-        const maxDmg = calculateDamageAtRank(weapon.stats.base_damage_max, stats?.power || 0);
+        const damageFromWeapon = (ability.stats as any)?.damage_from_weapon as number | undefined;
+        const minDmg = calculateDamageAtRank(weapon.stats.base_damage_min, stats?.power || 0, damageFromWeapon);
+        const maxDmg = calculateDamageAtRank(weapon.stats.base_damage_max, stats?.power || 0, damageFromWeapon);
         // Total attack = weapon base_atk + ability attack
         const totalAttack = (weapon.stats.base_atk || 0) + ability.stats.attack;
         const offense = totalAttack + (stats?.accuracy || 0);
