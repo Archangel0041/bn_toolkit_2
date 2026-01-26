@@ -23,14 +23,17 @@ interface EncounterGridProps {
 }
 
 // Calculate damage at rank: 
-// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon) * (1 + 2 * power/100), then floor
-// Otherwise: Base Damage * (1 + 2 * power/100), then floor
-function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number): number {
-  if (damageFromWeapon !== undefined && damageFromWeapon !== 1) {
-    const scaledBase = Math.floor(baseDamage * damageFromWeapon);
-    return Math.floor(scaledBase * (1 + 2 * 0.01 * power));
-  }
-  return Math.floor(baseDamage * (1 + 2 * 0.01 * power));
+// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon), else use baseDamage
+// If damageFromUnit exists: scaledPower = floor(damageFromUnit * power), else scaledPower = power * 2
+// Result: floor(scaledBase * (1 + scaledPower / 100))
+function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number, damageFromUnit?: number): number {
+  const scaledBase = damageFromWeapon !== undefined && damageFromWeapon !== 1 
+    ? Math.floor(baseDamage * damageFromWeapon) 
+    : baseDamage;
+  const scaledPower = damageFromUnit !== undefined 
+    ? Math.floor(damageFromUnit * power) 
+    : power * 2;
+  return Math.floor(scaledBase * (1 + scaledPower / 100));
 }
 
 export function EncounterGrid({ units, showPlayerUnits, compact = false, backPath, backLabel }: EncounterGridProps) {

@@ -376,7 +376,9 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
           selectedAbility.unitBaseCrit,
           selectedAbility.critPercent,
           selectedAbility.critBonuses,
-          target.unitId
+          target.unitId,
+          selectedAbility.weaponBaseCrit,
+          selectedAbility.critFromWeapon
         );
         
         // Calculate range for display purposes

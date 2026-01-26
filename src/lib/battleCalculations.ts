@@ -22,14 +22,17 @@ function getBlockerInfo(blockedBy?: BlockingUnit): { blockedByUnitName?: string;
 }
 
 // Calculate damage at rank: 
-// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon) * (1 + 2 * power/100), then floor
-// Otherwise: Base Damage * (1 + 2 * power/100), then floor
-export function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number): number {
-  if (damageFromWeapon !== undefined && damageFromWeapon !== 1) {
-    const scaledBase = Math.floor(baseDamage * damageFromWeapon);
-    return Math.floor(scaledBase * (1 + 2 * 0.01 * power));
-  }
-  return Math.floor(baseDamage * (1 + 2 * 0.01 * power));
+// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon), else use baseDamage
+// If damageFromUnit exists: scaledPower = floor(damageFromUnit * power), else scaledPower = power * 2
+// Result: floor(scaledBase * (1 + scaledPower / 100))
+export function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number, damageFromUnit?: number): number {
+  const scaledBase = damageFromWeapon !== undefined && damageFromWeapon !== 1 
+    ? Math.floor(baseDamage * damageFromWeapon) 
+    : baseDamage;
+  const scaledPower = damageFromUnit !== undefined 
+    ? Math.floor(damageFromUnit * power) 
+    : power * 2;
+  return Math.floor(scaledBase * (1 + scaledPower / 100));
 }
 
 // Calculate dodge chance: defense - offense + 5 (only positive values)
@@ -290,8 +293,10 @@ export function getUnitAbilities(unitId: number, rank: number): AbilityInfo[] {
       if (!ability) return;
 
       const damageFromWeapon = (ability.stats as any)?.damage_from_weapon as number | undefined;
-      const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, power, damageFromWeapon);
-      const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, power, damageFromWeapon);
+      const damageFromUnit = (ability.stats as any)?.damage_from_unit as number | undefined;
+      const critFromWeapon = (ability.stats as any)?.crit_from_weapon as number | undefined;
+      const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, power, damageFromWeapon, damageFromUnit);
+      const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, power, damageFromWeapon, damageFromUnit);
       // Total attack = weapon base_atk + ability attack
       const totalAttack = (weapon.stats.base_atk || 0) + ability.stats.attack;
       const offense = totalAttack + accuracy;
@@ -375,6 +380,8 @@ export function getUnitAbilities(unitId: number, rank: number): AbilityInfo[] {
         armorPiercing: ability.stats.armor_piercing_percent,
         critPercent: ability.stats.critical_hit_percent,
         unitBaseCrit: unitBaseCrit,
+        weaponBaseCrit: weapon.stats.base_crit_percent || 0,
+        critFromWeapon: critFromWeapon,
         critBonuses: (ability.stats as any).critical_bonuses || {},
         chargeTime: (ability.stats as any).charge_time || 0,
         suppressionMultiplier: (ability.stats as any).damage_distraction || 1,
@@ -438,16 +445,25 @@ function getUnitStatsAtRank(unitId: number, rank: number): UnitStats | undefined
 // abilityCrit: The ability's base critical_hit_percent
 // critBonuses: Tag-based critical bonuses from the ability
 // targetUnitId: The target unit to check tags against
+// weaponBaseCrit: The weapon's base critical hit percentage
+// critFromWeapon: Multiplier for the weapon's base crit (if present)
 export function calculateCritChance(
   unitBaseCrit: number,
   abilityCrit: number,
   critBonuses: Record<number, number>,
-  targetUnitId: number
+  targetUnitId: number,
+  weaponBaseCrit: number = 0,
+  critFromWeapon?: number
 ): number {
   const targetUnit = getUnitById(targetUnitId);
 
-  // Start with unit base crit + ability crit
-  let totalCrit = unitBaseCrit + abilityCrit;
+  // Calculate weapon crit contribution: floor(base_crit * crit_from_weapon) if multiplier exists
+  const scaledWeaponCrit = critFromWeapon !== undefined && critFromWeapon !== 1 
+    ? Math.floor(weaponBaseCrit * critFromWeapon) 
+    : weaponBaseCrit;
+
+  // Start with unit base crit + scaled weapon crit + ability crit
+  let totalCrit = unitBaseCrit + scaledWeaponCrit + abilityCrit;
 
   if (!targetUnit) return totalCrit;
 
@@ -488,7 +504,7 @@ export function calculateDamagePreviewsForEnemy(
       const canTarget = canTargetUnit(enemyUnit.unit_id, attackerAbility.targets);
       const defense = enemyStats?.defense || 0;
       const dodgeChance = calculateDodgeChance(defense, attackerAbility.offense);
-      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, enemyUnit.unit_id);
+      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, enemyUnit.unit_id, attackerAbility.weaponBaseCrit, attackerAbility.critFromWeapon);
 
       const armorHp = enemyStats?.armor_hp || 0;
       const hp = enemyStats?.hp || 0;
@@ -589,7 +605,7 @@ export function calculateDamagePreviewsForFriendly(
     const canTarget = canTargetUnit(friendlyUnit.unitId, attackerAbility.targets);
     const defense = stats?.defense || 0;
     const dodgeChance = calculateDodgeChance(defense, attackerAbility.offense);
-    const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, friendlyUnit.unitId);
+    const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, friendlyUnit.unitId, attackerAbility.weaponBaseCrit, attackerAbility.critFromWeapon);
 
     const armorHp = stats?.armor_hp || 0;
     const hp = stats?.hp || 0;
@@ -703,7 +719,7 @@ export function calculateAoeDamagePreviewsForEnemy(
       const canTarget = canTargetUnit(enemyUnit.unit_id, attackerAbility.targets);
       const defense = enemyStats?.defense || 0;
       const dodgeChance = calculateDodgeChance(defense, attackerAbility.offense);
-      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, enemyUnit.unit_id);
+      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, enemyUnit.unit_id, attackerAbility.weaponBaseCrit, attackerAbility.critFromWeapon);
 
       const armorHp = enemyStats?.armor_hp || 0;
       const hp = enemyStats?.hp || 0;
@@ -820,7 +836,7 @@ export function calculateAoeDamagePreviewsForFriendly(
       const canTarget = canTargetUnit(friendlyUnit.unitId, attackerAbility.targets);
       const defense = stats?.defense || 0;
       const dodgeChance = calculateDodgeChance(defense, attackerAbility.offense);
-      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, friendlyUnit.unitId);
+      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, friendlyUnit.unitId, attackerAbility.weaponBaseCrit, attackerAbility.critFromWeapon);
 
       const armorHp = stats?.armor_hp || 0;
       const hp = stats?.hp || 0;
@@ -938,7 +954,7 @@ export function calculateFixedDamagePreviewsForEnemy(
       const canTarget = canTargetUnit(enemyUnit.unit_id, attackerAbility.targets);
       const defense = enemyStats?.defense || 0;
       const dodgeChance = calculateDodgeChance(defense, attackerAbility.offense);
-      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, enemyUnit.unit_id);
+      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, enemyUnit.unit_id, attackerAbility.weaponBaseCrit, attackerAbility.critFromWeapon);
 
       const armorHp = enemyStats?.armor_hp || 0;
       const hp = enemyStats?.hp || 0;
@@ -1051,7 +1067,7 @@ export function calculateFixedDamagePreviewsForFriendly(
       const canTarget = canTargetUnit(friendlyUnit.unitId, attackerAbility.targets);
       const defense = stats?.defense || 0;
       const dodgeChance = calculateDodgeChance(defense, attackerAbility.offense);
-      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, friendlyUnit.unitId);
+      const critChance = calculateCritChance(attackerAbility.unitBaseCrit, attackerAbility.critPercent, attackerAbility.critBonuses, friendlyUnit.unitId, attackerAbility.weaponBaseCrit, attackerAbility.critFromWeapon);
 
       const armorHp = stats?.armor_hp || 0;
       const hp = stats?.hp || 0;
