@@ -68,7 +68,11 @@ export function useParties() {
         toast.error("Failed to save party to cloud");
       }
     } else {
-      saveParty(newParty);
+      const saved = saveParty(newParty);
+      if (!saved) {
+        toast.error("Failed to save party - storage may be full. Try clearing browser data.");
+        return null;
+      }
       setParties(getParties());
     }
     
@@ -86,7 +90,10 @@ export function useParties() {
         toast.error("Failed to save party to cloud");
       }
     } else {
-      saveParty(party);
+      const saved = saveParty(party);
+      if (!saved) {
+        toast.error("Failed to save party - storage may be full");
+      }
       setParties(getParties());
     }
   }, [isAuthenticated, user, refreshParties]);
@@ -123,7 +130,10 @@ export function useParties() {
         toast.error("Failed to save party to cloud");
       }
     } else {
-      saveParty(updated);
+      const saved = saveParty(updated);
+      if (!saved) {
+        toast.error("Failed to save party - storage may be full");
+      }
       setParties(getParties());
     }
   }, [selectedParty, isAuthenticated, user, refreshParties]);
@@ -141,7 +151,10 @@ export function useParties() {
         toast.error("Failed to save party to cloud");
       }
     } else {
-      saveParty(updated);
+      const saved = saveParty(updated);
+      if (!saved) {
+        toast.error("Failed to save party - storage may be full");
+      }
       setParties(getParties());
     }
   }, [selectedParty, isAuthenticated, user, refreshParties]);
@@ -159,7 +172,10 @@ export function useParties() {
         toast.error("Failed to save party to cloud");
       }
     } else {
-      saveParty(updated);
+      const saved = saveParty(updated);
+      if (!saved) {
+        toast.error("Failed to save party - storage may be full");
+      }
       setParties(getParties());
     }
   }, [selectedParty, isAuthenticated, user, refreshParties]);
@@ -177,7 +193,10 @@ export function useParties() {
         toast.error("Failed to save party to cloud");
       }
     } else {
-      saveParty(updated);
+      const saved = saveParty(updated);
+      if (!saved) {
+        toast.error("Failed to save party - storage may be full");
+      }
       setParties(getParties());
     }
   }, [selectedParty, isAuthenticated, user, refreshParties]);

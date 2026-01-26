@@ -23,7 +23,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { getCachedConfig, cacheConfig } from "@/lib/cacheStorage";
+import { getCachedConfigIDB, cacheConfigIDB, clearOldLocalStorageConfigs } from "@/lib/indexedDBCache";
 
 const CONFIG_BUCKET = "config";
 const LOCALIZATIONS_BUCKET = "Localizations";
@@ -138,8 +138,9 @@ function saveToLocalStorage(cacheKey: string, data: any): void {
   }
 }
 
-// Initialize cache version check
+// Initialize cache version check and migrate old localStorage cache
 checkCacheVersion();
+clearOldLocalStorageConfigs();
 
 // Fetch JSON from a storage bucket using public URL with caching
 async function fetchFromBucket(bucket: string, path: string, usePersistentCache = true, useBigIntParser = false): Promise<any> {
@@ -150,24 +151,13 @@ async function fetchFromBucket(bucket: string, path: string, usePersistentCache 
     return memoryCache.get(cacheKey);
   }
   
-  // Check Cache Storage first (preferred), then fall back to localStorage
+  // Check IndexedDB cache (large quota, won't interfere with localStorage for parties)
   if (usePersistentCache) {
-    // Try Cache Storage API first
-    const cacheStorageData = await getCachedConfig(cacheKey);
-    if (cacheStorageData !== null) {
-      console.log(`[DataLoader] Loaded ${cacheKey} from Cache Storage`);
-      memoryCache.set(cacheKey, cacheStorageData);
-      return cacheStorageData;
-    }
-    
-    // Fall back to localStorage (legacy)
-    const localCached = getFromLocalStorage(cacheKey);
-    if (localCached !== null) {
-      console.log(`[DataLoader] Loaded ${cacheKey} from localStorage cache`);
-      memoryCache.set(cacheKey, localCached);
-      // Migrate to Cache Storage
-      await cacheConfig(cacheKey, localCached);
-      return localCached;
+    const cachedData = await getCachedConfigIDB(cacheKey);
+    if (cachedData !== null) {
+      console.log(`[DataLoader] Loaded ${cacheKey} from IndexedDB cache`);
+      memoryCache.set(cacheKey, cachedData);
+      return cachedData;
     }
   }
   
@@ -203,11 +193,9 @@ async function fetchFromBucket(bucket: string, path: string, usePersistentCache 
       // Cache in memory
       memoryCache.set(cacheKey, json);
       
-      // Cache in Cache Storage for persistence (preferred)
+      // Cache in IndexedDB for persistence (uses larger quota than localStorage)
       if (usePersistentCache) {
-        await cacheConfig(cacheKey, json);
-        // Also save to localStorage as backup
-        saveToLocalStorage(cacheKey, json);
+        await cacheConfigIDB(cacheKey, json);
       }
       
       loadingPromises.delete(cacheKey);
@@ -292,13 +280,13 @@ export async function loadLocalizationData(lang: string) {
   return { shared, langData };
 }
 
-// Clear all caches (memory + localStorage + Cache Storage)
+// Clear all caches (memory + localStorage + IndexedDB)
 export async function clearDataCache() {
   memoryCache.clear();
   clearLocalStorageCache();
-  // Also clear Cache Storage
-  const { clearAllCaches } = await import("@/lib/cacheStorage");
-  await clearAllCaches();
+  // Also clear IndexedDB cache
+  const { clearAllConfigsIDB } = await import("@/lib/indexedDBCache");
+  await clearAllConfigsIDB();
   console.log("[DataLoader] All caches cleared");
 }
 
