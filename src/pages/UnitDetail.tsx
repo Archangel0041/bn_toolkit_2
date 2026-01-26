@@ -6,6 +6,12 @@ import { StatSection, StatRow, DamageModsGrid } from "@/components/units/StatSec
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -404,7 +410,21 @@ export default function UnitDetail() {
                               />
                               <StatRow label="Offense" value={offense} highlight />
                               <StatRow label="Attack" value={`${totalAttack} (${weaponBaseAtk}+${ability.stats.attack})`} />
-                              <StatRow label="Crit %" value={`${(stats?.critical || 0) + ability.stats.critical_hit_percent}%`} />
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex justify-between py-1 font-medium text-primary cursor-help">
+                                      <span className="text-muted-foreground">Crit %</span>
+                                      <span>{(stats?.critical || 0) + ability.stats.critical_hit_percent}%</span>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">
+                                      Unit: {stats?.critical || 0}% + Ability: {ability.stats.critical_hit_percent}%
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               <StatRow label="Cooldown" value={ability.stats.ability_cooldown} />
                               <StatRow label="Ammo Required" value={ability.stats.ammo_required} />
                               <StatRow label="Range" value={`${ability.stats.min_range}-${ability.stats.max_range}`} />
