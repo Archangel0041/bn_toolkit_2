@@ -657,7 +657,9 @@ export function executeAttack(
       ability.unitBaseCrit,
       ability.critPercent,
       ability.critBonuses,
-      target.unitId
+      target.unitId,
+      ability.weaponBaseCrit,
+      ability.critFromWeapon
     );
     
     // Roll dodge
@@ -1043,7 +1045,9 @@ export function executeRandomAttack(
         ability.unitBaseCrit,
         ability.critPercent,
         ability.critBonuses,
-        target.unitId
+        target.unitId,
+        ability.weaponBaseCrit,
+        ability.critFromWeapon
       );
       const isCrit = rollCrit(critChance);
       const finalDamage = isCrit ? Math.floor(baseDamage * 2) : baseDamage;

@@ -82,6 +82,8 @@ export interface AbilityInfo {
   armorPiercing: number;
   critPercent: number; // Ability's base critical hit percent
   unitBaseCrit: number; // Unit's base critical stat from statsConfig
+  weaponBaseCrit: number; // Weapon's base critical hit percent
+  critFromWeapon?: number; // Multiplier for weapon's base crit
   critBonuses: Record<number, number>; // tag_id -> bonus crit %
   chargeTime: number;
   suppressionMultiplier: number;
