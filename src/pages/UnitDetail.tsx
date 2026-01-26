@@ -382,27 +382,6 @@ export default function UnitDetail() {
                           <StatRow label="Offense" value={offense} highlight />
                           <StatRow label="Attack" value={`${totalAttack} (${weaponBaseAtk}+${ability.stats.attack})`} />
                           <StatRow label="Crit %" value={`${ability.stats.critical_hit_percent}%`} />
-                          {(() => {
-                            const critBonuses = (ability.stats as any)?.critical_bonuses as Record<string, number> | undefined;
-                            if (!critBonuses || Object.keys(critBonuses).length === 0) return null;
-                            return (
-                              <div className="col-span-2 md:col-span-4 flex items-center gap-1.5 flex-wrap py-1">
-                                <span className="text-muted-foreground text-sm">Crit Bonus:</span>
-                                {Object.entries(critBonuses).map(([tagId, bonus]) => {
-                                  const tagLabel = UnitTagLabels[parseInt(tagId)] || `Tag ${tagId}`;
-                                  return (
-                                    <Badge 
-                                      key={tagId} 
-                                      variant="outline" 
-                                      className="text-xs bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/50"
-                                    >
-                                      +{bonus}% vs {tagLabel}
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })()}
                           <StatRow label="Cooldown" value={ability.stats.ability_cooldown} />
                           <StatRow label="Ammo Required" value={ability.stats.ammo_required} />
                           <StatRow label="Range" value={`${ability.stats.min_range}-${ability.stats.max_range}`} />
@@ -438,6 +417,29 @@ export default function UnitDetail() {
                                   {cat.label}
                                 </Badge>
                               ))}
+                            </div>
+                          );
+                        })()}
+                        
+                        {/* Critical Bonuses */}
+                        {(() => {
+                          const critBonuses = (ability.stats as any)?.critical_bonuses as Record<string, number> | undefined;
+                          if (!critBonuses || Object.keys(critBonuses).length === 0) return null;
+                          return (
+                            <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-sm text-muted-foreground">Crit Bonus:</span>
+                              {Object.entries(critBonuses).map(([tagId, bonus]) => {
+                                const tagLabel = UnitTagLabels[parseInt(tagId)] || `Tag ${tagId}`;
+                                return (
+                                  <Badge 
+                                    key={tagId} 
+                                    variant="outline" 
+                                    className="text-xs bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/50"
+                                  >
+                                    +{bonus}% vs {tagLabel}
+                                  </Badge>
+                                );
+                              })}
                             </div>
                           );
                         })()}
