@@ -11,17 +11,23 @@ export function getParties(): Party[] {
   }
 }
 
-export function saveParty(party: Party): void {
-  const parties = getParties();
-  const existingIndex = parties.findIndex(p => p.id === party.id);
-  
-  if (existingIndex >= 0) {
-    parties[existingIndex] = { ...party, updatedAt: Date.now() };
-  } else {
-    parties.push({ ...party, createdAt: Date.now(), updatedAt: Date.now() });
+export function saveParty(party: Party): boolean {
+  try {
+    const parties = getParties();
+    const existingIndex = parties.findIndex(p => p.id === party.id);
+    
+    if (existingIndex >= 0) {
+      parties[existingIndex] = { ...party, updatedAt: Date.now() };
+    } else {
+      parties.push({ ...party, createdAt: Date.now(), updatedAt: Date.now() });
+    }
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(parties));
+    return true;
+  } catch (error) {
+    console.error("[PartyStorage] Failed to save party:", error);
+    return false;
   }
-  
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(parties));
 }
 
 export function deleteParty(partyId: string): void {
