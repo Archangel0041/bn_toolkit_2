@@ -94,17 +94,16 @@ function capitalize(str: string): string {
 }
 
 // Calculate damage at rank: 
-// If damageFromWeapon exists: Floor(Base Damage * damageFromWeapon), else use baseDamage
-// If damageFromUnit exists: scaledPower = floor(damageFromUnit * power), else scaledPower = power * 2
-// Result: floor(scaledBase * (1 + scaledPower / 100))
+// Formula: base_damage * damage_from_weapon * (1 + 2 * damage_from_unit * power / 100)
+// Floor after each multiplication involving decimal values
 function calculateDamageAtRank(baseDamage: number, power: number, damageFromWeapon?: number, damageFromUnit?: number): number {
   const scaledBase = damageFromWeapon !== undefined && damageFromWeapon !== 1 
     ? Math.floor(baseDamage * damageFromWeapon) 
     : baseDamage;
-  const scaledPower = damageFromUnit !== undefined 
-    ? Math.floor(damageFromUnit * power) 
-    : power * 2;
-  return Math.floor(scaledBase * (1 + scaledPower / 100));
+  const powerMultiplier = damageFromUnit !== undefined && damageFromUnit !== 1
+    ? Math.floor(2 * damageFromUnit * power)
+    : 2 * power;
+  return Math.floor(scaledBase * (1 + powerMultiplier / 100));
 }
 
 interface StatWithChangeProps {
@@ -368,8 +367,10 @@ export default function UnitDetail() {
                         const damageFromUnit = (ability.stats as any)?.damage_from_unit as number | undefined;
                         const minDamage = calculateDamageAtRank(weapon.stats.base_damage_min, currentPower, damageFromWeapon, damageFromUnit);
                         const maxDamage = calculateDamageAtRank(weapon.stats.base_damage_max, currentPower, damageFromWeapon, damageFromUnit);
-                        // Pre-calculate scaled power for tooltips
-                        const scaledPower = damageFromUnit !== undefined ? Math.floor(damageFromUnit * currentPower) : currentPower * 2;
+                        // Pre-calculate power multiplier for tooltips: 2 * damage_from_unit * power
+                        const powerMultiplier = damageFromUnit !== undefined && damageFromUnit !== 1
+                          ? Math.floor(2 * damageFromUnit * currentPower)
+                          : 2 * currentPower;
                         
                         // Total attack = weapon base_atk + ability attack
                         const weaponBaseAtk = weapon.stats.base_atk || 0;
@@ -421,8 +422,7 @@ export default function UnitDetail() {
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="text-xs">
-                                    Base: {weapon.stats.base_damage_min}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + {damageFromUnit !== undefined ? `floor(${damageFromUnit} × ${currentPower})` : `2 × ${currentPower}`}/100)
-                                    {damageFromUnit !== undefined && ` = ${scaledPower}`}
+                                    {weapon.stats.base_damage_min}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + 2{damageFromUnit !== undefined && damageFromUnit !== 1 ? ` × ${damageFromUnit}` : ''} × {currentPower} / 100)
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -435,8 +435,7 @@ export default function UnitDetail() {
                               </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="text-xs">
-                                    Base: {weapon.stats.base_damage_max}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + {damageFromUnit !== undefined ? `floor(${damageFromUnit} × ${currentPower})` : `2 × ${currentPower}`}/100)
-                                    {damageFromUnit !== undefined && ` = ${scaledPower}`}
+                                    {weapon.stats.base_damage_max}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + 2{damageFromUnit !== undefined && damageFromUnit !== 1 ? ` × ${damageFromUnit}` : ''} × {currentPower} / 100)
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
