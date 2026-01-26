@@ -397,52 +397,63 @@ export default function UnitDetail() {
                                 </div>
                               </div>
                             </div>
+                            <TooltipProvider>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1 text-sm">
-                              <StatRow 
-                                label="Min Damage" 
-                                value={
-                                  <span>
-                                    {ability.stats.shots_per_attack > 1 ? `${minDamage} (x${ability.stats.shots_per_attack})` : minDamage}
-                                    <span className="text-muted-foreground text-xs ml-1">
-                                      ({weapon.stats.base_damage_min}{damageFromWeapon && damageFromWeapon !== 1 ? `×${damageFromWeapon}` : ''}×{1 + 2 * currentPower / 100})
-                                    </span>
-                                  </span>
-                                }
-                                highlight 
-                              />
-                              <StatRow 
-                                label="Max Damage" 
-                                value={
-                                  <span>
-                                    {ability.stats.shots_per_attack > 1 ? `${maxDamage} (x${ability.stats.shots_per_attack})` : maxDamage}
-                                    <span className="text-muted-foreground text-xs ml-1">
-                                      ({weapon.stats.base_damage_max}{damageFromWeapon && damageFromWeapon !== 1 ? `×${damageFromWeapon}` : ''}×{1 + 2 * currentPower / 100})
-                                    </span>
-                                  </span>
-                                }
-                                highlight 
-                              />
-                              <StatRow 
-                                label="Offense" 
-                                value={
-                                  <span>
-                                    {offense}
-                                    <span className="text-muted-foreground text-xs ml-1">({totalAttack}+{stats?.accuracy || 0})</span>
-                                  </span>
-                                }
-                                highlight 
-                              />
-                              <StatRow label="Attack" value={`${totalAttack} (${weaponBaseAtk}+${ability.stats.attack})`} />
-                              <StatRow 
-                                label="Crit %" 
-                                value={
-                                  <span>
-                                    {(stats?.critical || 0) + ability.stats.critical_hit_percent}%
-                                    <span className="text-muted-foreground text-xs ml-1">({stats?.critical || 0}+{ability.stats.critical_hit_percent})</span>
-                                  </span>
-                                }
-                                highlight 
-                              />
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex justify-between py-1 font-medium text-primary">
+                                    <span className="text-muted-foreground">Min Damage</span>
+                                    <span>{ability.stats.shots_per_attack > 1 ? `${minDamage} (x${ability.stats.shots_per_attack})` : minDamage}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Base: {weapon.stats.base_damage_min}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + 2 × {currentPower}/100)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex justify-between py-1 font-medium text-primary">
+                                    <span className="text-muted-foreground">Max Damage</span>
+                                    <span>{ability.stats.shots_per_attack > 1 ? `${maxDamage} (x${ability.stats.shots_per_attack})` : maxDamage}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Base: {weapon.stats.base_damage_max}{damageFromWeapon && damageFromWeapon !== 1 ? ` × ${damageFromWeapon}` : ''} × (1 + 2 × {currentPower}/100)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex justify-between py-1 font-medium text-primary">
+                                    <span className="text-muted-foreground">Offense</span>
+                                    <span>{offense}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Attack: {totalAttack} + Accuracy: {stats?.accuracy || 0}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex justify-between py-1">
+                                    <span className="text-muted-foreground">Attack</span>
+                                    <span>{totalAttack}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Weapon: {weaponBaseAtk} + Ability: {ability.stats.attack}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex justify-between py-1 font-medium text-primary">
+                                    <span className="text-muted-foreground">Crit %</span>
+                                    <span>{(stats?.critical || 0) + ability.stats.critical_hit_percent}%</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Unit: {stats?.critical || 0}% + Ability: {ability.stats.critical_hit_percent}%</p>
+                                </TooltipContent>
+                              </Tooltip>
                               <StatRow label="Cooldown" value={ability.stats.ability_cooldown} />
                               <StatRow label="Ammo Required" value={ability.stats.ammo_required} />
                               <StatRow label="Range" value={`${ability.stats.min_range}-${ability.stats.max_range}`} />
@@ -453,6 +464,7 @@ export default function UnitDetail() {
                                 <StatRow label="Armor Pierce" value={`${Math.round(ability.stats.armor_piercing_percent * 100)}%`} />
                               )}
                             </div>
+                            </TooltipProvider>
                             
                             {/* Targets */}
                             {ability.stats.targets && ability.stats.targets.length > 0 && (() => {
