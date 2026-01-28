@@ -20,6 +20,7 @@ interface BattleGridProps {
   onMoveUnit?: (fromGridId: number, toGridId: number) => void;
   onRemoveUnit?: (gridId: number) => void;
   onAddUnit?: (unitId: number, gridId: number) => void;
+  onRequestAddUnit?: (gridId: number) => void; // Called when long-pressing empty slot on mobile
   // Targeting reticle props - only shows when this grid is the TARGET side
   targetArea?: TargetArea;
   damageArea?: DamageAreaPosition[]; // Splash damage pattern for overlapping calculation
@@ -51,6 +52,7 @@ export function BattleGrid({
   onMoveUnit,
   onRemoveUnit,
   onAddUnit,
+  onRequestAddUnit,
   targetArea,
   damageArea,
   reticleGridId,
@@ -99,7 +101,7 @@ export function BattleGrid({
     }
   }, []);
 
-  // Touch handlers for mobile - long press to enter move mode
+  // Touch handlers for mobile - long press to enter move mode OR add unit to empty slot
   const handleTouchStart = useCallback((e: React.TouchEvent, gridId: number, hasUnit: boolean) => {
     // Always cancel any existing timer first
     cancelLongPress();
@@ -112,22 +114,34 @@ export function BattleGrid({
     };
     longPressTriggeredRef.current = false;
     
-    // Start long press timer for friendly units (400ms threshold - slightly faster for better responsiveness)
-    // Only start if we're on the friendly grid, have a unit, can move, and not in targeting mode
-    if (!isEnemy && hasUnit && onMoveUnit && !showReticle && mobileSelectedGridId === null) {
-      longPressTimerRef.current = setTimeout(() => {
-        // Double-check we still have the same touch
-        if (touchStartRef.current?.gridId === gridId) {
-          longPressTriggeredRef.current = true;
-          setMobileSelectedGridId(gridId);
-          // Vibrate if available for haptic feedback
-          if (navigator.vibrate) {
-            navigator.vibrate(50);
+    // Only enable long-press on friendly grid when not in targeting mode
+    if (!isEnemy && !showReticle && mobileSelectedGridId === null) {
+      // Long press for moving units OR adding to empty slots
+      if (hasUnit && onMoveUnit) {
+        // Long press on unit = enter move mode
+        longPressTimerRef.current = setTimeout(() => {
+          if (touchStartRef.current?.gridId === gridId) {
+            longPressTriggeredRef.current = true;
+            setMobileSelectedGridId(gridId);
+            if (navigator.vibrate) {
+              navigator.vibrate(50);
+            }
           }
-        }
-      }, 400);
+        }, 400);
+      } else if (!hasUnit && onRequestAddUnit) {
+        // Long press on empty slot = request add unit
+        longPressTimerRef.current = setTimeout(() => {
+          if (touchStartRef.current?.gridId === gridId) {
+            longPressTriggeredRef.current = true;
+            onRequestAddUnit(gridId);
+            if (navigator.vibrate) {
+              navigator.vibrate(50);
+            }
+          }
+        }, 400);
+      }
     }
-  }, [isEnemy, onMoveUnit, showReticle, mobileSelectedGridId, cancelLongPress]);
+  }, [isEnemy, onMoveUnit, onRequestAddUnit, showReticle, mobileSelectedGridId, cancelLongPress]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     // Cancel long press if finger moves
