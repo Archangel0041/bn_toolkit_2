@@ -607,12 +607,15 @@ const LiveBattleSimulator = () => {
                           disabled={!battleState.isPlayerTurn || battleState.isBattleOver}
                         />
                       ) : (
-                        /* Show static AbilitySelector for enemy units or when not player turn (view-only) */
+                        /* Show static AbilitySelector for enemy units or when not player turn (view-only with live state) */
                         <AbilitySelector
                           abilities={allAbilities}
                           selectedAbilityId={selectedAbilityId}
                           onSelectAbility={setSelectedAbilityId}
                           readOnly={selectedUnit.isEnemy || !battleState.isPlayerTurn}
+                          cooldowns={selectedUnit.abilityCooldowns}
+                          weaponGlobalCooldowns={selectedUnit.weaponGlobalCooldown}
+                          abilityChargeProgress={selectedUnit.abilityChargeProgress}
                           className="flex-1"
                         />
                       )}

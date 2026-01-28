@@ -66,6 +66,10 @@ interface AbilitySelectorProps {
   onSelectAbility: (abilityId: number) => void;
   className?: string;
   readOnly?: boolean; // When true, shows abilities but doesn't allow selection (for viewing enemy abilities)
+  // Optional live state for displaying current cooldowns/charge in live battle
+  cooldowns?: Record<number, number>;
+  weaponGlobalCooldowns?: Record<string, number>;
+  abilityChargeProgress?: Record<number, number>;
 }
 
 export function AbilitySelector({
@@ -74,6 +78,9 @@ export function AbilitySelector({
   onSelectAbility,
   className,
   readOnly = false,
+  cooldowns,
+  weaponGlobalCooldowns,
+  abilityChargeProgress,
 }: AbilitySelectorProps) {
   const { t } = useLanguage();
 
@@ -97,8 +104,26 @@ export function AbilitySelector({
           const isSelected = selectedAbilityId === info.abilityId;
           const totalShots = info.shotsPerAttack * info.attacksPerUse;
           
-          // Calculate max initial wait time (for readOnly mode display)
+          // Live state values (if provided)
+          const currentAbilityCooldown = cooldowns?.[info.abilityId] ?? 0;
+          const currentWeaponCooldown = weaponGlobalCooldowns?.[info.weaponName] ?? 0;
+          const chargeProgress = abilityChargeProgress?.[info.abilityId] ?? 0;
+          const chargeTurnsLeft = info.chargeTime > 0 ? Math.max(0, info.chargeTime - chargeProgress) : 0;
+          
+          // Determine what to display: live values if provided, otherwise static max
+          const hasLiveState = cooldowns !== undefined || abilityChargeProgress !== undefined;
+          
+          // For live state: show current cooldown or charge remaining
+          const liveWaitTime = hasLiveState 
+            ? Math.max(currentAbilityCooldown, currentWeaponCooldown, chargeTurnsLeft)
+            : 0;
+          
+          // For static display: show max initial wait time
           const maxWaitTime = Math.max(info.cooldown, info.globalCooldown, info.chargeTime);
+          
+          // Choose which value to display
+          const displayWaitTime = hasLiveState ? liveWaitTime : maxWaitTime;
+          const isCharging = hasLiveState ? chargeTurnsLeft > 0 : (info.chargeTime > 0 && info.chargeTime >= maxWaitTime);
           
           // Calculate combined crit: unit base + floor(weapon * crit_from_weapon) + ability crit
           const scaledWeaponCrit = info.critFromWeapon !== undefined && info.critFromWeapon !== 1 
@@ -135,16 +160,16 @@ export function AbilitySelector({
                       </span>
                     </div>
                   </div>
-                  {/* Max wait time overlay - shows max(CD, GCD, prep time) */}
-                  {maxWaitTime > 0 && (
+                  {/* Wait time overlay - shows current cooldown/charge in live mode, max in static mode */}
+                  {displayWaitTime > 0 && (
                     <div className={cn(
                       "absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 flex items-center justify-center",
                       "rounded-full text-[10px] font-medium",
-                      info.chargeTime > 0 && info.chargeTime >= maxWaitTime
-                        ? "bg-orange-500 text-white" // Prep time is limiting factor
+                      isCharging
+                        ? "bg-orange-500 text-white" // Charging/prep time
                         : "bg-muted text-muted-foreground border"
                     )}>
-                      {maxWaitTime}
+                      {displayWaitTime}
                     </div>
                   )}
                 </button>
