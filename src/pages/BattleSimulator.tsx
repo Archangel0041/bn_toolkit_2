@@ -74,6 +74,13 @@ const BattleSimulator = () => {
 
   const backPath = (location.state as any)?.from || "/";
 
+  // Auto-load selected party when formation is empty
+  useEffect(() => {
+    if (selectedParty && selectedParty.units.length > 0 && tempFormation.units.length === 0) {
+      tempFormation.loadFromParty(selectedParty.units);
+    }
+  }, [selectedPartyId]); // Only trigger on party selection change
+
   // Get abilities for selected unit
   const selectedUnitAbilities = useMemo<AbilityInfo[]>(() => {
     if (!selectedUnit) return [];
