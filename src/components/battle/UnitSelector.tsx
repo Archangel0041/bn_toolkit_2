@@ -65,7 +65,7 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
   const unitLimit = encounter ? getEncounterUnitLimit(encounter) : 13;
   const restrictionMessages = getRestrictionMessages(encounter, partyUnits, t);
 
-  const handleAddUnit = (unitId: number) => {
+  const handleAddUnit = (unitId: number, closeAfter: boolean = false) => {
     const unit = getUnitById(unitId);
     if (!unit) return;
 
@@ -92,8 +92,13 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
       return;
     }
 
-    setIsOpen(false);
-    setSearchQuery("");
+    // Show brief success feedback
+    toast.success(`Added ${t(unit.identity.name)}`, { duration: 1500 });
+
+    if (closeAfter) {
+      setIsOpen(false);
+      setSearchQuery("");
+    }
   };
 
   // Drag handlers for dragging units from the party list to add to formation
@@ -165,17 +170,14 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
             />
             <div className="overflow-y-auto flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {filteredUnits.slice(0, 50).map(unit => (
-                <button
+                <div
                   key={unit.id}
-                  onClick={() => handleAddUnit(unit.id)}
-                  draggable
-                  onDragStart={(e) => handleDragStartFromList(e, unit.id)}
-                  className="flex items-center gap-2 p-2 rounded-lg border hover:bg-accent transition-colors text-left cursor-grab active:cursor-grabbing"
+                  className="flex items-center gap-2 p-2 rounded-lg border hover:bg-accent transition-colors text-left group"
                 >
                   <UnitImage
                     iconName={unit.identity.icon}
                     alt={t(unit.identity.name)}
-                    className="w-10 h-10 rounded"
+                    className="w-10 h-10 rounded shrink-0"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium truncate">
@@ -185,8 +187,21 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
                       ID: {unit.id}
                     </p>
                   </div>
-                </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 opacity-70 group-hover:opacity-100"
+                    onClick={() => handleAddUnit(unit.id, false)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               ))}
+            </div>
+            <div className="pt-3 border-t flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => setIsOpen(false)}>
+                Done
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
