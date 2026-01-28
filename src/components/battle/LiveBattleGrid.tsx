@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { getUnitById } from "@/lib/units";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Skull, Zap, Crosshair, Shuffle, ShieldOff } from "lucide-react";
 import { getStatusEffectDisplayName, getStatusEffectColor, getEffectIconUrl } from "@/lib/statusEffects";
 import { DamageBreakdown } from "@/components/battle/DamageBreakdown";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { LiveBattleUnit } from "@/types/liveBattle";
 import type { DamagePreview, TargetArea, DamageAreaPosition, StatusEffectPreview } from "@/types/battleSimulator";
 import { ENEMY_GRID_LAYOUT, FRIENDLY_GRID_LAYOUT, GRID_ID_TO_COORDS, COORDS_TO_GRID_ID, getAffectedGridPositions } from "@/types/battleSimulator";
@@ -67,11 +68,44 @@ export function LiveBattleGrid({
   collapsedRows = new Set(),
 }: LiveBattleGridProps) {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   const layout = isEnemy ? ENEMY_GRID_LAYOUT : FRIENDLY_GRID_LAYOUT;
   const gridRef = useRef<HTMLDivElement>(null);
   const [isDraggingReticle, setIsDraggingReticle] = useState(false);
   const [dragOverGridId, setDragOverGridId] = useState<number | null>(null);
   const [animatingTargets, setAnimatingTargets] = useState<Set<number>>(new Set());
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  // Touch handlers for mobile - prevents image drag behavior
+  const handleTouchStart = useCallback((e: React.TouchEvent, hasUnit: boolean) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+    // Prevent default to stop image drag on mobile
+    if (hasUnit) {
+      e.preventDefault();
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((
+    e: React.TouchEvent,
+    onTap: () => void
+  ) => {
+    if (!touchStartRef.current) return;
+    
+    const dx = Math.abs(e.changedTouches[0].clientX - touchStartRef.current.x);
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
+    const dt = Date.now() - touchStartRef.current.time;
+    
+    // Only trigger tap if movement was small and quick
+    if (dx < 10 && dy < 10 && dt < 500) {
+      onTap();
+    }
+    
+    touchStartRef.current = null;
+  }, []);
 
   // Trigger attack animation when lastActionGridIds changes
   useEffect(() => {
@@ -247,8 +281,11 @@ export function LiveBattleGrid({
       return (
         <div
           key={gridId}
-          draggable={isReticleCenter}
+          draggable={isReticleCenter && !isMobile}
           onClick={handleEmptySlotClick}
+          onTouchStart={(e) => handleTouchStart(e, false)}
+          onTouchEnd={(e) => handleTouchEnd(e, handleEmptySlotClick)}
+          onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => isReticleCenter && handleReticleDragStart(e, gridId)}
           onDragOver={(e) => handleDragOver(e, gridId)}
           onDragLeave={handleDragLeave}
@@ -256,7 +293,7 @@ export function LiveBattleGrid({
           onDragEnd={handleDragEnd}
           className={cn(
             slotSize,
-            "border border-dashed border-muted-foreground/20 rounded-md transition-all flex flex-col items-center justify-center relative",
+            "border border-dashed border-muted-foreground/20 rounded-md transition-all flex flex-col items-center justify-center relative select-none",
             showReticle && "cursor-pointer hover:bg-yellow-500/10",
             isDragOver && showReticle && "border-yellow-400 bg-yellow-500/20 border-solid",
             isValidReticleTarget && !isAffectedByPattern && "border-green-500/50 border-solid bg-green-500/10",
@@ -337,7 +374,10 @@ export function LiveBattleGrid({
     const slotContent = (
       <div
         onClick={handleClick}
-        draggable={isReticleCenter}
+        onTouchStart={(e) => handleTouchStart(e, true)}
+        onTouchEnd={(e) => handleTouchEnd(e, handleClick)}
+        onContextMenu={(e) => e.preventDefault()}
+        draggable={isReticleCenter && !isMobile}
         onDragStart={(e) => isReticleCenter && handleReticleDragStart(e, gridId)}
         onDragOver={(e) => handleDragOver(e, gridId)}
         onDragLeave={handleDragLeave}
@@ -345,7 +385,7 @@ export function LiveBattleGrid({
         onDragEnd={handleDragEnd}
         className={cn(
           slotSize,
-          "relative border rounded-md flex items-center justify-center cursor-pointer transition-all overflow-hidden",
+          "relative border rounded-md flex items-center justify-center cursor-pointer transition-all overflow-hidden select-none",
           "bg-muted/20 hover:bg-muted/40",
           isSelected && "ring-2 ring-primary",
           isHighlighted && "ring-2 ring-yellow-500",

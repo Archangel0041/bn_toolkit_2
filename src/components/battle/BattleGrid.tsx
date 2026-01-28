@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { getUnitById } from "@/lib/units";
 import { UnitImage } from "@/components/units/UnitImage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Crosshair } from "lucide-react";
+import { Crosshair, Move } from "lucide-react";
 import type { EncounterUnit } from "@/types/encounters";
 import type { PartyUnit, DamagePreview, SelectedUnit, TargetArea, DamageAreaPosition } from "@/types/battleSimulator";
 import { ENEMY_GRID_LAYOUT, FRIENDLY_GRID_LAYOUT, GRID_ID_TO_COORDS, COORDS_TO_GRID_ID, getAffectedGridPositions } from "@/types/battleSimulator";
 import { DamageBreakdown } from "@/components/battle/DamageBreakdown";
-
+import { useIsMobile } from "@/hooks/use-mobile";
 interface BattleGridProps {
   isEnemy: boolean;
   units: EncounterUnit[] | PartyUnit[];
@@ -60,11 +60,16 @@ export function BattleGrid({
   validReticlePositions,
 }: BattleGridProps) {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   const layout = isEnemy ? ENEMY_GRID_LAYOUT : FRIENDLY_GRID_LAYOUT;
   const gridRef = useRef<HTMLDivElement>(null);
   const [draggedGridId, setDraggedGridId] = useState<number | null>(null);
   const [dragOverGridId, setDragOverGridId] = useState<number | null>(null);
   const [isDraggingReticle, setIsDraggingReticle] = useState(false);
+  
+  // Mobile tap-to-move state: first tap selects, second tap places
+  const [mobileSelectedGridId, setMobileSelectedGridId] = useState<number | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   // For movable reticles, calculate affected positions. For fixed attacks, use fixedAttackPositions
   const affectedPositions = fixedAttackPositions.length > 0
@@ -75,6 +80,69 @@ export function BattleGrid({
   
   // Whether we're showing any targeting pattern (movable or fixed)
   const hasTargetingPattern = affectedPositions.length > 0;
+  
+  // Clear mobile selection when showReticle changes
+  useEffect(() => {
+    setMobileSelectedGridId(null);
+  }, [showReticle]);
+
+  // Touch handlers for mobile - prevents image drag behavior
+  const handleTouchStart = useCallback((e: React.TouchEvent, hasUnit: boolean) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+    // Prevent default to stop image drag on mobile
+    if (hasUnit) {
+      e.preventDefault();
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((
+    e: React.TouchEvent,
+    gridId: number,
+    unitId: number | null,
+    hasUnit: boolean,
+    onTap: () => void
+  ) => {
+    if (!touchStartRef.current) return;
+    
+    const dx = Math.abs(e.changedTouches[0].clientX - touchStartRef.current.x);
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
+    const dt = Date.now() - touchStartRef.current.time;
+    
+    // Only trigger tap if movement was small and quick
+    if (dx < 10 && dy < 10 && dt < 500) {
+      // Handle mobile move mode for friendly units
+      if (isMobile && !isEnemy && !showReticle && onMoveUnit) {
+        if (mobileSelectedGridId !== null) {
+          // Second tap - move unit
+          if (mobileSelectedGridId !== gridId) {
+            onMoveUnit(mobileSelectedGridId, gridId);
+          }
+          setMobileSelectedGridId(null);
+          touchStartRef.current = null;
+          return;
+        } else if (hasUnit) {
+          // First tap on unit - select for moving
+          setMobileSelectedGridId(gridId);
+          touchStartRef.current = null;
+          return;
+        }
+      }
+      
+      // Normal tap behavior
+      onTap();
+    }
+    
+    touchStartRef.current = null;
+  }, [isMobile, isEnemy, showReticle, onMoveUnit, mobileSelectedGridId]);
+
+  // Cancel mobile selection on outside tap
+  const handleCancelMobileSelection = useCallback(() => {
+    setMobileSelectedGridId(null);
+  }, []);
 
   // Keyboard controls for reticle movement
   useEffect(() => {
@@ -253,6 +321,10 @@ export function BattleGrid({
     const isDragging = draggedGridId === gridId;
     const isDragOver = dragOverGridId === gridId;
     
+    // Mobile move mode state
+    const isMobileSelected = mobileSelectedGridId === gridId;
+    const isMobileMoveTarget = mobileSelectedGridId !== null && mobileSelectedGridId !== gridId && !isEnemy;
+    
     // Check if this grid is affected by targeting pattern
     const affectedPos = affectedPositions.find(p => p.gridId === gridId);
     const isAffectedByPattern = affectedPos !== undefined;
@@ -288,8 +360,11 @@ export function BattleGrid({
       return (
         <div
           key={gridId}
-          draggable={isReticleCenter}
+          draggable={isReticleCenter && !isMobile}
           onClick={handleEmptySlotClick}
+          onTouchStart={(e) => handleTouchStart(e, false)}
+          onTouchEnd={(e) => handleTouchEnd(e, gridId, null, false, handleEmptySlotClick)}
+          onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => isReticleCenter && handleReticleDragStart(e, gridId)}
           onDragOver={(e) => handleDragOver(e, gridId)}
           onDragLeave={handleDragLeave}
@@ -297,10 +372,12 @@ export function BattleGrid({
           onDragEnd={handleDragEnd}
           className={cn(
             slotSize,
-            "border border-dashed border-muted-foreground/20 rounded-md transition-all flex flex-col items-center justify-center relative",
+            "border border-dashed border-muted-foreground/20 rounded-md transition-all flex flex-col items-center justify-center relative select-none",
             showReticle && "cursor-pointer hover:bg-yellow-500/10",
             isDragOver && showReticle && "border-yellow-400 bg-yellow-500/20 border-solid",
             isDragOver && !showReticle && "border-primary bg-primary/20 border-solid",
+            // Mobile move target highlighting
+            isMobileMoveTarget && "border-primary border-solid border-2 bg-primary/20 animate-pulse",
             // Valid/invalid reticle position highlighting
             isValidReticleTarget && !isAffectedByPattern && "border-green-500/50 border-solid bg-green-500/10",
             isInvalidReticleTarget && "opacity-30",
@@ -313,6 +390,10 @@ export function BattleGrid({
             isDraggingReticle && isReticleCenter && "opacity-50"
           )}
         >
+          {/* Mobile move target indicator */}
+          {isMobileMoveTarget && (
+            <Move className="w-5 h-5 text-primary/70" />
+          )}
           {/* Crosshair icon for movable reticle center */}
           {isReticleCenter && (
             <Crosshair className="w-6 h-6 text-yellow-500" />
@@ -372,7 +453,10 @@ export function BattleGrid({
     const slotContent = (
       <div
         onClick={handleClick}
-        draggable={isReticleCenter || (!isEnemy && !showReticle)}
+        onTouchStart={(e) => handleTouchStart(e, true)}
+        onTouchEnd={(e) => handleTouchEnd(e, gridId, unitId, true, handleClick)}
+        onContextMenu={(e) => e.preventDefault()}
+        draggable={!isMobile && (isReticleCenter || (!isEnemy && !showReticle))}
         onDragStart={(e) => {
           if (isReticleCenter) {
             handleReticleDragStart(e, gridId);
@@ -386,7 +470,7 @@ export function BattleGrid({
         onDragEnd={handleDragEnd}
         className={cn(
           slotSize,
-          "border rounded-md flex flex-col items-center justify-center overflow-hidden transition-all cursor-pointer relative",
+          "border rounded-md flex flex-col items-center justify-center overflow-hidden transition-all cursor-pointer relative select-none",
           isEnemy 
             ? "border-destructive/50 bg-destructive/10 hover:bg-destructive/20" 
             : "border-primary bg-primary/10 hover:bg-primary/20",
@@ -394,6 +478,9 @@ export function BattleGrid({
           isDragging && "opacity-50",
           isDragOver && showReticle && "ring-2 ring-yellow-400",
           isDragOver && !showReticle && "ring-2 ring-primary",
+          // Mobile selection highlighting
+          isMobileSelected && "ring-2 ring-offset-2 ring-primary animate-pulse",
+          isMobileMoveTarget && "ring-2 ring-primary/50",
           // Movable reticle highlighting for occupied slots
           isReticleCenter && "ring-2 ring-yellow-500 ring-offset-1 cursor-grab",
           showReticle && isAffectedByPattern && !isReticleCenter && "ring-2 ring-orange-500/70",
@@ -403,6 +490,15 @@ export function BattleGrid({
           isDraggingReticle && isReticleCenter && "opacity-50"
         )}
       >
+        {/* Mobile move indicator */}
+        {isMobileSelected && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <div className="bg-primary/90 text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              Tap to place
+            </div>
+          </div>
+        )}
+        
         {/* Crosshair overlay for movable reticle center */}
         {isReticleCenter && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
