@@ -29,17 +29,26 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   ArrowLeft,
   Plus,
   Trash2,
   Play,
-  Save,
   Upload,
   Download,
   Layers,
+  FileText,
+  Code,
+  FileJson,
 } from "lucide-react";
 import { UnitSide } from "@/data/gameEnums";
 import { toast } from "sonner";
+import { downloadFormationAsText, downloadFormationAsCode } from "@/lib/exportUtils";
 
 function CustomFormationContent() {
   const navigate = useNavigate();
@@ -115,7 +124,7 @@ function CustomFormationContent() {
     });
   };
 
-  const handleExport = () => {
+  const handleExportJson = () => {
     const data = JSON.stringify(formation, null, 2);
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -124,7 +133,17 @@ function CustomFormationContent() {
     a.download = `${formation.name.replace(/\s+/g, "_")}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Formation exported");
+    toast.success("Formation exported as JSON");
+  };
+
+  const handleExportText = () => {
+    downloadFormationAsText({ formation, t });
+    toast.success("Formation exported as text");
+  };
+
+  const handleExportCode = () => {
+    downloadFormationAsCode({ formation, t });
+    toast.success("Formation exported as code");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,10 +214,28 @@ function CustomFormationContent() {
               </div>
 
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1 gap-1" onClick={handleExport}>
-                  <Download className="h-4 w-4" />
-                  Export
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex-1 gap-1">
+                      <Download className="h-4 w-4" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-popover">
+                    <DropdownMenuItem onClick={handleExportJson} className="gap-2">
+                      <FileJson className="h-4 w-4" />
+                      Export as JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportText} className="gap-2">
+                      <FileText className="h-4 w-4" />
+                      Export as Text
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportCode} className="gap-2">
+                      <Code className="h-4 w-4" />
+                      Export as Code
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button variant="outline" size="sm" className="flex-1 gap-1" asChild>
                   <label>
                     <Upload className="h-4 w-4" />

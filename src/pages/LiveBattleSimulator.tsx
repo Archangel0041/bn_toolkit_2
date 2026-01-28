@@ -690,6 +690,12 @@ const LiveBattleSimulator = () => {
                 <BattleLog
                   turns={battleState.battleLog}
                   currentTurn={battleState.currentTurn}
+                  encounterInfo={{
+                    id: encounterId,
+                    name: encounter?.name ? t(encounter.name) : undefined,
+                    level: encounter?.level,
+                  }}
+                  playerFormation={tempFormation.units}
                 />
               </div>
             </div>
