@@ -1,14 +1,23 @@
 import { useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sword, Shield, Skull, Zap, Wind, Target, Flame, Droplets, TrendingUp, Ban, CircleOff, ShieldOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sword, Shield, Skull, Zap, Wind, Target, Flame, Droplets, TrendingUp, Ban, CircleOff, ShieldOff, Download } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { downloadBattleLog } from "@/lib/exportUtils";
 import type { BattleAction, BattleTurn, TurnSummary } from "@/types/liveBattle";
+import type { PartyUnit } from "@/types/battleSimulator";
 
 interface BattleLogProps {
   turns: BattleTurn[];
   currentTurn: number;
   className?: string;
+  encounterInfo?: {
+    id?: string | number;
+    name?: string;
+    level?: number;
+  };
+  playerFormation?: PartyUnit[];
 }
 
 function ActionIcon({ type, statusEffectName }: { type: BattleAction["type"]; statusEffectName?: string }) {
@@ -83,7 +92,7 @@ function TurnSummaryDisplay({ summary, isPlayerTurn }: { summary: TurnSummary; i
   );
 }
 
-export function BattleLog({ turns, currentTurn, className }: BattleLogProps) {
+export function BattleLog({ turns, currentTurn, className, encounterInfo, playerFormation }: BattleLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
 
@@ -93,6 +102,15 @@ export function BattleLog({ turns, currentTurn, className }: BattleLogProps) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [turns.length]);
+
+  const handleExportLog = () => {
+    downloadBattleLog({
+      turns,
+      encounterInfo,
+      playerFormation,
+      t,
+    });
+  };
 
   // Format action message with localization
   const formatActionMessage = (action: BattleAction): string => {
@@ -125,8 +143,18 @@ export function BattleLog({ turns, currentTurn, className }: BattleLogProps) {
 
   return (
     <div className={cn("border rounded-lg", className)}>
-      <div className="p-2 border-b bg-muted/50">
+      <div className="p-2 border-b bg-muted/50 flex items-center justify-between">
         <h3 className="text-sm font-semibold">Battle Log</h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 text-xs"
+          onClick={handleExportLog}
+          disabled={turns.length === 0}
+        >
+          <Download className="h-3 w-3" />
+          Export
+        </Button>
       </div>
       <ScrollArea className="h-[200px]" ref={scrollRef}>
         <div className="p-2 space-y-2">
