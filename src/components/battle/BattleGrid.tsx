@@ -834,9 +834,6 @@ export function BattleGrid({
           {isEnemy ? "Enemy Formation" : (
             mobileSelectedGridId !== null ? "Tap where to move" : "Your Formation"
           )}
-          {!isEnemy && isMobile && mobileSelectedGridId === null && (
-            <span className="text-xs ml-2 text-muted-foreground/70">(Hold to move)</span>
-          )}
         </div>
         
         {isEnemy ? (
