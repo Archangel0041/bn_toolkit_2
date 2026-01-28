@@ -65,6 +65,7 @@ interface AbilitySelectorProps {
   selectedAbilityId: number | null;
   onSelectAbility: (abilityId: number) => void;
   className?: string;
+  readOnly?: boolean; // When true, shows abilities but doesn't allow selection (for viewing enemy abilities)
 }
 
 export function AbilitySelector({
@@ -72,6 +73,7 @@ export function AbilitySelector({
   selectedAbilityId,
   onSelectAbility,
   className,
+  readOnly = false,
 }: AbilitySelectorProps) {
   const { t } = useLanguage();
 
@@ -94,18 +96,22 @@ export function AbilitySelector({
           const dmgTypeIcon = getDamageTypeIconUrl(info.damageType);
           const isSelected = selectedAbilityId === info.abilityId;
           const totalShots = info.shotsPerAttack * info.attacksPerUse;
+          
+          // Calculate max initial wait time (for readOnly mode display)
+          const maxWaitTime = Math.max(info.cooldown, info.globalCooldown, info.chargeTime);
 
           return (
             <Tooltip key={info.abilityId}>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => onSelectAbility(info.abilityId)}
+                  onClick={() => !readOnly && onSelectAbility(info.abilityId)}
                   className={cn(
-                    "flex items-center gap-2 p-2 rounded-lg border transition-all",
-                    "hover:bg-accent/50",
-                    isSelected
+                    "relative flex items-center gap-2 p-2 rounded-lg border transition-all",
+                    readOnly ? "cursor-default" : "hover:bg-accent/50",
+                    isSelected && !readOnly
                       ? "border-primary bg-primary/10 ring-2 ring-primary"
-                      : "border-border bg-background"
+                      : "border-border bg-background",
+                    readOnly && "opacity-80"
                   )}
                 >
                   {iconUrl && (
@@ -123,6 +129,18 @@ export function AbilitySelector({
                       </span>
                     </div>
                   </div>
+                  {/* Max wait time overlay - shows max(CD, GCD, prep time) */}
+                  {maxWaitTime > 0 && (
+                    <div className={cn(
+                      "absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 flex items-center justify-center",
+                      "rounded-full text-[10px] font-medium",
+                      info.chargeTime > 0 && info.chargeTime >= maxWaitTime
+                        ? "bg-orange-500 text-white" // Prep time is limiting factor
+                        : "bg-muted text-muted-foreground border"
+                    )}>
+                      {maxWaitTime}
+                    </div>
+                  )}
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs">
