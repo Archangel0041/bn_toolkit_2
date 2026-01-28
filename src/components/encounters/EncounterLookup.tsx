@@ -10,6 +10,7 @@ import { getEncounterIconUrl } from "@/lib/resourceImages";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { isLovableEnvironment } from "@/components/ProtectedRoute";
 import { Link } from "react-router-dom";
 import { Play, Plus } from "lucide-react";
 
@@ -130,7 +131,7 @@ export function EncounterLookup() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle>Find Encounter</CardTitle>
-            {user && hasAccess && (
+            {(isLovableEnvironment() || (user && hasAccess)) && (
               <Link to="/custom-formation">
                 <Button variant="outline" size="sm" className="gap-2">
                   <Plus className="h-4 w-4" />
@@ -188,7 +189,7 @@ export function EncounterLookup() {
                         )}
                       </div>
                     </div>
-                    {user && hasAccess && (
+                    {(isLovableEnvironment() || (user && hasAccess)) && (
                       <Link
                         to={`/battle/${id}`}
                         onClick={(e) => e.stopPropagation()}
