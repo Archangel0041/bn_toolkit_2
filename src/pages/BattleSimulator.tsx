@@ -65,6 +65,7 @@ const BattleSimulator = () => {
   const [enemyRankOverrides, setEnemyRankOverrides] = useState<Record<number, number>>({});
   const [enemyReticleGridId, setEnemyReticleGridId] = useState<number>(7);
   const [friendlyReticleGridId, setFriendlyReticleGridId] = useState<number>(7);
+  const [addUnitTargetGridId, setAddUnitTargetGridId] = useState<number | null>(null);
 
   const encounter = encounterId ? getEncounterById(parseInt(encounterId)) : null;
   const waves = encounter ? getEncounterWaves(encounter) : [];
@@ -433,6 +434,7 @@ const BattleSimulator = () => {
             onMoveUnit={tempFormation.moveUnit}
             onRemoveUnit={tempFormation.removeUnit}
             onAddUnit={tempFormation.addUnit}
+            onRequestAddUnit={(gridId) => setAddUnitTargetGridId(gridId)}
             targetArea={selectedAbility?.targetArea}
             damageArea={selectedAbility?.damageArea}
             reticleGridId={friendlyReticleGridId}
@@ -474,6 +476,8 @@ const BattleSimulator = () => {
             onRemoveUnit={tempFormation.removeUnit}
             onUpdateRank={tempFormation.setUnitRank}
             encounter={encounter}
+            targetGridId={addUnitTargetGridId}
+            onClearTargetGridId={() => setAddUnitTargetGridId(null)}
           />
         </div>
 

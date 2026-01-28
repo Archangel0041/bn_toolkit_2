@@ -1,4 +1,4 @@
-import { useState, useMemo, forwardRef } from "react";
+import { useState, useMemo, forwardRef, useEffect } from "react";
 import { getUnitById, getAllUnits } from "@/lib/units";
 import { UnitImage } from "@/components/units/UnitImage";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -35,6 +35,8 @@ interface UnitSelectorProps {
   onRemoveUnit: (gridId: number) => void;
   onUpdateRank: (gridId: number, rank: number) => void;
   encounter?: Encounter | null;
+  targetGridId?: number | null; // Pre-selected grid position from long-press
+  onClearTargetGridId?: () => void; // Clear the target after adding
 }
 
 export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(function UnitSelector({
@@ -43,11 +45,20 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
   onRemoveUnit,
   onUpdateRank,
   encounter,
+  targetGridId,
+  onClearTargetGridId,
 }, ref) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // Auto-open dialog when targetGridId is set (from long-press on grid)
+  useEffect(() => {
+    if (targetGridId !== null && targetGridId !== undefined) {
+      setIsOpen(true);
+    }
+  }, [targetGridId]);
 
   // Filter to only show Player units (side 1)
   const allUnits = useMemo(() => getAllUnits(), []);
@@ -65,13 +76,20 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
   const unitLimit = encounter ? getEncounterUnitLimit(encounter) : 13;
   const restrictionMessages = getRestrictionMessages(encounter, partyUnits, t);
 
-  const handleAddUnit = (unitId: number, closeAfter: boolean = false) => {
+  const handleAddUnit = (unitId: number) => {
     const unit = getUnitById(unitId);
     if (!unit) return;
 
-    const preferredRow = unit.statsConfig?.preferred_row || 1;
+    // Use target grid position if set, otherwise find next available
+    let position: number | null = null;
     const occupiedPositions = partyUnits.map(u => u.gridId);
-    const position = getNextAvailablePosition(preferredRow, occupiedPositions);
+    
+    if (targetGridId !== null && targetGridId !== undefined && !occupiedPositions.includes(targetGridId)) {
+      position = targetGridId;
+    } else {
+      const preferredRow = unit.statsConfig?.preferred_row || 1;
+      position = getNextAvailablePosition(preferredRow, occupiedPositions);
+    }
 
     if (position === null) {
       toast.error("Grid is full");
@@ -95,10 +113,16 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
     // Show brief success feedback
     toast.success(`Added ${t(unit.identity.name)}`, { duration: 1500 });
 
-    if (closeAfter) {
-      setIsOpen(false);
-      setSearchQuery("");
-    }
+    // Close dialog and clear target
+    setIsOpen(false);
+    setSearchQuery("");
+    onClearTargetGridId?.();
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setSearchQuery("");
+    onClearTargetGridId?.();
   };
 
   // Drag handlers for dragging units from the party list to add to formation
@@ -151,7 +175,7 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
             <span>{restrictionMessages[0]}</span>
           </div>
         )}
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1">
               <Plus className="h-4 w-4" />
@@ -191,7 +215,7 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 shrink-0 opacity-70 group-hover:opacity-100"
-                    onClick={() => handleAddUnit(unit.id, false)}
+                    onClick={() => handleAddUnit(unit.id)}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -199,7 +223,7 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
               ))}
             </div>
             <div className="pt-3 border-t flex justify-end">
-              <Button variant="outline" size="sm" onClick={() => setIsOpen(false)}>
+              <Button variant="outline" size="sm" onClick={handleClose}>
                 Done
               </Button>
             </div>
