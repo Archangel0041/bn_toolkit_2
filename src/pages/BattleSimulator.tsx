@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, Save, Upload, Swords } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Swords, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
@@ -22,7 +22,6 @@ import { getStatusEffect, getStatusEffectDisplayName, getStatusEffectColor, getS
 import { UnitImage } from "@/components/units/UnitImage";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Flame } from "lucide-react";
 import type { SelectedUnit, AbilityInfo, DamagePreview } from "@/types/battleSimulator";
 import { DAMAGE_TYPE_MAP } from "@/types/battleSimulator";
 
@@ -437,62 +436,24 @@ const BattleSimulator = () => {
           <div className="flex items-center gap-4 flex-wrap">
             <h3 className="text-sm font-medium">Formation</h3>
             
-            {/* Party selection and load */}
-            <div className="flex items-center gap-2">
-              <PartyManager
-                parties={parties}
-                selectedPartyId={selectedPartyId}
-                onSelectParty={setSelectedPartyId}
-                onCreateParty={createParty}
-                onDeleteParty={removeParty}
-                onRenameParty={renameParty}
-              />
-              {selectedParty && (
-                <Button variant="outline" size="sm" onClick={handleLoadParty} className="gap-1">
-                  <Upload className="h-3 w-3" />
-                  Load
-                </Button>
-              )}
-            </div>
-
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSaveAsParty}
-              disabled={tempFormation.units.length === 0}
-              className="gap-1"
-            >
-              <Save className="h-3 w-3" />
-              Save as Party
-            </Button>
-
-            {selectedParty && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => {
-                  updateParty({
-                    ...selectedParty,
-                    units: [...tempFormation.units],
-                  });
-                  toast.success(`Updated party: ${selectedParty.name}`);
-                }}
-                disabled={tempFormation.units.length === 0}
-                className="gap-1"
-              >
-                <Save className="h-3 w-3" />
-                Update Party
-              </Button>
-            )}
-
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => tempFormation.clearFormation()}
-              disabled={tempFormation.units.length === 0}
-            >
-              Clear
-            </Button>
+            <PartyManager
+              parties={parties}
+              selectedPartyId={selectedPartyId}
+              onSelectParty={setSelectedPartyId}
+              onCreateParty={createParty}
+              onDeleteParty={removeParty}
+              onRenameParty={renameParty}
+              onUpdateParty={updateParty}
+              onLoadParty={handleLoadParty}
+              currentUnits={tempFormation.units}
+              onImportUnits={(units, _name) => {
+                if (units.length === 0) {
+                  tempFormation.clearFormation();
+                } else {
+                  tempFormation.loadFromParty(units);
+                }
+              }}
+            />
           </div>
 
           <UnitSelector

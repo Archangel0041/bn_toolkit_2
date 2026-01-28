@@ -340,33 +340,24 @@ const LiveBattleSimulator = () => {
                 <CardTitle className="text-lg">Setup Your Party</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <PartyManager
+              <PartyManager
                   parties={parties}
                   selectedPartyId={selectedPartyId}
                   onSelectParty={setSelectedPartyId}
-                  onCreateParty={(name) => createParty(name)}
+                  onCreateParty={createParty}
                   onDeleteParty={removeParty}
                   onRenameParty={renameParty}
+                  onUpdateParty={updateParty}
+                  onLoadParty={handleLoadParty}
+                  currentUnits={tempFormation.units}
+                  onImportUnits={(units, _name) => {
+                    if (units.length === 0) {
+                      tempFormation.clearFormation();
+                    } else {
+                      tempFormation.loadFromParty(units);
+                    }
+                  }}
                 />
-                
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleLoadParty}
-                    disabled={!selectedParty}
-                  >
-                    Load Selected Party
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={tempFormation.clearFormation}
-                    disabled={tempFormation.units.length === 0}
-                  >
-                    Clear
-                  </Button>
-                </div>
 
                 <UnitSelector
                   partyUnits={tempFormation.units}
