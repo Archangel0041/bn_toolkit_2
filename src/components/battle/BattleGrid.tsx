@@ -60,7 +60,10 @@ export function BattleGrid({
   validReticlePositions,
 }: BattleGridProps) {
   const { t } = useLanguage();
-  const isMobile = useIsMobile();
+  const isMobileViewport = useIsMobile();
+  // Detect touch devices more reliably - check for touch capability OR small viewport
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  const isMobile = isMobileViewport || isTouchDevice;
   const layout = isEnemy ? ENEMY_GRID_LAYOUT : FRIENDLY_GRID_LAYOUT;
   const gridRef = useRef<HTMLDivElement>(null);
   const [draggedGridId, setDraggedGridId] = useState<number | null>(null);
@@ -69,8 +72,8 @@ export function BattleGrid({
   
   // Mobile long-press-to-move state
   const [mobileSelectedGridId, setMobileSelectedGridId] = useState<number | null>(null);
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; time: number; gridId: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef(false);
 
   // For movable reticles, calculate affected positions. For fixed attacks, use fixedAttackPositions
@@ -98,31 +101,33 @@ export function BattleGrid({
 
   // Touch handlers for mobile - long press to enter move mode
   const handleTouchStart = useCallback((e: React.TouchEvent, gridId: number, hasUnit: boolean) => {
+    // Always cancel any existing timer first
+    cancelLongPress();
+    
     touchStartRef.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
       time: Date.now(),
+      gridId,
     };
     longPressTriggeredRef.current = false;
     
-    // Prevent default to stop image drag on mobile
-    if (hasUnit) {
-      e.preventDefault();
-    }
-    
-    // Start long press timer for friendly units (500ms threshold)
-    if (isMobile && !isEnemy && hasUnit && onMoveUnit && !showReticle) {
-      cancelLongPress();
+    // Start long press timer for friendly units (400ms threshold - slightly faster for better responsiveness)
+    // Only start if we're on the friendly grid, have a unit, can move, and not in targeting mode
+    if (!isEnemy && hasUnit && onMoveUnit && !showReticle && mobileSelectedGridId === null) {
       longPressTimerRef.current = setTimeout(() => {
-        longPressTriggeredRef.current = true;
-        setMobileSelectedGridId(gridId);
-        // Vibrate if available for haptic feedback
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
+        // Double-check we still have the same touch
+        if (touchStartRef.current?.gridId === gridId) {
+          longPressTriggeredRef.current = true;
+          setMobileSelectedGridId(gridId);
+          // Vibrate if available for haptic feedback
+          if (navigator.vibrate) {
+            navigator.vibrate(50);
+          }
         }
-      }, 500);
+      }, 400);
     }
-  }, [isMobile, isEnemy, onMoveUnit, showReticle, cancelLongPress]);
+  }, [isEnemy, onMoveUnit, showReticle, mobileSelectedGridId, cancelLongPress]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     // Cancel long press if finger moves
@@ -143,33 +148,37 @@ export function BattleGrid({
   ) => {
     cancelLongPress();
     
-    if (!touchStartRef.current) return;
+    const touchStart = touchStartRef.current;
+    touchStartRef.current = null;
     
-    const dx = Math.abs(e.changedTouches[0].clientX - touchStartRef.current.x);
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
-    const dt = Date.now() - touchStartRef.current.time;
+    if (!touchStart) return;
     
-    // If long press was triggered, don't do normal tap
+    const dx = Math.abs(e.changedTouches[0].clientX - touchStart.x);
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStart.y);
+    const dt = Date.now() - touchStart.time;
+    
+    // If long press was triggered, don't do normal tap - the unit is now selected for moving
     if (longPressTriggeredRef.current) {
-      touchStartRef.current = null;
+      longPressTriggeredRef.current = false;
       return;
     }
     
-    // Only trigger tap if movement was small and quick
-    if (dx < 10 && dy < 10 && dt < 500) {
+    // Check if it was a valid tap (small movement, reasonable time)
+    const isValidTap = dx < 15 && dy < 15;
+    
+    if (isValidTap) {
       // If we're in move mode (unit selected via long press), complete the move
-      if (mobileSelectedGridId !== null && !isEnemy && onMoveUnit) {
-        if (mobileSelectedGridId !== gridId) {
+      if (mobileSelectedGridId !== null && !isEnemy) {
+        if (mobileSelectedGridId !== gridId && onMoveUnit) {
           onMoveUnit(mobileSelectedGridId, gridId);
         }
         setMobileSelectedGridId(null);
-      } else {
-        // Normal tap behavior - select unit for viewing
-        onTap();
+        return;
       }
+      
+      // Normal tap behavior - select unit for viewing
+      onTap();
     }
-    
-    touchStartRef.current = null;
   }, [cancelLongPress, mobileSelectedGridId, isEnemy, onMoveUnit]);
 
   // Cancel mobile selection
