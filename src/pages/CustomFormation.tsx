@@ -45,16 +45,19 @@ import {
   FileText,
   Code,
   FileJson,
+  Share2,
 } from "lucide-react";
 import { UnitSide } from "@/data/gameEnums";
 import { toast } from "sonner";
 import { downloadFormationAsText, downloadFormationAsCode } from "@/lib/exportUtils";
+import { FormationShareDialog } from "@/components/encounters/FormationShareDialog";
 
 function CustomFormationContent() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [unitSearchQuery, setUnitSearchQuery] = useState("");
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const {
     formation,
@@ -71,6 +74,7 @@ function CustomFormationContent() {
     setFormationName,
     setFormationLevel,
     clearFormation,
+    loadFormation,
   } = useCustomFormation();
 
   // Get all hostile units for selection
@@ -248,7 +252,23 @@ function CustomFormationContent() {
                     />
                   </label>
                 </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-1"
+                  onClick={() => setIsShareOpen(true)}
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share
+                </Button>
               </div>
+
+              <FormationShareDialog
+                open={isShareOpen}
+                onOpenChange={setIsShareOpen}
+                formation={formation}
+                onImport={loadFormation}
+              />
 
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between mb-3">

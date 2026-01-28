@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -27,16 +26,27 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Edit2 } from "lucide-react";
-import type { Party } from "@/types/battleSimulator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Plus, Trash2, Edit2, Save, Upload, Download, Share2, X } from "lucide-react";
+import { ShareDialog } from "./ShareDialog";
+import { toast } from "sonner";
+import type { Party, PartyUnit } from "@/types/battleSimulator";
 
 interface PartyManagerProps {
   parties: Party[];
   selectedPartyId: string | null;
   onSelectParty: (id: string | null) => void;
-  onCreateParty: (name: string) => void;
+  onCreateParty: (name: string) => Promise<Party | null>;
   onDeleteParty: (id: string) => void;
   onRenameParty: (name: string) => void;
+  onUpdateParty?: (party: Party) => void;
+  onLoadParty?: () => void;
+  currentUnits?: PartyUnit[];
+  onImportUnits?: (units: PartyUnit[], name: string) => void;
 }
 
 export const PartyManager = forwardRef<HTMLDivElement, PartyManagerProps>(function PartyManager({
@@ -46,18 +56,42 @@ export const PartyManager = forwardRef<HTMLDivElement, PartyManagerProps>(functi
   onCreateParty,
   onDeleteParty,
   onRenameParty,
+  onUpdateParty,
+  onLoadParty,
+  currentUnits = [],
+  onImportUnits,
 }, ref) {
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [newName, setNewName] = useState("");
 
   const selectedParty = parties.find(p => p.id === selectedPartyId);
 
-  const handleCreate = () => {
-    if (newName.trim()) {
-      onCreateParty(newName.trim());
-      setNewName("");
-      setIsCreateOpen(false);
+  const handleSaveNew = async () => {
+    const name = prompt("Enter party name:");
+    if (name?.trim()) {
+      const newParty = await onCreateParty(name.trim());
+      if (newParty && onUpdateParty && currentUnits.length > 0) {
+        onUpdateParty({
+          ...newParty,
+          units: [...currentUnits],
+        });
+      }
+      if (newParty) {
+        toast.success(`Created party: ${name.trim()}`);
+      }
+    }
+  };
+
+  const handleSave = () => {
+    if (selectedParty && onUpdateParty) {
+      onUpdateParty({
+        ...selectedParty,
+        units: [...currentUnits],
+      });
+      toast.success(`Updated: ${selectedParty.name}`);
+    } else {
+      handleSaveNew();
     }
   };
 
@@ -69,86 +103,133 @@ export const PartyManager = forwardRef<HTMLDivElement, PartyManagerProps>(functi
     }
   };
 
+  const handleImport = (units: PartyUnit[], name: string) => {
+    onImportUnits?.(units, name);
+  };
+
   return (
-    <div ref={ref} className="flex items-center gap-2 flex-wrap">
+    <div ref={ref} className="flex items-center gap-1.5 flex-wrap">
+      {/* Party selector */}
       <Select
         value={selectedPartyId || ""}
         onValueChange={(val) => onSelectParty(val || null)}
       >
-        <SelectTrigger className="w-48">
-          <SelectValue placeholder="Select a party..." />
+        <SelectTrigger className="w-40 h-8 text-xs">
+          <SelectValue placeholder="Select party..." />
         </SelectTrigger>
-        <SelectContent>
-          {parties.map(party => (
-            <SelectItem key={party.id} value={party.id}>
-              {party.name} ({party.units.length} units)
-            </SelectItem>
-          ))}
+        <SelectContent className="bg-popover">
+          {parties.length === 0 ? (
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+              No saved parties
+            </div>
+          ) : (
+            parties.map(party => (
+              <SelectItem key={party.id} value={party.id}>
+                {party.name} ({party.units.length})
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1">
-            <Plus className="h-4 w-4" />
-            New Party
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Party</DialogTitle>
-          </DialogHeader>
-          <Input
-            placeholder="Party name..."
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-          />
-          <DialogFooter>
-            <Button onClick={handleCreate} disabled={!newName.trim()}>
-              Create
+      {/* Load button */}
+      {selectedParty && onLoadParty && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={onLoadParty}>
+              <Download className="h-4 w-4" />
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </TooltipTrigger>
+          <TooltipContent>Load party</TooltipContent>
+        </Tooltip>
+      )}
 
+      {/* Save/Update button */}
+      {onUpdateParty && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={handleSave}
+              disabled={currentUnits.length === 0}
+            >
+              <Save className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {selectedParty ? `Save to "${selectedParty.name}"` : "Save as new party"}
+          </TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Save as New button */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8"
+            onClick={handleSaveNew}
+            disabled={currentUnits.length === 0}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Save as new party</TooltipContent>
+      </Tooltip>
+
+      {/* Share button */}
+      {onImportUnits && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => setIsShareOpen(true)}
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Share / Import</TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Party actions when selected */}
       {selectedParty && (
         <>
-          <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
-            <DialogTrigger asChild>
+          {/* Rename */}
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Button 
                 variant="ghost" 
-                size="sm" 
-                className="gap-1"
-                onClick={() => setNewName(selectedParty.name)}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  setNewName(selectedParty.name);
+                  setIsRenameOpen(true);
+                }}
               >
                 <Edit2 className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Rename Party</DialogTitle>
-              </DialogHeader>
-              <Input
-                placeholder="New name..."
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleRename()}
-              />
-              <DialogFooter>
-                <Button onClick={handleRename} disabled={!newName.trim()}>
-                  Rename
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            </TooltipTrigger>
+            <TooltipContent>Rename party</TooltipContent>
+          </Tooltip>
 
+          {/* Delete */}
           <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-destructive">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Delete party</TooltipContent>
+            </Tooltip>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Party</AlertDialogTitle>
@@ -169,6 +250,52 @@ export const PartyManager = forwardRef<HTMLDivElement, PartyManagerProps>(functi
           </AlertDialog>
         </>
       )}
+
+      {/* Clear button */}
+      {currentUnits.length > 0 && onImportUnits && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => onImportUnits([], "")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Clear formation</TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Rename Dialog */}
+      <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Party</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="New name..."
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleRename()}
+          />
+          <DialogFooter>
+            <Button onClick={handleRename} disabled={!newName.trim()}>
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Dialog */}
+      <ShareDialog
+        open={isShareOpen}
+        onOpenChange={setIsShareOpen}
+        units={currentUnits}
+        partyName={selectedParty?.name}
+        onImport={handleImport}
+      />
     </div>
   );
 });
