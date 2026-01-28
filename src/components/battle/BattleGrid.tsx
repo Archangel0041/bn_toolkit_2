@@ -67,9 +67,11 @@ export function BattleGrid({
   const [dragOverGridId, setDragOverGridId] = useState<number | null>(null);
   const [isDraggingReticle, setIsDraggingReticle] = useState(false);
   
-  // Mobile tap-to-move state: first tap selects, second tap places
+  // Mobile long-press-to-move state
   const [mobileSelectedGridId, setMobileSelectedGridId] = useState<number | null>(null);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   // For movable reticles, calculate affected positions. For fixed attacks, use fixedAttackPositions
   const affectedPositions = fixedAttackPositions.length > 0
@@ -86,60 +88,91 @@ export function BattleGrid({
     setMobileSelectedGridId(null);
   }, [showReticle]);
 
-  // Touch handlers for mobile - prevents image drag behavior
-  const handleTouchStart = useCallback((e: React.TouchEvent, hasUnit: boolean) => {
+  // Cancel long press timer
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  // Touch handlers for mobile - long press to enter move mode
+  const handleTouchStart = useCallback((e: React.TouchEvent, gridId: number, hasUnit: boolean) => {
     touchStartRef.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
       time: Date.now(),
     };
+    longPressTriggeredRef.current = false;
+    
     // Prevent default to stop image drag on mobile
     if (hasUnit) {
       e.preventDefault();
     }
-  }, []);
+    
+    // Start long press timer for friendly units (500ms threshold)
+    if (isMobile && !isEnemy && hasUnit && onMoveUnit && !showReticle) {
+      cancelLongPress();
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        setMobileSelectedGridId(gridId);
+        // Vibrate if available for haptic feedback
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }, 500);
+    }
+  }, [isMobile, isEnemy, onMoveUnit, showReticle, cancelLongPress]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    // Cancel long press if finger moves
+    if (touchStartRef.current) {
+      const dx = Math.abs(e.touches[0].clientX - touchStartRef.current.x);
+      const dy = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+      if (dx > 10 || dy > 10) {
+        cancelLongPress();
+        touchStartRef.current = null;
+      }
+    }
+  }, [cancelLongPress]);
 
   const handleTouchEnd = useCallback((
     e: React.TouchEvent,
     gridId: number,
-    unitId: number | null,
-    hasUnit: boolean,
     onTap: () => void
   ) => {
+    cancelLongPress();
+    
     if (!touchStartRef.current) return;
     
     const dx = Math.abs(e.changedTouches[0].clientX - touchStartRef.current.x);
     const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
     const dt = Date.now() - touchStartRef.current.time;
     
+    // If long press was triggered, don't do normal tap
+    if (longPressTriggeredRef.current) {
+      touchStartRef.current = null;
+      return;
+    }
+    
     // Only trigger tap if movement was small and quick
     if (dx < 10 && dy < 10 && dt < 500) {
-      // Handle mobile move mode for friendly units
-      if (isMobile && !isEnemy && !showReticle && onMoveUnit) {
-        if (mobileSelectedGridId !== null) {
-          // Second tap - move unit
-          if (mobileSelectedGridId !== gridId) {
-            onMoveUnit(mobileSelectedGridId, gridId);
-          }
-          setMobileSelectedGridId(null);
-          touchStartRef.current = null;
-          return;
-        } else if (hasUnit) {
-          // First tap on unit - select for moving
-          setMobileSelectedGridId(gridId);
-          touchStartRef.current = null;
-          return;
+      // If we're in move mode (unit selected via long press), complete the move
+      if (mobileSelectedGridId !== null && !isEnemy && onMoveUnit) {
+        if (mobileSelectedGridId !== gridId) {
+          onMoveUnit(mobileSelectedGridId, gridId);
         }
+        setMobileSelectedGridId(null);
+      } else {
+        // Normal tap behavior - select unit for viewing
+        onTap();
       }
-      
-      // Normal tap behavior
-      onTap();
     }
     
     touchStartRef.current = null;
-  }, [isMobile, isEnemy, showReticle, onMoveUnit, mobileSelectedGridId]);
+  }, [cancelLongPress, mobileSelectedGridId, isEnemy, onMoveUnit]);
 
-  // Cancel mobile selection on outside tap
+  // Cancel mobile selection
   const handleCancelMobileSelection = useCallback(() => {
     setMobileSelectedGridId(null);
   }, []);
@@ -362,8 +395,9 @@ export function BattleGrid({
           key={gridId}
           draggable={isReticleCenter && !isMobile}
           onClick={handleEmptySlotClick}
-          onTouchStart={(e) => handleTouchStart(e, false)}
-          onTouchEnd={(e) => handleTouchEnd(e, gridId, null, false, handleEmptySlotClick)}
+          onTouchStart={(e) => handleTouchStart(e, gridId, false)}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={(e) => handleTouchEnd(e, gridId, handleEmptySlotClick)}
           onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => isReticleCenter && handleReticleDragStart(e, gridId)}
           onDragOver={(e) => handleDragOver(e, gridId)}
@@ -453,8 +487,9 @@ export function BattleGrid({
     const slotContent = (
       <div
         onClick={handleClick}
-        onTouchStart={(e) => handleTouchStart(e, true)}
-        onTouchEnd={(e) => handleTouchEnd(e, gridId, unitId, true, handleClick)}
+        onTouchStart={(e) => handleTouchStart(e, gridId, true)}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={(e) => handleTouchEnd(e, gridId, handleClick)}
         onContextMenu={(e) => e.preventDefault()}
         draggable={!isMobile && (isReticleCenter || (!isEnemy && !showReticle))}
         onDragStart={(e) => {
@@ -490,11 +525,11 @@ export function BattleGrid({
           isDraggingReticle && isReticleCenter && "opacity-50"
         )}
       >
-        {/* Mobile move indicator */}
+        {/* Mobile move indicator - shows when unit is selected via long-press */}
         {isMobileSelected && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <div className="bg-primary/90 text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              Tap to place
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 bg-primary/30">
+            <div className="bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
+              Tap destination
             </div>
           </div>
         )}
@@ -771,13 +806,28 @@ export function BattleGrid({
         ref={gridRef}
         tabIndex={showReticle ? 0 : undefined}
         className={cn(
-          "flex flex-col items-center gap-2 p-4 rounded-lg outline-none",
+          "flex flex-col items-center gap-2 p-4 rounded-lg outline-none relative",
           isEnemy ? "bg-destructive/5" : "bg-primary/5",
           showReticle && "focus:ring-2 focus:ring-yellow-500/50"
         )}
       >
+        {/* Mobile move mode cancel button */}
+        {mobileSelectedGridId !== null && !isEnemy && (
+          <button
+            onClick={handleCancelMobileSelection}
+            className="absolute top-2 right-2 bg-muted hover:bg-muted/80 text-muted-foreground text-xs px-2 py-1 rounded-md z-30"
+          >
+            Cancel
+          </button>
+        )}
+        
         <div className="text-sm font-medium text-muted-foreground mb-2">
-          {isEnemy ? "Enemy Formation" : "Your Formation"}
+          {isEnemy ? "Enemy Formation" : (
+            mobileSelectedGridId !== null ? "Tap where to move" : "Your Formation"
+          )}
+          {!isEnemy && isMobile && mobileSelectedGridId === null && (
+            <span className="text-xs ml-2 text-muted-foreground/70">(Hold to move)</span>
+          )}
         </div>
         
         {isEnemy ? (
