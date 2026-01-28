@@ -175,7 +175,7 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
             <span>{restrictionMessages[0]}</span>
           </div>
         )}
-        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+        <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1">
               <Plus className="h-4 w-4" />
