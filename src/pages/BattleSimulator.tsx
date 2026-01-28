@@ -376,44 +376,49 @@ const BattleSimulator = () => {
             validReticlePositions={!selectedUnit?.isEnemy ? validReticlePositions : undefined}
           />
 
-          {/* Divider with selected unit info */}
-          <div className="border-y py-4">
+          {/* Divider with ability selector */}
+          <div className="border-y py-3">
             {selectedUnit && selectedUnitData ? (
-              <div className="grid lg:grid-cols-3 gap-4">
-                {/* Unit Info Panel */}
-                <UnitInfoPanel
-                  unitId={selectedUnit.unitId}
-                  rank={selectedUnit.rank}
-                  gridId={selectedUnit.gridId}
-                  isEnemy={selectedUnit.isEnemy}
-                />
+              <div className="flex items-center gap-4">
+                {/* Compact unit indicator */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <UnitImage
+                    iconName={selectedUnitData.identity.icon}
+                    alt={selectedUnitName}
+                    className="w-10 h-10 rounded border"
+                  />
+                  <div className="text-sm">
+                    <div className="font-medium">{selectedUnitName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Rank {selectedUnit.rank}
+                    </div>
+                  </div>
+                </div>
                 
                 {/* Ability selector */}
-                <div className="lg:col-span-2 flex items-center gap-4">
-                  <AbilitySelector
-                    abilities={selectedUnitAbilities}
-                    selectedAbilityId={selectedAbilityId}
-                    onSelectAbility={setSelectedAbilityId}
-                    className="flex-1"
+                <AbilitySelector
+                  abilities={selectedUnitAbilities}
+                  selectedAbilityId={selectedAbilityId}
+                  onSelectAbility={setSelectedAbilityId}
+                  className="flex-1"
+                />
+                
+                {/* Pattern diagram for abilities */}
+                {selectedAbility && (
+                  <TargetingPatternDiagram 
+                    targetArea={selectedAbility.targetArea}
+                    lineOfFire={selectedAbility.lineOfFire}
+                    attackDirection={selectedAbility.attackDirection}
+                    minRange={selectedAbility.minRange}
+                    maxRange={selectedAbility.maxRange}
+                    isFixed={selectedAbility.isFixed}
+                    className="shrink-0"
                   />
-                  
-                  {/* Pattern diagram for abilities */}
-                  {selectedAbility && (
-                    <TargetingPatternDiagram 
-                      targetArea={selectedAbility.targetArea}
-                      lineOfFire={selectedAbility.lineOfFire}
-                      attackDirection={selectedAbility.attackDirection}
-                      minRange={selectedAbility.minRange}
-                      maxRange={selectedAbility.maxRange}
-                      isFixed={selectedAbility.isFixed}
-                      className="ml-4"
-                    />
-                  )}
-                </div>
+                )}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground">
-                Click on a unit to see its abilities and damage calculations
+              <p className="text-center text-muted-foreground text-sm">
+                Tap a unit to see abilities
               </p>
             )}
           </div>
@@ -471,6 +476,18 @@ const BattleSimulator = () => {
             encounter={encounter}
           />
         </div>
+
+        {/* Unit Info Panel - fixed at bottom when unit selected */}
+        {selectedUnit && selectedUnitData && (
+          <div className="border-t pt-4 animate-fade-in">
+            <UnitInfoPanel
+              unitId={selectedUnit.unitId}
+              rank={selectedUnit.rank}
+              gridId={selectedUnit.gridId}
+              isEnemy={selectedUnit.isEnemy}
+            />
+          </div>
+        )}
       </main>
     </div>
   );
