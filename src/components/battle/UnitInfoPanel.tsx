@@ -352,6 +352,12 @@ export const UnitInfoPanel = forwardRef<HTMLDivElement, UnitInfoPanelProps>(func
                           <span className="text-muted-foreground">Global CD</span>
                           <span className="font-medium">{ability.globalCooldown}t</span>
                         </div>
+                        {ability.chargeTime > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Prep Time</span>
+                            <span className="font-medium text-orange-500">{ability.chargeTime}t</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Ammo</span>
                           <span className="font-medium">{ammoRequired}</span>
