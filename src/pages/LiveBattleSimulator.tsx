@@ -8,6 +8,7 @@ import { Header } from "@/components/Header";
 import { LiveBattleGrid } from "@/components/battle/LiveBattleGrid";
 import { BattleGrid } from "@/components/battle/BattleGrid";
 import { LiveAbilitySelector } from "@/components/battle/LiveAbilitySelector";
+import { AbilitySelector } from "@/components/battle/AbilitySelector";
 import { BattleLog } from "@/components/battle/BattleLog";
 import { UnitSelector } from "@/components/battle/UnitSelector";
 import { PartyManager } from "@/components/battle/PartyManager";
@@ -592,7 +593,8 @@ const LiveBattleSimulator = () => {
                           {selectedUnit.maxArmor > 0 && ` | Armor: ${selectedUnit.currentArmor}/${selectedUnit.maxArmor}`}
                         </p>
                       </div>
-                      {!selectedUnit.isEnemy && battleState.isPlayerTurn && (
+                      {/* Show LiveAbilitySelector for friendly units on player turn */}
+                      {!selectedUnit.isEnemy && battleState.isPlayerTurn ? (
                         <LiveAbilitySelector
                           abilities={allAbilities}
                           selectedAbilityId={selectedAbilityId}
@@ -603,6 +605,15 @@ const LiveBattleSimulator = () => {
                           weaponReloadCooldown={selectedUnit.weaponReloadCooldown}
                           abilityChargeProgress={selectedUnit.abilityChargeProgress}
                           disabled={!battleState.isPlayerTurn || battleState.isBattleOver}
+                        />
+                      ) : (
+                        /* Show static AbilitySelector for enemy units or when not player turn (view-only) */
+                        <AbilitySelector
+                          abilities={allAbilities}
+                          selectedAbilityId={selectedAbilityId}
+                          onSelectAbility={setSelectedAbilityId}
+                          readOnly={selectedUnit.isEnemy || !battleState.isPlayerTurn}
+                          className="flex-1"
                         />
                       )}
                     </div>
