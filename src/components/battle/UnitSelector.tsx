@@ -194,9 +194,10 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
             />
             <div className="overflow-y-auto flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {filteredUnits.slice(0, 50).map(unit => (
-                <div
+                <button
                   key={unit.id}
-                  className="flex items-center gap-2 p-2 rounded-lg border hover:bg-accent transition-colors text-left group"
+                  className="flex items-center gap-2 p-2 rounded-lg border hover:bg-accent transition-colors text-left cursor-pointer"
+                  onClick={() => handleAddUnit(unit.id)}
                 >
                   <UnitImage
                     iconName={unit.identity.icon}
@@ -211,21 +212,8 @@ export const UnitSelector = forwardRef<HTMLDivElement, UnitSelectorProps>(functi
                       ID: {unit.id}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0 opacity-70 group-hover:opacity-100"
-                    onClick={() => handleAddUnit(unit.id)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+                </button>
               ))}
-            </div>
-            <div className="pt-3 border-t flex justify-end">
-              <Button variant="outline" size="sm" onClick={handleClose}>
-                Done
-              </Button>
             </div>
           </DialogContent>
         </Dialog>
