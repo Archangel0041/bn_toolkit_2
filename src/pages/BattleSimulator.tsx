@@ -396,13 +396,12 @@ const BattleSimulator = () => {
                   </div>
                 </div>
                 
-                {/* Ability selector - readOnly for enemies */}
+                {/* Ability selector - allow selection for both friendly and enemy units for damage preview */}
                 <AbilitySelector
                   abilities={selectedUnitAbilities}
                   selectedAbilityId={selectedAbilityId}
                   onSelectAbility={setSelectedAbilityId}
                   className="flex-1"
-                  readOnly={selectedUnit.isEnemy}
                 />
                 
                 {/* Pattern diagram for abilities */}
