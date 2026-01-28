@@ -270,8 +270,12 @@ export const UnitInfoPanel = forwardRef<HTMLDivElement, UnitInfoPanelProps>(func
                   const shotsPerAttack = abilityData?.stats.shots_per_attack ?? 1;
                   const attacksPerUse = ability.attacksPerUse ?? 1;
                   const totalShots = shotsPerAttack * attacksPerUse;
-                  const critPercent = abilityData?.stats.critical_hit_percent ?? 0;
-                  const armorPierce = abilityData?.stats.armor_piercing_percent ?? 0;
+                  // Calculate combined crit: unit base + floor(weapon * crit_from_weapon) + ability crit
+                  const scaledWeaponCrit = ability.critFromWeapon !== undefined && ability.critFromWeapon !== 1 
+                    ? Math.floor(ability.weaponBaseCrit * ability.critFromWeapon) 
+                    : ability.weaponBaseCrit;
+                  const totalCrit = ability.unitBaseCrit + scaledWeaponCrit + ability.critPercent;
+                  const armorPierce = ability.armorPiercing ?? 0;
                   
                   // Get targets and critical bonuses
                   const targets = abilityData?.stats.targets || [];
@@ -364,7 +368,7 @@ export const UnitInfoPanel = forwardRef<HTMLDivElement, UnitInfoPanelProps>(func
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Crit %</span>
-                          <span className="font-medium">{critPercent}%</span>
+                          <span className="font-medium">{totalCrit}%</span>
                         </div>
                         {armorPierce > 0 && (
                           <div className="flex justify-between">

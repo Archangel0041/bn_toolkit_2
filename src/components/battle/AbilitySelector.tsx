@@ -99,6 +99,12 @@ export function AbilitySelector({
           
           // Calculate max initial wait time (for readOnly mode display)
           const maxWaitTime = Math.max(info.cooldown, info.globalCooldown, info.chargeTime);
+          
+          // Calculate combined crit: unit base + floor(weapon * crit_from_weapon) + ability crit
+          const scaledWeaponCrit = info.critFromWeapon !== undefined && info.critFromWeapon !== 1 
+            ? Math.floor(info.weaponBaseCrit * info.critFromWeapon) 
+            : info.weaponBaseCrit;
+          const totalCrit = info.unitBaseCrit + scaledWeaponCrit + info.critPercent;
 
           return (
             <Tooltip key={info.abilityId}>
@@ -172,7 +178,7 @@ export function AbilitySelector({
                     <span>Armor Pierce:</span>
                     <span>{Math.round(info.armorPiercing * 100)}%</span>
                     <span>Crit:</span>
-                    <span>{info.critPercent}%</span>
+                    <span>{totalCrit}%</span>
                     {info.suppressionMultiplier !== 1 && (
                       <>
                         <span>Suppression:</span>
