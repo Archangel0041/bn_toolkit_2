@@ -373,7 +373,7 @@ const BattleSimulator = () => {
             reticleGridId={enemyReticleGridId}
             onReticleMove={handleEnemyReticleMove}
             showReticle={!!selectedAbility && !selectedAbility.isFixed && !selectedAbility.isSingleTarget && !selectedUnit?.isEnemy}
-            fixedAttackPositions={!selectedUnit?.isEnemy ? fixedAttackPositions.enemyGrid : fixedAttackPositions.friendlyGrid}
+            fixedAttackPositions={!selectedUnit?.isEnemy ? fixedAttackPositions.enemyGrid : []}
             validReticlePositions={!selectedUnit?.isEnemy ? validReticlePositions : undefined}
           />
 
