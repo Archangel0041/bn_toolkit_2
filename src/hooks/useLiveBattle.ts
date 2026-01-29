@@ -812,8 +812,8 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     newState.friendlyCollapsedRows = collapseGrid(newState.friendlyUnits, newState.friendlyCollapsedRows);
     newState.enemyCollapsedRows = collapseGrid(newState.enemyUnits, newState.enemyCollapsedRows);
 
-    // 2b. Reduce cooldowns for enemies (before ability selection) - stunned units skip this
-    reduceCooldowns(newState.enemyUnits);
+    // NOTE: Enemy cooldown reduction is done AFTER ability selection/execution
+    // to ensure abilities with prep time (chargeTime) require the full N turns before use
 
     // 3. Check if battle ended from status effects
     let endCheck = checkBattleEnd(newState);
@@ -953,7 +953,8 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       actions.push({ type: "skip", message: "Enemy skipped turn" });
     }
 
-    // Cooldowns already reduced at turn start (before ability selection)
+    // Reduce cooldowns AFTER action execution (so prep time abilities require full N turns)
+    reduceCooldowns(newState.enemyUnits);
 
     // 10. Check battle end
     endCheck = checkBattleEnd(newState);
