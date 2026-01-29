@@ -876,7 +876,7 @@ export function executeAttack(
     attacker.weaponAmmo[ability.weaponName] = Math.max(0, currentAmmo - ability.ammoRequired);
     
     if (attacker.weaponAmmo[ability.weaponName] === 0 && ability.weaponReloadTime > 0) {
-      attacker.weaponReloadCooldown[ability.weaponName] = ability.weaponReloadTime;
+      attacker.weaponReloadCooldown[ability.weaponName] = ability.weaponReloadTime + 1;
     }
   }
   
@@ -1129,7 +1129,7 @@ export function executeRandomAttack(
     const currentAmmo = attacker.weaponAmmo[ability.weaponName] ?? 0;
     attacker.weaponAmmo[ability.weaponName] = Math.max(0, currentAmmo - ability.ammoRequired);
     if (attacker.weaponAmmo[ability.weaponName] === 0 && ability.weaponReloadTime > 0) {
-      attacker.weaponReloadCooldown[ability.weaponName] = ability.weaponReloadTime;
+      attacker.weaponReloadCooldown[ability.weaponName] = ability.weaponReloadTime + 1;
     }
   }
   
