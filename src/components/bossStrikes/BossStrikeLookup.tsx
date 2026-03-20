@@ -77,7 +77,13 @@ export function BossStrikeLookup() {
 
   const getDisplayName = (encounterName: string | undefined, id: string, archived: boolean): string => {
     const mappedName = getBossStrikeNameById(id, archived);
-    if (mappedName) return mappedName;
+    if (mappedName) {
+      // For current boss strikes, mappedName is a localization key — translate it
+      const translated = t(mappedName);
+      if (translated !== mappedName) return translated;
+      // If translation failed, it's a static name (archived) — use as-is
+      return mappedName;
+    }
     
     if (encounterName) {
       const translated = t(encounterName);
