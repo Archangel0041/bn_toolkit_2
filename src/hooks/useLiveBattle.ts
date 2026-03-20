@@ -806,7 +806,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     const actions: BattleAction[] = [];
 
     // 1. Process status effects for ENEMY units only (DoT damage ticks at start of their turn)
-    actions.push(...processStatusEffects(newState.enemyUnits, environmentalDamageMods));
+    actions.push(...processStatusEffects(newState.enemyUnits, environmentalDamageMods, encounter?.environmental_status_effect));
 
     // 2. Detect collapsed rows
     // Pass previous collapsed rows to ensure only 1 row collapses per turn
