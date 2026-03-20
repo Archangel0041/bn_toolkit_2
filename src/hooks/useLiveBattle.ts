@@ -15,6 +15,7 @@ import {
   createLiveBattleUnit,
   collapseGrid,
   calculateTurnSummary,
+  applyEnvironmentalEffect,
 } from "@/lib/liveBattleEngine";
 import { getUnitAbilities, calculateDodgeChance, calculateDamageWithArmor, canTargetUnit, calculateCritChance } from "@/lib/battleCalculations";
 import { getBlockingUnits, checkLineOfFire, calculateRange, findFrontmostUnblockedPosition, getTargetingInfo } from "@/lib/battleTargeting";
