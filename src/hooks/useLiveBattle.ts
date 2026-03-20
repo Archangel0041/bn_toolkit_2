@@ -862,6 +862,10 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       newState.enemyCollapsedRows = new Set<number>(); // Reset enemy grid layout for new wave
       newState.currentWave = nextWave;
       newState.currentEnemyIndex = 0;
+      // Apply environmental status effect to new wave units
+      if (encounter?.environmental_status_effect) {
+        applyEnvironmentalEffect([...newState.friendlyUnits, ...newEnemyUnits], encounter.environmental_status_effect);
+      }
       actions.push({ type: "skip", message: `Wave ${nextWave + 1} begins! Enemies attack first.` });
     }
 
