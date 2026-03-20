@@ -1156,7 +1156,7 @@ export function processStatusEffects(
         
         // Check immunity
         const unitData = getUnitById(unit.unitId);
-        const immunities = unitData?.statsConfig?.stats?.[unit.rank - 1]?.status_immunities || [];
+        const immunities = unitData?.statsConfig?.status_effect_immunities || [];
         if (immunities.includes(envEffect.family)) continue;
         
         const dotDamage = envEffect.dot_bonus_damage ?? 0;
