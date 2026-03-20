@@ -15,6 +15,7 @@ import {
   createLiveBattleUnit,
   collapseGrid,
   calculateTurnSummary,
+  applyEnvironmentalEffect,
 } from "@/lib/liveBattleEngine";
 import { getUnitAbilities, calculateDodgeChance, calculateDamageWithArmor, canTargetUnit, calculateCritChance } from "@/lib/battleCalculations";
 import { getBlockingUnits, checkLineOfFire, calculateRange, findFrontmostUnblockedPosition, getTargetingInfo } from "@/lib/battleTargeting";
@@ -57,6 +58,10 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     console.log("Starting battle with party:", friendlyParty.map(u => ({ unitId: u.unitId, gridId: u.gridId, rank: u.rank })));
     const state = initializeBattle(friendlyParty, waves, startingWave);
     console.log("Battle initialized, friendly units:", state.friendlyUnits.map(u => ({ unitId: u.unitId, gridId: u.gridId })));
+    // Apply environmental status effect at battle start
+    if (encounter?.environmental_status_effect) {
+      applyEnvironmentalEffect([...state.friendlyUnits, ...state.enemyUnits], encounter.environmental_status_effect);
+    }
     setBattleState(state);
     setSelectedUnitGridId(null);
     setSelectedUnitIsEnemy(false);
@@ -64,7 +69,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     setIsProcessing(false);
     // First turn is already ready - no DOT to process yet
     setPlayerTurnStartProcessed(true);
-  }, [friendlyParty, waves, startingWave]);
+  }, [friendlyParty, waves, startingWave, encounter?.environmental_status_effect]);
 
   // Execute player turn start phase: DoT -> deaths -> collapse -> cooldowns
   // Called automatically when player turn begins (after enemy turn ends)
@@ -857,6 +862,10 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       newState.enemyCollapsedRows = new Set<number>(); // Reset enemy grid layout for new wave
       newState.currentWave = nextWave;
       newState.currentEnemyIndex = 0;
+      // Apply environmental status effect to new wave units
+      if (encounter?.environmental_status_effect) {
+        applyEnvironmentalEffect([...newState.friendlyUnits, ...newEnemyUnits], encounter.environmental_status_effect);
+      }
       actions.push({ type: "skip", message: `Wave ${nextWave + 1} begins! Enemies attack first.` });
     }
 
@@ -1016,6 +1025,11 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
 
       // On subsequent waves, enemies go first
       // Reset enemy collapsed rows since new enemies spawn on the full grid
+      // Apply environmental status effect to new wave enemies and surviving friendlies
+      if (encounter?.environmental_status_effect) {
+        applyEnvironmentalEffect([...prev.friendlyUnits, ...enemyUnits], encounter.environmental_status_effect);
+      }
+
       return {
         ...prev,
         enemyUnits,
@@ -1030,7 +1044,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
         }],
       };
     });
-  }, [battleState, waves]);
+  }, [battleState, waves, encounter?.environmental_status_effect]);
 
   // Skip player turn
   const skipTurn = useCallback(() => {
