@@ -974,7 +974,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     });
 
     setIsProcessing(false);
-  }, [battleState, isProcessing, environmentalDamageMods, t]);
+  }, [battleState, isProcessing, environmentalDamageMods, encounter?.environmental_status_effect, t]);
 
   // Check if all enemies are dead and auto-advance wave
   const checkWaveAdvance = useCallback(() => {
