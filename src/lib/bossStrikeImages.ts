@@ -1,14 +1,7 @@
-// ID-based mappings for CURRENT boss strike backgrounds
-const currentIdToBackground: Record<string, string> = {
-  "1": "/boss-strike-images/boss_animal_raider_1136x640.png",
-};
+import { getBossStrikeById } from "@/lib/bossStrikes";
+import { getMenuBackgroundUrl } from "@/lib/resourceImages";
 
-// ID-based mappings for CURRENT boss strike names
-const currentIdToName: Record<string, string> = {
-  "1": "Yuzul the Raptor Trainer",
-};
-
-// ID-based mappings for ARCHIVED boss strike backgrounds
+// ID-based mappings for ARCHIVED boss strike backgrounds (static, since archived data is bundled)
 const archivedIdToBackground: Record<string, string> = {
   "1": "/boss-strike-images/boss_strike_mad_scientist_1136x640.png",
   "2": "/boss-strike-images/boss_strike_mad_scientist_1136x640.png",
@@ -41,7 +34,7 @@ const archivedIdToBackground: Record<string, string> = {
   "22": "/boss-strike-images/raider_bosses_boss_strike1136x640.png",
 };
 
-// ID-based mappings for ARCHIVED boss strike names
+// ID-based mappings for ARCHIVED boss strike names (static)
 const archivedIdToName: Record<string, string> = {
   "1": "Dr. Vogel",
   "2": "Dr. Vogel",
@@ -74,16 +67,50 @@ const archivedIdToName: Record<string, string> = {
   "22": "Raiders",
 };
 
+/**
+ * Get boss strike background image URL.
+ * For current boss strikes, reads ui_config.menu_bg from the config data.
+ * For archived, uses the static mapping.
+ */
 export function getBossStrikeBackgroundById(id: string | number, archived = false): string | null {
-  const map = archived ? archivedIdToBackground : currentIdToBackground;
-  // Fall back to archived if not found in current
-  return map[String(id)] || archivedIdToBackground[String(id)] || null;
+  const strId = String(id);
+
+  if (archived) {
+    return archivedIdToBackground[strId] || null;
+  }
+
+  // For current boss strikes, read from the config's ui_config
+  const bossStrike = getBossStrikeById(strId, false);
+  if (bossStrike?.ui_config?.menu_bg) {
+    return getMenuBackgroundUrl(bossStrike.ui_config.menu_bg);
+  }
+
+  // Fallback to archived mapping
+  return archivedIdToBackground[strId] || null;
 }
 
+/**
+ * Get boss strike display name.
+ * For current boss strikes, returns the ui_config.event_title localization key.
+ * For archived, uses the static mapping.
+ * Returns null if no name found (caller should use encounter name or fallback).
+ */
 export function getBossStrikeNameById(id: string | number, archived = false): string | null {
-  const map = archived ? archivedIdToName : currentIdToName;
-  // Fall back to archived if not found in current
-  return map[String(id)] || archivedIdToName[String(id)] || null;
+  const strId = String(id);
+
+  if (archived) {
+    return archivedIdToName[strId] || null;
+  }
+
+  // For current boss strikes, return the event_title localization key
+  // The caller (component) is responsible for translating via t()
+  const bossStrike = getBossStrikeById(strId, false);
+  if (bossStrike?.ui_config?.event_title) {
+    return bossStrike.ui_config.event_title;
+  }
+
+  // Fallback to archived mapping
+  return archivedIdToName[strId] || null;
 }
 
 // Legacy functions kept for compatibility

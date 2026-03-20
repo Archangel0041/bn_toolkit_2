@@ -37,8 +37,14 @@ export function BossStrikeViewer({ bossStrike, bossStrikeId }: BossStrikeViewerP
   const bossStrikeName = getBossStrikeName(bossStrike);
   const encounterDisplayName = bossStrikeName ? t(bossStrikeName) : null;
   
+  // For current boss strikes, mappedName may be a localization key — translate it
+  const translatedMappedName = mappedName ? t(mappedName) : null;
+  const resolvedMappedName = translatedMappedName && translatedMappedName !== mappedName 
+    ? translatedMappedName 
+    : mappedName; // Archived names are already plain text
+  
   // Use mapped name first, then encounter name if translated, otherwise generic
-  const displayName = mappedName 
+  const displayName = resolvedMappedName
     || (encounterDisplayName && encounterDisplayName !== bossStrikeName ? encounterDisplayName : null)
     || `Boss Strike #${bossStrikeId}`;
   
