@@ -57,6 +57,10 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     console.log("Starting battle with party:", friendlyParty.map(u => ({ unitId: u.unitId, gridId: u.gridId, rank: u.rank })));
     const state = initializeBattle(friendlyParty, waves, startingWave);
     console.log("Battle initialized, friendly units:", state.friendlyUnits.map(u => ({ unitId: u.unitId, gridId: u.gridId })));
+    // Apply environmental status effect at battle start
+    if (encounter?.environmental_status_effect) {
+      applyEnvironmentalEffect([...state.friendlyUnits, ...state.enemyUnits], encounter.environmental_status_effect);
+    }
     setBattleState(state);
     setSelectedUnitGridId(null);
     setSelectedUnitIsEnemy(false);
@@ -64,7 +68,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     setIsProcessing(false);
     // First turn is already ready - no DOT to process yet
     setPlayerTurnStartProcessed(true);
-  }, [friendlyParty, waves, startingWave]);
+  }, [friendlyParty, waves, startingWave, encounter?.environmental_status_effect]);
 
   // Execute player turn start phase: DoT -> deaths -> collapse -> cooldowns
   // Called automatically when player turn begins (after enemy turn ends)

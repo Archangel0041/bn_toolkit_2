@@ -145,6 +145,39 @@ export function initializeBattle(
   };
 }
 
+// Apply environmental status effect to all alive units (used at battle/wave start)
+export function applyEnvironmentalEffect(units: LiveBattleUnit[], environmentalStatusEffectId: number): void {
+  const envEffect = getStatusEffect(environmentalStatusEffectId);
+  if (!envEffect || envEffect.dot_damage_type === undefined) return;
+
+  const dotDamage = envEffect.dot_bonus_damage ?? 0;
+
+  for (const unit of units) {
+    if (unit.isDead) continue;
+
+    // Check immunity
+    const unitData = getUnitById(unit.unitId);
+    const immunities = unitData?.statsConfig?.status_effect_immunities || [];
+    if (immunities.includes(envEffect.family)) continue;
+
+    // Only add if not already present
+    const existing = unit.activeStatusEffects.find(e => e.effectId === environmentalStatusEffectId);
+    if (!existing) {
+      unit.activeStatusEffects.push({
+        effectId: environmentalStatusEffectId,
+        remainingDuration: envEffect.duration || 1,
+        dotDamage,
+        dotDamageType: envEffect.dot_damage_type ?? null,
+        isStun: envEffect.stun_block_action === true,
+        originalDotDamage: dotDamage,
+        originalDuration: envEffect.duration || 1,
+        currentTurn: 1,
+        dotDiminishing: false,
+      });
+    }
+  }
+}
+
 // Roll random damage between min and max
 export function rollDamage(minDamage: number, maxDamage: number): number {
   return Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
