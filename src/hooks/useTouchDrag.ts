@@ -30,7 +30,7 @@ export function useTouchDrag(options: UseTouchDragOptions = {}) {
   });
 
   // Track if current interaction is a long press
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
   // Select a unit for moving (first tap)
