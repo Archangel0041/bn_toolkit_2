@@ -140,7 +140,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     
     setPlayerTurnStartProcessed(true);
     setIsProcessing(false);
-  }, [battleState, isProcessing, playerTurnStartProcessed, environmentalDamageMods]);
+  }, [battleState, isProcessing, playerTurnStartProcessed, environmentalDamageMods, encounter?.environmental_status_effect]);
 
   // Reset playerTurnStartProcessed when turn changes to enemy
   useEffect(() => {
