@@ -1138,9 +1138,11 @@ export function executeRandomAttack(
 
 // Process status effect ticks at start of turn
 // environmentalDamageMods: Optional damage modifiers from environmental status effects (e.g., Firemod)
+// environmentalStatusEffectId: If set, this status effect is reapplied fresh to all alive units every turn
 export function processStatusEffects(
   units: LiveBattleUnit[],
-  environmentalDamageMods?: Record<string, number>
+  environmentalDamageMods?: Record<string, number>,
+  environmentalStatusEffectId?: number
 ): BattleAction[] {
   const actions: BattleAction[] = [];
   
