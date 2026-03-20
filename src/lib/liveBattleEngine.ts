@@ -1161,22 +1161,30 @@ export function processStatusEffects(
         
         const dotDamage = envEffect.dot_bonus_damage ?? 0;
         
-        // Remove any existing environmental effect and re-add fresh
-        unit.activeStatusEffects = unit.activeStatusEffects.filter(
-          e => e.effectId !== environmentalStatusEffectId
+        // Refresh existing or add new — same stacking rules as normal effects (no stacking, just refresh)
+        const existingEffect = unit.activeStatusEffects.find(
+          e => e.effectId === environmentalStatusEffectId
         );
-        
-        unit.activeStatusEffects.push({
-          effectId: environmentalStatusEffectId,
-          remainingDuration: 2, // 2 so it ticks this turn then gets removed
-          dotDamage,
-          dotDamageType: envEffect.dot_damage_type ?? null,
-          isStun: envEffect.stun_block_action === true,
-          originalDotDamage: dotDamage,
-          originalDuration: 1,
-          currentTurn: 1,
-          dotDiminishing: false, // Environmental effects always deal full damage
-        });
+        if (existingEffect) {
+          // Refresh: reset duration and damage to full
+          existingEffect.remainingDuration = envEffect.duration || 1;
+          existingEffect.originalDotDamage = dotDamage;
+          existingEffect.dotDamage = dotDamage;
+          existingEffect.currentTurn = 1;
+          existingEffect.dotDiminishing = false;
+        } else {
+          unit.activeStatusEffects.push({
+            effectId: environmentalStatusEffectId,
+            remainingDuration: envEffect.duration || 1,
+            dotDamage,
+            dotDamageType: envEffect.dot_damage_type ?? null,
+            isStun: envEffect.stun_block_action === true,
+            originalDotDamage: dotDamage,
+            originalDuration: envEffect.duration || 1,
+            currentTurn: 1,
+            dotDiminishing: false, // Environmental effects always deal full damage
+          });
+        }
       }
     }
   }
