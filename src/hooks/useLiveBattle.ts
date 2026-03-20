@@ -1021,6 +1021,11 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
 
       // On subsequent waves, enemies go first
       // Reset enemy collapsed rows since new enemies spawn on the full grid
+      // Apply environmental status effect to new wave enemies and surviving friendlies
+      if (encounter?.environmental_status_effect) {
+        applyEnvironmentalEffect([...prev.friendlyUnits, ...enemyUnits], encounter.environmental_status_effect);
+      }
+
       return {
         ...prev,
         enemyUnits,
@@ -1035,7 +1040,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
         }],
       };
     });
-  }, [battleState, waves]);
+  }, [battleState, waves, encounter?.environmental_status_effect]);
 
   // Skip player turn
   const skipTurn = useCallback(() => {
