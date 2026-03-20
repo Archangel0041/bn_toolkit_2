@@ -1,6 +1,5 @@
 import { getBossStrikeById } from "@/lib/bossStrikes";
 import { getMenuBackgroundUrl } from "@/lib/resourceImages";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 // ID-based mappings for ARCHIVED boss strike backgrounds (static, since archived data is bundled)
 const archivedIdToBackground: Record<string, string> = {
