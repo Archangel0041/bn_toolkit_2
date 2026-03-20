@@ -1138,11 +1138,48 @@ export function executeRandomAttack(
 
 // Process status effect ticks at start of turn
 // environmentalDamageMods: Optional damage modifiers from environmental status effects (e.g., Firemod)
+// environmentalStatusEffectId: If set, this status effect is reapplied fresh to all alive units every turn
 export function processStatusEffects(
   units: LiveBattleUnit[],
-  environmentalDamageMods?: Record<string, number>
+  environmentalDamageMods?: Record<string, number>,
+  environmentalStatusEffectId?: number
 ): BattleAction[] {
   const actions: BattleAction[] = [];
+  
+  // Reapply environmental status effect fresh to all alive units every turn
+  if (environmentalStatusEffectId) {
+    const envEffect = getStatusEffect(environmentalStatusEffectId);
+    if (envEffect && envEffect.dot_damage_type !== undefined) {
+      const envEffectName = getEffectDisplayNameTranslated(environmentalStatusEffectId);
+      for (const unit of units) {
+        if (unit.isDead) continue;
+        
+        // Check immunity
+        const unitData = getUnitById(unit.unitId);
+        const immunities = unitData?.statsConfig?.status_effect_immunities || [];
+        if (immunities.includes(envEffect.family)) continue;
+        
+        const dotDamage = envEffect.dot_bonus_damage ?? 0;
+        
+        // Remove any existing environmental effect and re-add fresh
+        unit.activeStatusEffects = unit.activeStatusEffects.filter(
+          e => e.effectId !== environmentalStatusEffectId
+        );
+        
+        unit.activeStatusEffects.push({
+          effectId: environmentalStatusEffectId,
+          remainingDuration: 2, // 2 so it ticks this turn then gets removed
+          dotDamage,
+          dotDamageType: envEffect.dot_damage_type ?? null,
+          isStun: envEffect.stun_block_action === true,
+          originalDotDamage: dotDamage,
+          originalDuration: 1,
+          currentTurn: 1,
+          dotDiminishing: false, // Environmental effects always deal full damage
+        });
+      }
+    }
+  }
   
   for (const unit of units) {
     if (unit.isDead) continue;

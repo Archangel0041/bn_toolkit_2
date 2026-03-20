@@ -107,7 +107,8 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       const actions: BattleAction[] = [];
       
       // 1. Process status effects for PLAYER units only (DoT damage ticks at start of their turn)
-      actions.push(...processStatusEffects(newState.friendlyUnits, environmentalDamageMods));
+      // Environmental status effect is reapplied fresh every turn
+      actions.push(...processStatusEffects(newState.friendlyUnits, environmentalDamageMods, encounter?.environmental_status_effect));
       
       // 2. Collapse rows if needed
       newState.friendlyCollapsedRows = collapseGrid(newState.friendlyUnits, newState.friendlyCollapsedRows);
@@ -139,7 +140,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     
     setPlayerTurnStartProcessed(true);
     setIsProcessing(false);
-  }, [battleState, isProcessing, playerTurnStartProcessed, environmentalDamageMods]);
+  }, [battleState, isProcessing, playerTurnStartProcessed, environmentalDamageMods, encounter?.environmental_status_effect]);
 
   // Reset playerTurnStartProcessed when turn changes to enemy
   useEffect(() => {
@@ -805,7 +806,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     const actions: BattleAction[] = [];
 
     // 1. Process status effects for ENEMY units only (DoT damage ticks at start of their turn)
-    actions.push(...processStatusEffects(newState.enemyUnits, environmentalDamageMods));
+    actions.push(...processStatusEffects(newState.enemyUnits, environmentalDamageMods, encounter?.environmental_status_effect));
 
     // 2. Detect collapsed rows
     // Pass previous collapsed rows to ensure only 1 row collapses per turn
@@ -973,7 +974,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     });
 
     setIsProcessing(false);
-  }, [battleState, isProcessing, environmentalDamageMods, t]);
+  }, [battleState, isProcessing, environmentalDamageMods, encounter?.environmental_status_effect, t]);
 
   // Check if all enemies are dead and auto-advance wave
   const checkWaveAdvance = useCallback(() => {
