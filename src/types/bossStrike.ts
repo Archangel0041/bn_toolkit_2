@@ -34,6 +34,15 @@ export interface GlobalEventEncounter {
   max_level: number;
 }
 
+export interface BossStrikeUiConfig {
+  event_long_desc?: string;
+  event_short_desc?: string;
+  event_title?: string;
+  menu_bg?: string;
+  mission_icon?: string;
+  top_prize_desc?: string;
+}
+
 export interface BossStrike {
   default_progress_cost?: ProgressCost;
   global_event_encounters?: GlobalEventEncounter[];
@@ -42,6 +51,7 @@ export interface BossStrike {
   tier_info?: TierInfo[];
   menu_bg?: string;
   name?: string;
+  ui_config?: BossStrikeUiConfig;
 }
 
 export type BossStrikeData = Record<string, BossStrike>;
