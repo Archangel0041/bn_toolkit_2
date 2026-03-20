@@ -107,7 +107,8 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       const actions: BattleAction[] = [];
       
       // 1. Process status effects for PLAYER units only (DoT damage ticks at start of their turn)
-      actions.push(...processStatusEffects(newState.friendlyUnits, environmentalDamageMods));
+      // Environmental status effect is reapplied fresh every turn
+      actions.push(...processStatusEffects(newState.friendlyUnits, environmentalDamageMods, encounter?.environmental_status_effect));
       
       // 2. Collapse rows if needed
       newState.friendlyCollapsedRows = collapseGrid(newState.friendlyUnits, newState.friendlyCollapsedRows);
