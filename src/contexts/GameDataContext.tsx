@@ -21,6 +21,7 @@ import {
   getLanguageDataFromMemory,
 } from "@/lib/dataLoader";
 import { initializeGameDataStore, isGameDataStoreInitialized, addLanguageToStore } from "@/lib/gameDataStore";
+import { UNIT_ICON_OVERRIDES, makeOverrideSentinel } from "@/lib/unitImageOverrides";
 import { requestPersistentStorage, getStorageQuota } from "@/lib/cacheStorage";
 import type { Ability } from "@/lib/abilities";
 import type { ParsedUnit, UnitConfig, IdentityConfig, AnimationConfig, StatsConfig, RequirementsConfig, HealingConfig, WeaponsConfig, SharedDataFile, LocalizedFile, SupportedLanguage } from "@/types/units";
