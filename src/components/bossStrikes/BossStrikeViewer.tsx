@@ -12,6 +12,7 @@ import { getUnitById } from "@/lib/units";
 import { getEventRewardIconUrl, getEncounterIconUrl } from "@/lib/resourceImages";
 import { getBossStrikeBackgroundById, getBossStrikeNameById } from "@/lib/bossStrikeImages";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAccountLevel } from "@/hooks/useAccountLevel";
 import type { BossStrike, TierInfo } from "@/types/bossStrike";
 import bsPointsIcon from "@/assets/bs_points_icon.png";
 
@@ -219,13 +220,19 @@ function EncounterListSection({
     });
   }, [tierInfo]);
 
-  // Default to level 46-50 if available, otherwise first available
+  const { accountLevel } = useAccountLevel();
+
+  // Default to the range containing the user's account level, otherwise highest available
   useMemo(() => {
     if (levelRanges.length > 0 && !selectedLevel) {
-      const defaultLevel = levelRanges.find(r => r === "46-50") || levelRanges[levelRanges.length - 1];
+      const containing = levelRanges.find(r => {
+        const [min, max] = r.split('-').map(Number);
+        return accountLevel >= min && accountLevel <= max;
+      });
+      const defaultLevel = containing || levelRanges[levelRanges.length - 1];
       setSelectedLevel(defaultLevel);
     }
-  }, [levelRanges, selectedLevel]);
+  }, [levelRanges, selectedLevel, accountLevel]);
 
   // Get encounters grouped by tier for selected level, collapsing identical tiers
   const collapsedTierGroups = useMemo(() => {
