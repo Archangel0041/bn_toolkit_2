@@ -90,9 +90,17 @@ const GameDataContext = createContext<GameDataContextType | undefined>(undefined
 const SUPPORTED_LANGUAGES: SupportedLanguage[] = ["en", "de", "es", "fr", "it", "ja", "ko", "ru", "zh-Hans", "zh-Hant"];
 
 function parseUnit(id: string, configs: UnitConfig[]): ParsedUnit {
+  const identity = configs.find((c) => c._t === "battle_unit_identity_config") as IdentityConfig;
+
+  // Inject manual icon override (sentinel name resolved by getUnitImageUrl).
+  const numericId = parseInt(id);
+  if (identity && UNIT_ICON_OVERRIDES[numericId]) {
+    identity.icon = makeOverrideSentinel(numericId);
+  }
+
   const unit: ParsedUnit = {
-    id: parseInt(id),
-    identity: configs.find((c) => c._t === "battle_unit_identity_config") as IdentityConfig,
+    id: numericId,
+    identity,
   };
 
   unit.animation = configs.find((c) => c._t === "battle_unit_animation_config") as AnimationConfig | undefined;
