@@ -39,6 +39,10 @@ function SimulatorLoader() {
 function AppContent() {
   const { isLoading, loadProgress, error } = useGameData();
 
+  useEffect(() => {
+    if (!isLoading && !error) prewarmStaticIcons();
+  }, [isLoading, error]);
+
   if (isLoading) {
     return <LoadingScreen progress={loadProgress} message="Loading game data..." />;
   }
