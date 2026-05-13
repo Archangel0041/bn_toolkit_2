@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { prewarmStaticIcons } from "@/lib/assetCache";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,6 +38,10 @@ function SimulatorLoader() {
 // Inner app that requires game data to be loaded
 function AppContent() {
   const { isLoading, loadProgress, error } = useGameData();
+
+  useEffect(() => {
+    if (!isLoading && !error) prewarmStaticIcons();
+  }, [isLoading, error]);
 
   if (isLoading) {
     return <LoadingScreen progress={loadProgress} message="Loading game data..." />;
