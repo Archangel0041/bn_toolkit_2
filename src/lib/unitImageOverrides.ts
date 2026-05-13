@@ -14,7 +14,7 @@
  */
 
 import ramsey212 from "@/assets/unit-overrides/ramsey_212.png";
-import frCivilianUnarmed153 from "@/assets/unit-overrides/fr_civilian_unarmed_153.png";
+import frCivilianUnarmed153 from "@/assets/unit-overrides/fr_unarmed_civilian_0068.png";
 
 export const OVERRIDE_SENTINEL_PREFIX = "__override__";
 
