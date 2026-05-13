@@ -95,10 +95,10 @@ export function Header() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <RouterLink to="/settings">
+                      <Link to="/settings">
                         <SettingsIcon className="h-4 w-4 mr-2" />
                         Settings
-                      </RouterLink>
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSync} disabled={syncing}>
                       <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
