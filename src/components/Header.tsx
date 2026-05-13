@@ -3,7 +3,6 @@ import { LanguageSelector } from "./LanguageSelector";
 import { ThemeToggle } from "./ThemeToggle";
 import { Link } from "react-router-dom";
 import { Sword, LogOut, RefreshCw, Settings as SettingsIcon } from "lucide-react";
-import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "./ui/button";
 import {
