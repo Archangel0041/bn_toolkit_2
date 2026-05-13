@@ -14,11 +14,13 @@
  */
 
 import ramsey212 from "@/assets/unit-overrides/ramsey_212.png";
+import frCivilianUnarmed153 from "@/assets/unit-overrides/fr_civilian_unarmed_153.png";
 
 export const OVERRIDE_SENTINEL_PREFIX = "__override__";
 
 export const UNIT_ICON_OVERRIDES: Record<number, string> = {
   212: ramsey212,
+  153: frCivilianUnarmed153,
 };
 
 export function getUnitOverrideUrl(unitId: number): string | undefined {
