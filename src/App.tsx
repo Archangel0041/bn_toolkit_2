@@ -14,6 +14,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import Index from "./pages/Index";
 import UnitDetail from "./pages/UnitDetail";
 import Compare from "./pages/Compare";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 // Lazy-load custom formation page
@@ -70,6 +71,7 @@ function AppContent() {
                 <Route path="/" element={<Index />} />
                 <Route path="/unit/:id" element={<UnitDetail />} />
                 <Route path="/compare/:id1/:id2" element={<Compare />} />
+                <Route path="/settings" element={<Settings />} />
                 <Route 
                   path="/battle/:encounterId" 
                   element={
