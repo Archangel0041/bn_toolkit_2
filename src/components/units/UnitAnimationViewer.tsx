@@ -232,7 +232,7 @@ export function UnitAnimationViewer({ iconName }: Props) {
         {showAdvanced ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         Additional options
       </button>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      <div className="flex flex-col gap-4">
         {animNames.map((name) => (
           <AnimationPlayer
             key={name}
