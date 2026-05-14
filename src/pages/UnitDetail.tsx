@@ -616,6 +616,8 @@ export default function UnitDetail() {
                                       isFixed={info.isFixed}
                                       minDamage={info.minDamage}
                                       maxDamage={info.maxDamage}
+                                      shotsPerAttack={info.shotsPerAttack}
+                                      attacksPerUse={info.attacksPerUse}
                                       className="shrink-0"
                                     />
                                   )}

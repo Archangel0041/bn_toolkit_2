@@ -12,11 +12,10 @@ interface Props {
   minRange: number;
   maxRange: number;
   isFixed: boolean;
-  /** Min damage per shot (for computing tile damage). */
   minDamage?: number;
-  /** Max damage per shot (for computing tile damage). */
   maxDamage?: number;
-  /** Unit ID to render (upright) at the target reticle. Defaults to the in-game dummy (709). */
+  shotsPerAttack?: number;
+  attacksPerUse?: number;
   centerUnitId?: number;
   className?: string;
 }
@@ -33,25 +32,25 @@ export function IsometricTargetingDiagram({
   isFixed,
   minDamage,
   maxDamage,
+  shotsPerAttack = 1,
+  attacksPerUse = 1,
   centerUnitId = 709,
   className,
 }: Props) {
   const positions = targetArea?.data ?? [];
   const isSingleTarget = !targetArea || (targetArea.targetType === 1 && positions.length === 0);
   const isRandom = !!targetArea?.random;
+  const totalShots = Math.max(1, shotsPerAttack) * Math.max(1, attacksPerUse);
 
-  // Average damage per shot (used to compute per-tile expected damage).
   const avgDamage =
     minDamage !== undefined && maxDamage !== undefined
       ? (minDamage + maxDamage) / 2
       : undefined;
 
-  // Total weight for random attacks (used to derive per-tile probability).
   const totalWeight = isRandom
     ? positions.reduce((s, p) => s + (p.weight ?? 1), 0) || 1
     : 0;
 
-  // Always include the center (0,0) so the dummy can sit somewhere.
   let minX = 0, maxX = 0, minY = 0, maxY = 0;
   for (const p of positions) {
     if (p.x < minX) minX = p.x;
@@ -64,8 +63,9 @@ export function IsometricTargetingDiagram({
 
   type Cell = {
     damagePercent: number;
-    weight?: number;
-    probability?: number; // 0..1, only for random attacks
+    perShotProb?: number;
+    hitChance?: number;
+    expectedHits: number;
     expectedDamage?: number;
   } | null;
 
@@ -74,16 +74,16 @@ export function IsometricTargetingDiagram({
   );
   for (const p of positions) {
     const dmgPct = p.damagePercent ?? 100;
-    const probability = isRandom ? (p.weight ?? 1) / totalWeight : undefined;
-    const baseExpected = avgDamage !== undefined ? (avgDamage * dmgPct) / 100 : undefined;
+    const perShotProb = isRandom ? (p.weight ?? 1) / totalWeight : 1;
+    const expectedHits = totalShots * perShotProb;
+    const hitChance = isRandom ? 1 - Math.pow(1 - perShotProb, totalShots) : 1;
     const expectedDamage =
-      baseExpected !== undefined && probability !== undefined
-        ? baseExpected * probability
-        : baseExpected;
+      avgDamage !== undefined ? (avgDamage * dmgPct / 100) * expectedHits : undefined;
     grid[p.y - minY][p.x - minX] = {
       damagePercent: dmgPct,
-      weight: p.weight,
-      probability,
+      perShotProb: isRandom ? perShotProb : undefined,
+      hitChance: isRandom ? hitChance : undefined,
+      expectedHits,
       expectedDamage,
     };
   }
@@ -181,18 +181,24 @@ export function IsometricTargetingDiagram({
                     )}
                   >
                     {hit && cell && (
-                      <>
+                      <div
+                        className="flex flex-col items-center justify-center leading-tight"
+                        style={{
+                          transform: "rotateZ(45deg) rotateX(-55deg)",
+                          transformStyle: "preserve-3d",
+                        }}
+                      >
                         {cell.expectedDamage !== undefined ? (
                           <span className="text-[13px] font-bold">{fmt(cell.expectedDamage)}</span>
                         ) : (
                           <span className="text-[11px] font-bold">{cell.damagePercent}%</span>
                         )}
-                        {cell.probability !== undefined && (
+                        {cell.hitChance !== undefined && (
                           <span className="text-[9px] font-medium opacity-90">
-                            {(cell.probability * 100).toFixed(cell.probability * 100 >= 10 ? 0 : 1)}%
+                            {(cell.hitChance * 100).toFixed(cell.hitChance * 100 >= 10 ? 0 : 1)}%
                           </span>
                         )}
-                      </>
+                      </div>
                     )}
                   </div>
                 );
@@ -238,7 +244,10 @@ export function IsometricTargetingDiagram({
         </div>
         {avgDamage !== undefined && (
           <div className="flex items-center gap-1">
-            <span>Avg dmg/shot: {fmt(avgDamage)}</span>
+            <span>
+              Avg {fmt(avgDamage)}/shot × {totalShots} shot{totalShots === 1 ? "" : "s"}
+              {isRandom ? " (% = chance to be hit at least once)" : ""}
+            </span>
           </div>
         )}
       </div>
