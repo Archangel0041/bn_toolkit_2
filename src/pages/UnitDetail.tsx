@@ -31,8 +31,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useCompare } from "@/contexts/CompareContext";
 import { cn } from "@/lib/utils";
 import { 
-  ArrowLeft, Swords, Clock, Coins, Wrench, Plus, Check, Activity, Shield
+  ArrowLeft, Swords, Clock, Coins, Wrench, Plus, Check, Activity, Shield, Film
 } from "lucide-react";
+import { UnitAnimationViewer } from "@/components/units/UnitAnimationViewer";
 import { UnitTag, UnitTagLabels } from "@/data/gameEnums";
 import { expandTargetTags } from "@/lib/tagHierarchy";
 
@@ -264,6 +265,13 @@ export default function UnitDetail() {
         )}
 
         <div className="space-y-4">
+          {/* Animations */}
+          {unit.identity.icon && (
+            <StatSection title="Animations" icon={<Film className="h-4 w-4" />} defaultOpen>
+              <UnitAnimationViewer iconName={unit.identity.icon} />
+            </StatSection>
+          )}
+
           {/* Main Stats */}
           {stats && (
             <StatSection title="Main Stats" icon={<Activity className="h-4 w-4" />} defaultOpen>
