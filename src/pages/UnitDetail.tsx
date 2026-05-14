@@ -504,37 +504,96 @@ export default function UnitDetail() {
                             </div>
                             </TooltipProvider>
                             
-                            {/* Targets + AOE Pattern side-by-side */}
+                            {/* Targets + Crit Bonus + Status Effects + AOE Pattern side-by-side */}
                             {(() => {
                               const info = abilityInfoMap[abilId];
                               const hasTargets = ability.stats.targets && ability.stats.targets.length > 0;
-                              if (!info && !hasTargets) return null;
+                              const critBonuses = (ability.stats as any)?.critical_bonuses as Record<string, number> | undefined;
+                              const hasCrit = critBonuses && Object.keys(critBonuses).length > 0;
+                              const hasStatus = ability.stats.status_effects && Object.keys(ability.stats.status_effects).length > 0;
+                              const hasLeft = hasTargets || hasCrit || hasStatus;
+                              if (!info && !hasLeft) return null;
                               const cats = hasTargets ? getTargetingCategories(ability.stats.targets) : null;
                               return (
                                 <div className="mt-3 flex flex-wrap items-stretch gap-3">
-                                  {cats && (
-                                    <div className="flex-1 min-w-[220px] p-3 bg-muted/30 rounded-lg flex flex-col">
-                                      <div className="text-xs font-semibold text-muted-foreground mb-2">Targets</div>
-                                      <div className="flex items-start gap-1.5 flex-wrap">
-                                        {cats.canTarget.map(cat => (
-                                          <Badge
-                                            key={cat.label}
-                                            variant="outline"
-                                            className={cn("text-xs", cat.color)}
-                                          >
-                                            ✓ {cat.label}
-                                          </Badge>
-                                        ))}
-                                        {cats.cannotTarget.map(cat => (
-                                          <Badge
-                                            key={cat.label}
-                                            variant="outline"
-                                            className="text-xs bg-muted/50 text-muted-foreground line-through"
-                                          >
-                                            {cat.label}
-                                          </Badge>
-                                        ))}
-                                      </div>
+                                  {hasLeft && (
+                                    <div className="flex-1 min-w-[220px] p-3 bg-muted/30 rounded-lg flex flex-col gap-3">
+                                      {cats && (
+                                        <div>
+                                          <div className="text-xs font-semibold text-muted-foreground mb-2">Targets</div>
+                                          <div className="flex items-start gap-1.5 flex-wrap">
+                                            {cats.canTarget.map(cat => (
+                                              <Badge
+                                                key={cat.label}
+                                                variant="outline"
+                                                className={cn("text-xs", cat.color)}
+                                              >
+                                                ✓ {cat.label}
+                                              </Badge>
+                                            ))}
+                                            {cats.cannotTarget.map(cat => (
+                                              <Badge
+                                                key={cat.label}
+                                                variant="outline"
+                                                className="text-xs bg-muted/50 text-muted-foreground line-through"
+                                              >
+                                                {cat.label}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {hasCrit && (
+                                        <div>
+                                          <div className="text-xs font-semibold text-muted-foreground mb-2">Crit Bonus</div>
+                                          <div className="flex items-start gap-1.5 flex-wrap">
+                                            {Object.entries(critBonuses!).map(([tagId, bonus]) => {
+                                              const tagLabel = UnitTagLabels[parseInt(tagId)] || `Tag ${tagId}`;
+                                              return (
+                                                <Badge
+                                                  key={tagId}
+                                                  variant="outline"
+                                                  className="text-xs bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/50"
+                                                >
+                                                  {bonus > 0 ? `+${bonus}` : bonus}% vs {tagLabel}
+                                                </Badge>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {hasStatus && (
+                                        <div>
+                                          <div className="text-xs font-semibold text-muted-foreground mb-2">Inflicts Status Effects</div>
+                                          <div className="flex flex-wrap gap-2">
+                                            {Object.entries(ability.stats.status_effects).map(([effectId, chance]) => {
+                                              const id = parseInt(effectId);
+                                              const displayName = getEffectDisplayNameTranslated(id);
+                                              const color = getEffectColor(id);
+                                              const iconUrl = getEffectIconUrl(id);
+                                              const duration = getEffectDuration(id);
+                                              return (
+                                                <div
+                                                  key={effectId}
+                                                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-muted border"
+                                                  style={{ borderColor: color, borderLeftWidth: 3 }}
+                                                >
+                                                  {iconUrl && (
+                                                    <img
+                                                      src={iconUrl}
+                                                      alt=""
+                                                      className="h-4 w-4 object-contain"
+                                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                    />
+                                                  )}
+                                                  <span className="text-foreground font-medium">{displayName}</span>
+                                                  <span className="text-muted-foreground">({chance}%{duration > 0 ? `, ${duration}t` : ""})</span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                   {info && (
@@ -555,62 +614,6 @@ export default function UnitDetail() {
                                 </div>
                               );
                             })()}
-                            
-                            {/* Critical Bonuses */}
-                            {(() => {
-                              const critBonuses = (ability.stats as any)?.critical_bonuses as Record<string, number> | undefined;
-                              if (!critBonuses || Object.keys(critBonuses).length === 0) return null;
-                              return (
-                                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-sm text-muted-foreground">Crit Bonus:</span>
-                                  {Object.entries(critBonuses).map(([tagId, bonus]) => {
-                                    const tagLabel = UnitTagLabels[parseInt(tagId)] || `Tag ${tagId}`;
-                                    return (
-                                      <Badge 
-                                        key={tagId} 
-                                        variant="outline" 
-                                        className="text-xs bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/50"
-                                      >
-                                        {bonus > 0 ? `+${bonus}` : bonus}% vs {tagLabel}
-                                      </Badge>
-                                    );
-                                  })}
-                                </div>
-                              );
-                            })()}
-                            
-                            {ability.stats.status_effects && Object.keys(ability.stats.status_effects).length > 0 && (
-                              <div className="mt-3 pt-3 border-t">
-                                <p className="text-xs text-muted-foreground mb-2">Inflicts Status Effects:</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {Object.entries(ability.stats.status_effects).map(([effectId, chance]) => {
-                                    const id = parseInt(effectId);
-                                    const displayName = getEffectDisplayNameTranslated(id);
-                                    const color = getEffectColor(id);
-                                    const iconUrl = getEffectIconUrl(id);
-                                    const duration = getEffectDuration(id);
-                                    return (
-                                      <div 
-                                        key={effectId} 
-                                        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-muted border"
-                                        style={{ borderColor: color, borderLeftWidth: 3 }}
-                                      >
-                                        {iconUrl && (
-                                          <img 
-                                            src={iconUrl} 
-                                            alt="" 
-                                            className="h-4 w-4 object-contain"
-                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                          />
-                                        )}
-                                        <span className="text-foreground font-medium">{displayName}</span>
-                                        <span className="text-muted-foreground">({chance}%{duration > 0 ? `, ${duration}t` : ""})</span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
 
                             {(() => {
                               const wname = t(weapon.name);
