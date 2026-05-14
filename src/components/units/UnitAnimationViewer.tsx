@@ -194,7 +194,9 @@ function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     canvas.style.width = w + "px";
-    canvas.style.height = h + "px";
+    canvas.style.height = "auto";
+    canvas.style.maxWidth = "100%";
+    canvas.style.aspectRatio = `${w} / ${h}`;
     const ctx = canvas.getContext("2d")!;
     const off = document.createElement("canvas");
     off.width = w; off.height = h;
@@ -263,8 +265,12 @@ function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
           )}
         </div>
       )}
-      <div className="rounded p-1" style={{ background: wrapperBg }}>
-        <canvas ref={canvasRef} className="block" style={{ imageRendering: "pixelated" }} />
+      <div className="rounded p-1 max-w-full overflow-hidden flex items-center justify-center" style={{ background: wrapperBg }}>
+        <canvas
+          ref={canvasRef}
+          className="block max-w-full h-auto"
+          style={{ imageRendering: "pixelated" }}
+        />
       </div>
       {!minimal && (
         <button
