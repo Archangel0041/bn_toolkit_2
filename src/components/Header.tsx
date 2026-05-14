@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LanguageSelector } from "./LanguageSelector";
 import { ThemeToggle } from "./ThemeToggle";
 import { Link } from "react-router-dom";
-import { Sword, LogOut, RefreshCw, Settings as SettingsIcon } from "lucide-react";
+import { Sword, LogOut, RefreshCw, Settings as SettingsIcon, Menu } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "./ui/button";
 import {
@@ -12,6 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "./ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 
 function DiscordIcon({ className }: { className?: string }) {
@@ -26,6 +33,7 @@ export function Header() {
   const { user, signOut, signInWithDiscord, loading, displayName, manualSync } = useAuth();
   const [signingIn, setSigningIn] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { toast } = useToast();
 
   const handleSync = async () => {
@@ -52,81 +60,117 @@ export function Header() {
     }
   };
 
+  const accountSection = (
+    <>
+      {!loading && (
+        <>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  {user.user_metadata?.avatar_url ? (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt="Avatar"
+                      className="h-5 w-5 rounded-full"
+                    />
+                  ) : (
+                    <DiscordIcon className="h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {displayName || 'User'}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled className="flex items-center gap-2">
+                  {user.user_metadata?.avatar_url && (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt="Avatar"
+                      className="h-6 w-6 rounded-full"
+                    />
+                  )}
+                  <span className="text-muted-foreground">
+                    {displayName || user.email}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/settings">
+                    <SettingsIcon className="h-4 w-4 mr-2" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSync} disabled={syncing}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Sync Discord'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 w-full sm:w-auto justify-center"
+              onClick={handleDiscordSignIn}
+              disabled={signingIn}
+            >
+              <DiscordIcon className="h-4 w-4" />
+              {signingIn ? 'Signing in...' : 'Sign in with Discord'}
+            </Button>
+          )}
+        </>
+      )}
+    </>
+  );
+
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-          <Sword className="h-6 w-6" />
-          <span>Battle Nations Toolkit</span>
+      <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4">
+        <Link to="/" className="flex items-center gap-2 font-bold text-xl min-w-0">
+          <Sword className="h-6 w-6 shrink-0" />
+          <span className="truncate">Vogels Laboratory</span>
         </Link>
-        <div className="flex items-center gap-2">
-          {!loading && (
-            <>
-              {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      {user.user_metadata?.avatar_url ? (
-                        <img 
-                          src={user.user_metadata.avatar_url} 
-                          alt="Avatar" 
-                          className="h-5 w-5 rounded-full"
-                        />
-                      ) : (
-                        <DiscordIcon className="h-4 w-4" />
-                      )}
-                      <span className="hidden sm:inline">
-                        {displayName || 'User'}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem disabled className="flex items-center gap-2">
-                      {user.user_metadata?.avatar_url && (
-                        <img 
-                          src={user.user_metadata.avatar_url} 
-                          alt="Avatar" 
-                          className="h-6 w-6 rounded-full"
-                        />
-                      )}
-                      <span className="text-muted-foreground">
-                        {displayName || user.email}
-                      </span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/settings">
-                        <SettingsIcon className="h-4 w-4 mr-2" />
-                        Settings
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSync} disabled={syncing}>
-                      <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                      {syncing ? 'Syncing...' : 'Sync Discord'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => signOut()}>
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="gap-2"
-                  onClick={handleDiscordSignIn}
-                  disabled={signingIn}
-                >
-                  <DiscordIcon className="h-4 w-4" />
-                  {signingIn ? 'Signing in...' : 'Sign in with Discord'}
-                </Button>
-              )}
-            </>
-          )}
+
+        {/* Desktop controls */}
+        <div className="hidden sm:flex items-center gap-2">
+          {accountSection}
           <ThemeToggle />
           <LanguageSelector />
         </div>
+
+        {/* Mobile hamburger */}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="sm:hidden" aria-label="Open menu">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[280px] sm:w-[320px]">
+            <SheetHeader>
+              <SheetTitle>Menu</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Account</span>
+                {accountSection}
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Theme</span>
+                <ThemeToggle />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Language</span>
+                <LanguageSelector />
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </header>
   );
