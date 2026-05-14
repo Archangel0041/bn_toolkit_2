@@ -532,7 +532,7 @@ export default function UnitDetail() {
                                         variant="outline" 
                                         className="text-xs bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/50"
                                       >
-                                        +{bonus}% vs {tagLabel}
+                                        {bonus > 0 ? `+${bonus}` : bonus}% vs {tagLabel}
                                       </Badge>
                                     );
                                   })}
