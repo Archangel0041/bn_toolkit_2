@@ -614,6 +614,8 @@ export default function UnitDetail() {
                                       minRange={info.minRange}
                                       maxRange={info.maxRange}
                                       isFixed={info.isFixed}
+                                      minDamage={info.minDamage}
+                                      maxDamage={info.maxDamage}
                                       className="shrink-0"
                                     />
                                   )}
