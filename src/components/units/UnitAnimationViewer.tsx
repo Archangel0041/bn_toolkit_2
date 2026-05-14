@@ -505,6 +505,7 @@ export function UnitAnimationViewer({ iconName, labelMap, groups, filterNames, c
                   label={labelMap?.[name]}
                   frames={timelines[name]}
                   atlas={atlas}
+                  minimal={compact}
                 />
               ))}
             </div>
