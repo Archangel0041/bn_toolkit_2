@@ -442,6 +442,7 @@ export function UnitAnimationViewer({ iconName, labelMap }: Props) {
           <AnimationPlayer
             key={name}
             name={name}
+            label={labelMap?.[name]}
             frames={timelines[name]}
             atlas={atlas}
           />
