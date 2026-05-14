@@ -186,7 +186,8 @@ export function IsometricTargetingDiagram({
               left: centerCx,
               top: centerCy,
               transform: "translate(-50%, -55%)",
-              width: CELL_PX * 0.9,
+              width: CELL_PX * 0.45,
+              opacity: 0.85,
               height: "auto",
               imageRendering: "pixelated",
             }}
