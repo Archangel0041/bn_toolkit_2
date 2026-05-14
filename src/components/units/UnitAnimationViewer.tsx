@@ -53,6 +53,7 @@ function encodeGif(
   bbox: BBox,
   ppu: number,
   fps: number,
+  bg: string | null, // null = transparent
   GIF: any,
   workerUrl: string,
 ): Promise<Blob> {
@@ -60,13 +61,14 @@ function encodeGif(
     const { w, h } = canvasSize(bbox, ppu, PAD);
     const SENTINEL = { r: 255, g: 0, b: 255 };
     const sentinelHex = 0xff00ff;
+    const transparent = bg === null;
     const gif = new GIF({
       workers: 2,
       quality: 10,
       width: w,
       height: h,
       workerScript: workerUrl,
-      transparent: sentinelHex,
+      transparent: transparent ? sentinelHex : null,
     });
     const off = document.createElement("canvas");
     off.width = w; off.height = h;
@@ -74,23 +76,38 @@ function encodeGif(
     const delay = Math.max(20, Math.round(1000 / fps));
     for (const fr of frames) {
       octx.clearRect(0, 0, w, h);
-      renderFrameToCtx(octx, fr, atlas, bbox, ppu, PAD, false);
-      const img = octx.getImageData(0, 0, w, h);
-      const d = img.data;
-      for (let p = 0; p < d.length; p += 4) {
-        if (d[p + 3] < 128) {
-          d[p] = SENTINEL.r; d[p + 1] = SENTINEL.g; d[p + 2] = SENTINEL.b; d[p + 3] = 255;
-        } else {
-          d[p + 3] = 255;
-        }
+      if (!transparent) {
+        octx.fillStyle = bg!;
+        octx.fillRect(0, 0, w, h);
       }
-      octx.putImageData(img, 0, 0);
+      renderFrameToCtx(octx, fr, atlas, bbox, ppu, PAD, false);
+      if (transparent) {
+        const img = octx.getImageData(0, 0, w, h);
+        const d = img.data;
+        for (let p = 0; p < d.length; p += 4) {
+          if (d[p + 3] < 128) {
+            d[p] = SENTINEL.r; d[p + 1] = SENTINEL.g; d[p + 2] = SENTINEL.b; d[p + 3] = 255;
+          } else {
+            d[p + 3] = 255;
+          }
+        }
+        octx.putImageData(img, 0, 0);
+      }
       gif.addFrame(octx, { copy: true, delay });
     }
     gif.on("finished", (blob: Blob) => resolve(blob));
     gif.on("abort", () => reject(new Error("GIF encoding aborted")));
     gif.render();
   });
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ----------------------------------------------------------------------------
