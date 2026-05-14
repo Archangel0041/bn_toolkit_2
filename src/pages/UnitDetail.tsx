@@ -651,11 +651,35 @@ export default function UnitDetail() {
           )}
 
           {/* Animations - at the bottom, fetched on mount */}
-          {unit.identity.icon && (
-            <StatSection title="Animations" icon={<Film className="h-4 w-4" />} defaultOpen>
-              <UnitAnimationViewer iconName={unit.identity.icon} />
-            </StatSection>
-          )}
+          {unit.identity.icon && (() => {
+            const animLabels: Record<string, string> = {};
+            if (unit.animation?.front_idle) animLabels[unit.animation.front_idle] = "Idle (Front)";
+            if (unit.animation?.back_idle) animLabels[unit.animation.back_idle] = "Idle (Back)";
+            if (unit.weapons?.weapons) {
+              for (const weapon of Object.values(unit.weapons.weapons)) {
+                const abilityNames = weapon.abilities
+                  .map((aid) => {
+                    const a = getAbilityById(aid);
+                    return a ? t(a.name) : null;
+                  })
+                  .filter(Boolean)
+                  .join(", ");
+                const wname = t(weapon.name);
+                const suffix = abilityNames ? ` — ${abilityNames}` : "";
+                if (weapon.frontattack_animation) {
+                  animLabels[weapon.frontattack_animation] = `${wname} (Front)${suffix}`;
+                }
+                if (weapon.backattack_animation) {
+                  animLabels[weapon.backattack_animation] = `${wname} (Back)${suffix}`;
+                }
+              }
+            }
+            return (
+              <StatSection title="Animations" icon={<Film className="h-4 w-4" />} defaultOpen>
+                <UnitAnimationViewer iconName={unit.identity.icon} labelMap={animLabels} />
+              </StatSection>
+            );
+          })()}
         </div>
       </main>
       <CompareBar />
