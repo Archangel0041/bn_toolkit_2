@@ -434,11 +434,9 @@ export default function TimelinePreview() {
     if (!frames || !atlas || !bbox) return;
     try {
       setGifProgress(0);
-      const GIF = await loadGifJs();
+      const { GIF, workerUrl } = await loadGifJs();
       const { w, h } = canvasSize(bbox, ppu, PAD);
 
-      // GIF can't store true alpha — use a sentinel color (magenta) marked transparent.
-      // Any pixel with alpha < 128 becomes magenta; opaque pixels render as-is.
       const SENTINEL = { r: 255, g: 0, b: 255 };
       const sentinelHex = 0xff00ff;
 
@@ -447,7 +445,7 @@ export default function TimelinePreview() {
         quality: 10,
         width: w,
         height: h,
-        workerScript: "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js",
+        workerScript: workerUrl,
         transparent: gifTransparent && bgMode === "transparent" ? sentinelHex : null,
       });
 
