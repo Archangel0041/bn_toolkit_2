@@ -427,6 +427,22 @@ export function UnitAnimationViewer({ iconName, labelMap, groups }: Props) {
 
   const animNames = Object.keys(timelines);
 
+  // Build resolved groups: only include names that actually exist in the timelines.
+  const used = new Set<string>();
+  const resolvedGroups: Array<{ title: string; names: string[] }> = [];
+  if (groups) {
+    for (const g of groups) {
+      const present = g.names.filter((n) => n in timelines && !used.has(n));
+      if (present.length === 0) continue;
+      present.forEach((n) => used.add(n));
+      resolvedGroups.push({ title: g.title, names: present });
+    }
+  }
+  const leftover = animNames.filter((n) => !used.has(n));
+  if (leftover.length > 0) {
+    resolvedGroups.push({ title: resolvedGroups.length === 0 ? "Animations" : "Other", names: leftover });
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -447,15 +463,24 @@ export function UnitAnimationViewer({ iconName, labelMap, groups }: Props) {
         </Button>
       </div>
       {errorMsg && <div className="text-xs text-destructive">{errorMsg}</div>}
-      <div className="flex flex-col gap-4">
-        {animNames.map((name) => (
-          <AnimationPlayer
-            key={name}
-            name={name}
-            label={labelMap?.[name]}
-            frames={timelines[name]}
-            atlas={atlas}
-          />
+      <div className="space-y-6">
+        {resolvedGroups.map((g) => (
+          <div key={g.title} className="space-y-2">
+            <h4 className="text-sm font-semibold text-foreground/80 border-b border-border pb-1">
+              {g.title}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {g.names.map((name) => (
+                <AnimationPlayer
+                  key={name}
+                  name={name}
+                  label={labelMap?.[name]}
+                  frames={timelines[name]}
+                  atlas={atlas}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>
