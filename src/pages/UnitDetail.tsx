@@ -653,8 +653,19 @@ export default function UnitDetail() {
           {/* Animations - at the bottom, fetched on mount */}
           {unit.identity.icon && (() => {
             const animLabels: Record<string, string> = {};
-            if (unit.animation?.front_idle) animLabels[unit.animation.front_idle] = "Idle (Front)";
-            if (unit.animation?.back_idle) animLabels[unit.animation.back_idle] = "Idle (Back)";
+            const animGroups: Array<{ title: string; names: string[] }> = [];
+
+            const idleNames: string[] = [];
+            if (unit.animation?.front_idle) {
+              animLabels[unit.animation.front_idle] = "Idle (Front)";
+              idleNames.push(unit.animation.front_idle);
+            }
+            if (unit.animation?.back_idle) {
+              animLabels[unit.animation.back_idle] = "Idle (Back)";
+              idleNames.push(unit.animation.back_idle);
+            }
+            if (idleNames.length) animGroups.push({ title: "Idle", names: idleNames });
+
             if (unit.weapons?.weapons) {
               for (const weapon of Object.values(unit.weapons.weapons)) {
                 const abilityNames = weapon.abilities
@@ -665,18 +676,26 @@ export default function UnitDetail() {
                   .filter(Boolean)
                   .join(", ");
                 const wname = t(weapon.name);
-                const suffix = abilityNames ? ` — ${abilityNames}` : "";
+                const title = abilityNames ? `${wname} — ${abilityNames}` : wname;
+                const names: string[] = [];
                 if (weapon.frontattack_animation) {
-                  animLabels[weapon.frontattack_animation] = `${wname} (Front)${suffix}`;
+                  animLabels[weapon.frontattack_animation] = `${wname} (Front)`;
+                  names.push(weapon.frontattack_animation);
                 }
                 if (weapon.backattack_animation) {
-                  animLabels[weapon.backattack_animation] = `${wname} (Back)${suffix}`;
+                  animLabels[weapon.backattack_animation] = `${wname} (Back)`;
+                  names.push(weapon.backattack_animation);
                 }
+                if (names.length) animGroups.push({ title, names });
               }
             }
             return (
               <StatSection title="Animations" icon={<Film className="h-4 w-4" />} defaultOpen>
-                <UnitAnimationViewer iconName={unit.identity.icon} labelMap={animLabels} />
+                <UnitAnimationViewer
+                  iconName={unit.identity.icon}
+                  labelMap={animLabels}
+                  groups={animGroups}
+                />
               </StatSection>
             );
           })()}
