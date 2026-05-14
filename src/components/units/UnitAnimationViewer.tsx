@@ -159,9 +159,11 @@ interface PlayerProps {
   label?: string;
   frames: Frame[];
   atlas: HTMLImageElement;
+  /** Minimal mode: no label, no advanced options toggle — just the canvas. */
+  minimal?: boolean;
 }
 
-function AnimationPlayer({ name, label, frames, atlas }: PlayerProps) {
+function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
   const [frameIdx, setFrameIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(30);
