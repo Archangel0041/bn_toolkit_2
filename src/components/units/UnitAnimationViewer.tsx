@@ -36,6 +36,8 @@ function AnimationPlayer({ name, frames, atlas, showAdvanced }: PlayerProps) {
   const [frameIdx, setFrameIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(30);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef<number>();
 
   // Auto-pick a scale that fits the animation into a roughly uniform target size.
   const TARGET_PX = 140;
