@@ -504,30 +504,54 @@ export default function UnitDetail() {
                             </div>
                             </TooltipProvider>
                             
-                            {/* Targets */}
-                            {ability.stats.targets && ability.stats.targets.length > 0 && (() => {
-                              const { canTarget, cannotTarget } = getTargetingCategories(ability.stats.targets);
+                            {/* Targets + AOE Pattern side-by-side */}
+                            {(() => {
+                              const info = abilityInfoMap[abilId];
+                              const hasTargets = ability.stats.targets && ability.stats.targets.length > 0;
+                              if (!info && !hasTargets) return null;
+                              const cats = hasTargets ? getTargetingCategories(ability.stats.targets) : null;
                               return (
-                                <div className="mt-2 flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm text-muted-foreground">Targets:</span>
-                                  {canTarget.map(cat => (
-                                    <Badge 
-                                      key={cat.label} 
-                                      variant="outline" 
-                                      className={cn("text-xs", cat.color)}
-                                    >
-                                      ✓ {cat.label}
-                                    </Badge>
-                                  ))}
-                                  {cannotTarget.map(cat => (
-                                    <Badge 
-                                      key={cat.label} 
-                                      variant="outline" 
-                                      className="text-xs bg-muted/50 text-muted-foreground line-through"
-                                    >
-                                      {cat.label}
-                                    </Badge>
-                                  ))}
+                                <div className="mt-3 flex flex-wrap items-stretch gap-3">
+                                  {cats && (
+                                    <div className="flex-1 min-w-[220px] p-3 bg-muted/30 rounded-lg flex flex-col">
+                                      <div className="text-xs font-semibold text-muted-foreground mb-2">Targets</div>
+                                      <div className="flex items-start gap-1.5 flex-wrap">
+                                        {cats.canTarget.map(cat => (
+                                          <Badge
+                                            key={cat.label}
+                                            variant="outline"
+                                            className={cn("text-xs", cat.color)}
+                                          >
+                                            ✓ {cat.label}
+                                          </Badge>
+                                        ))}
+                                        {cats.cannotTarget.map(cat => (
+                                          <Badge
+                                            key={cat.label}
+                                            variant="outline"
+                                            className="text-xs bg-muted/50 text-muted-foreground line-through"
+                                          >
+                                            {cat.label}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {info && (
+                                    <IsometricTargetingDiagram
+                                      targetArea={info.targetArea}
+                                      lineOfFire={info.lineOfFire}
+                                      attackDirection={info.attackDirection}
+                                      minRange={info.minRange}
+                                      maxRange={info.maxRange}
+                                      isFixed={info.isFixed}
+                                      minDamage={info.minDamage}
+                                      maxDamage={info.maxDamage}
+                                      shotsPerAttack={info.shotsPerAttack}
+                                      attacksPerUse={info.attacksPerUse}
+                                      className="shrink-0"
+                                    />
+                                  )}
                                 </div>
                               );
                             })()}
