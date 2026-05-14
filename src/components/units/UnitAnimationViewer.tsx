@@ -203,9 +203,7 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
     }
   };
 
-  const wrapperBg = bgMode === "transparent"
-    ? "repeating-conic-gradient(hsl(var(--muted)) 0% 25%, hsl(var(--background)) 0% 50%) 50% / 16px 16px"
-    : effectiveBg ?? undefined;
+  const wrapperBg = effectiveBg ?? undefined;
 
   return (
     <div className="flex flex-col items-center gap-2 p-3 rounded-md border border-border bg-card/40">
