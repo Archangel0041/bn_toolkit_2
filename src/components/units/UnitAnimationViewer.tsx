@@ -117,11 +117,12 @@ function downloadBlob(blob: Blob, filename: string) {
 // ----------------------------------------------------------------------------
 interface PlayerProps {
   name: string;
+  label?: string;
   frames: Frame[];
   atlas: HTMLImageElement;
 }
 
-function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
+function AnimationPlayer({ name, label, frames, atlas }: PlayerProps) {
   const [frameIdx, setFrameIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(30);
