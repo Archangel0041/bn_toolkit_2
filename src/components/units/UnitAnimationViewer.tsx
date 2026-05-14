@@ -355,7 +355,7 @@ function AnimationPlayer({ name, label, frames, atlas }: PlayerProps) {
 // ----------------------------------------------------------------------------
 // Loader + list + export-all
 // ----------------------------------------------------------------------------
-export function UnitAnimationViewer({ iconName, labelMap, groups }: Props) {
+export function UnitAnimationViewer({ iconName, labelMap, groups, filterNames, compact }: Props) {
   const stem = useMemo(() => deriveStem(iconName), [iconName]);
 
   const [atlas, setAtlas] = useState<HTMLImageElement | null>(null);
@@ -371,34 +371,11 @@ export function UnitAnimationViewer({ iconName, labelMap, groups }: Props) {
     setAtlas(null);
     setTimelines(null);
 
-    const texUrl = supabase.storage
-      .from(ANIMATIONS_BUCKET)
-      .getPublicUrl(`textures/${stem}_texture.png`).data.publicUrl;
-    const timelineUrl = supabase.storage
-      .from(ANIMATIONS_BUCKET)
-      .getPublicUrl(`timelines/${stem}_timeline.bytes`).data.publicUrl;
-
-    const imgPromise = new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("texture not found"));
-      img.src = texUrl;
-    });
-
-    const timelinePromise = (async () => {
-      const res = await fetch(timelineUrl);
-      if (!res.ok) throw new Error("timeline not found");
-      const buf = new Uint8Array(await res.arrayBuffer());
-      const raw = decode(buf);
-      return normalizeTimeline(raw, stem);
-    })();
-
-    Promise.all([imgPromise, timelinePromise])
-      .then(([img, tl]) => {
+    loadAssets(stem)
+      .then(({ atlas, timelines }) => {
         if (cancelled) return;
-        setAtlas(img);
-        setTimelines(tl);
+        setAtlas(atlas);
+        setTimelines(timelines);
         setStatus("ready");
       })
       .catch((e: Error) => {
@@ -451,6 +428,7 @@ export function UnitAnimationViewer({ iconName, labelMap, groups }: Props) {
     return <div className="text-sm text-muted-foreground">Loading animations…</div>;
   }
   if (status === "missing") {
+    if (compact) return null;
     return (
       <div className="text-sm text-muted-foreground">
         No animation assets found for <code>{stem}</code>.
@@ -462,14 +440,17 @@ export function UnitAnimationViewer({ iconName, labelMap, groups }: Props) {
   }
   if (!atlas || !timelines) return null;
 
-  const animNames = Object.keys(timelines);
+  // Apply name filter (only animations actually present in the timelines).
+  const filterSet = filterNames ? new Set(filterNames.filter((n) => n in timelines)) : null;
+  const animNames = Object.keys(timelines).filter((n) => !filterSet || filterSet.has(n));
+  if (animNames.length === 0) return null;
 
-  // Build resolved groups: only include names that actually exist in the timelines.
+  // Build resolved groups.
   const used = new Set<string>();
   const resolvedGroups: Array<{ title: string; names: string[] }> = [];
   if (groups) {
     for (const g of groups) {
-      const present = g.names.filter((n) => n in timelines && !used.has(n));
+      const present = g.names.filter((n) => n in timelines && (!filterSet || filterSet.has(n)) && !used.has(n));
       if (present.length === 0) continue;
       present.forEach((n) => used.add(n));
       resolvedGroups.push({ title: g.title, names: present });
@@ -477,35 +458,39 @@ export function UnitAnimationViewer({ iconName, labelMap, groups }: Props) {
   }
   const leftover = animNames.filter((n) => !used.has(n));
   if (leftover.length > 0) {
-    resolvedGroups.push({ title: resolvedGroups.length === 0 ? "Animations" : "Other", names: leftover });
+    resolvedGroups.push({ title: resolvedGroups.length === 0 ? (compact ? "" : "Animations") : "Other", names: leftover });
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs text-muted-foreground">
-          {animNames.length} animation{animNames.length === 1 ? "" : "s"}
-        </span>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={exportAll}
-          disabled={exportProgress !== null}
-          className="gap-2"
-        >
-          <Download className="h-4 w-4" />
-          {exportProgress
-            ? `Exporting ${exportProgress.current}/${exportProgress.total}…`
-            : "Export all as ZIP"}
-        </Button>
-      </div>
+      {!compact && (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground">
+            {animNames.length} animation{animNames.length === 1 ? "" : "s"}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={exportAll}
+            disabled={exportProgress !== null}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {exportProgress
+              ? `Exporting ${exportProgress.current}/${exportProgress.total}…`
+              : "Export all as ZIP"}
+          </Button>
+        </div>
+      )}
       {errorMsg && <div className="text-xs text-destructive">{errorMsg}</div>}
       <div className="space-y-6">
-        {resolvedGroups.map((g) => (
-          <div key={g.title} className="space-y-2">
-            <h4 className="text-sm font-semibold text-foreground/80 border-b border-border pb-1">
-              {g.title}
-            </h4>
+        {resolvedGroups.map((g, gi) => (
+          <div key={g.title || gi} className="space-y-2">
+            {g.title && (
+              <h4 className="text-sm font-semibold text-foreground/80 border-b border-border pb-1">
+                {g.title}
+              </h4>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {g.names.map((name) => (
                 <AnimationPlayer
