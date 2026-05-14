@@ -21,6 +21,43 @@ interface Props {
   labelMap?: Record<string, string>;
   /** Optional ordered groups (e.g. Idle, per-weapon attacks). Names not present go into "Other". */
   groups?: Array<{ title: string; names: string[] }>;
+  /** When set, only show animations matching these names. */
+  filterNames?: string[];
+  /** Compact mode: hides count + export-all button. */
+  compact?: boolean;
+}
+
+// Module-level cache so multiple viewers for the same unit share a single fetch.
+const assetCache = new Map<string, Promise<{ atlas: HTMLImageElement; timelines: Timelines }>>();
+
+function loadAssets(stem: string): Promise<{ atlas: HTMLImageElement; timelines: Timelines }> {
+  const cached = assetCache.get(stem);
+  if (cached) return cached;
+  const texUrl = supabase.storage
+    .from(ANIMATIONS_BUCKET)
+    .getPublicUrl(`textures/${stem}_texture.png`).data.publicUrl;
+  const timelineUrl = supabase.storage
+    .from(ANIMATIONS_BUCKET)
+    .getPublicUrl(`timelines/${stem}_timeline.bytes`).data.publicUrl;
+  const imgPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("texture not found"));
+    img.src = texUrl;
+  });
+  const tlPromise = (async () => {
+    const res = await fetch(timelineUrl);
+    if (!res.ok) throw new Error("timeline not found");
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const raw = decode(buf);
+    return normalizeTimeline(raw, stem);
+  })();
+  const p = Promise.all([imgPromise, tlPromise]).then(([atlas, timelines]) => ({ atlas, timelines }));
+  // Don't cache failures — let next viewer retry.
+  p.catch(() => assetCache.delete(stem));
+  assetCache.set(stem, p);
+  return p;
 }
 
 function deriveStem(iconName: string): string {
