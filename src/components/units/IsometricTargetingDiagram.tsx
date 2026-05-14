@@ -181,18 +181,24 @@ export function IsometricTargetingDiagram({
                     )}
                   >
                     {hit && cell && (
-                      <>
+                      <div
+                        className="flex flex-col items-center justify-center leading-tight"
+                        style={{
+                          transform: "rotateZ(45deg) rotateX(-55deg)",
+                          transformStyle: "preserve-3d",
+                        }}
+                      >
                         {cell.expectedDamage !== undefined ? (
                           <span className="text-[13px] font-bold">{fmt(cell.expectedDamage)}</span>
                         ) : (
                           <span className="text-[11px] font-bold">{cell.damagePercent}%</span>
                         )}
-                        {cell.probability !== undefined && (
+                        {cell.hitChance !== undefined && (
                           <span className="text-[9px] font-medium opacity-90">
-                            {(cell.probability * 100).toFixed(cell.probability * 100 >= 10 ? 0 : 1)}%
+                            {(cell.hitChance * 100).toFixed(cell.hitChance * 100 >= 10 ? 0 : 1)}%
                           </span>
                         )}
-                      </>
+                      </div>
                     )}
                   </div>
                 );
