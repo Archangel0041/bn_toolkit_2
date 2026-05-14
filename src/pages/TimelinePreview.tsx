@@ -410,9 +410,12 @@ export default function TimelinePreview() {
   const [gifTransparent, setGifTransparent] = useState(true);
 
   const loadGifJs = async (): Promise<{ GIF: any; workerUrl: string }> => {
-    if (!(window as any).GIF) {
-      // @ts-ignore – gif.js has no types and assigns window.GIF on import
-      await import("gif.js/dist/gif.js");
+    if (typeof (window as any).GIF !== "function") {
+      // @ts-ignore – gif.js has no types; Vite exposes the UMD export as default
+      const mod = await import("gif.js/dist/gif.js");
+      const GIFCtor = mod.default ?? (mod as any).GIF ?? (window as any).GIF;
+      if (typeof GIFCtor !== "function") throw new Error("GIF encoder failed to load");
+      (window as any).GIF = GIFCtor;
     }
     if (!(window as any).__gifWorkerUrl) {
       const mod = await import("gif.js/dist/gif.worker.js?url");
