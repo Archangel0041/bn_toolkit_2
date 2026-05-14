@@ -571,6 +571,17 @@ export default function TimelinePreview() {
           </Button>
           <Button variant="outline" onClick={() => { setPlaying(false); setFrameIdx(0); }}>Reset</Button>
           <Button variant="outline" onClick={exportPng} disabled={!atlas || !frames}>Export frame PNG</Button>
+          <Button onClick={exportGif} disabled={!atlas || !frames || gifProgress !== null}>
+            {gifProgress !== null ? `GIF ${(gifProgress * 100).toFixed(0)}%` : "Export GIF"}
+          </Button>
+          <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={gifTransparent}
+              onChange={(e) => setGifTransparent(e.target.checked)}
+            />
+            Transparent GIF
+          </label>
         </div>
       )}
 
