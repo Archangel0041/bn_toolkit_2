@@ -194,7 +194,7 @@ function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     canvas.style.width = w + "px";
-    canvas.style.height = h + "px";
+    canvas.style.height = "auto";
     canvas.style.maxWidth = "100%";
     canvas.style.aspectRatio = `${w} / ${h}`;
     const ctx = canvas.getContext("2d")!;
