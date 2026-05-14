@@ -381,7 +381,7 @@ export function UnitAnimationViewer({ iconName }: Props) {
         const baseBbox = computeBbox(frames);
         const ppu = autoScaleFor(baseBbox);
         const bbox = tightenBbox(frames, atlas, baseBbox, ppu, PAD);
-        const blob = await encodeGif(frames, atlas, bbox, ppu, 30, GIF, workerUrl);
+        const blob = await encodeGif(frames, atlas, bbox, ppu, 30, null, GIF, workerUrl);
         zip.file(`${name}.gif`, blob);
         setExportProgress({ current: i + 1, total: names.length });
       }
