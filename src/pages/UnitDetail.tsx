@@ -34,6 +34,8 @@ import {
   ArrowLeft, Swords, Clock, Coins, Wrench, Plus, Check, Activity, Shield, Film
 } from "lucide-react";
 import { UnitAnimationViewer } from "@/components/units/UnitAnimationViewer";
+import { TargetingPatternDiagram } from "@/components/battle/TargetingPatternDiagram";
+import { getUnitAbilities } from "@/lib/battleCalculations";
 import { UnitTag, UnitTagLabels } from "@/data/gameEnums";
 import { expandTargetTags } from "@/lib/tagHierarchy";
 
