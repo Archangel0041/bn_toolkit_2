@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Download } from "lucide-react";
 import {
   normalizeTimeline, computeBbox, tightenBbox, canvasSize, renderFrameToCtx,
   type Frame, type Timelines, type BBox,
@@ -12,6 +12,7 @@ import {
 
 const PAD = 4;
 const ANIMATIONS_BUCKET = "Animations";
+const TARGET_PX = 140;
 
 interface Props {
   /** The unit's icon name (e.g. "artillery_icon"). The trailing "_icon" is stripped to derive the asset stem. */
@@ -22,6 +23,76 @@ function deriveStem(iconName: string): string {
   return iconName.replace(/_icon$/i, "").replace(/\.png$/i, "");
 }
 
+function autoScaleFor(bbox: BBox): number {
+  const w = Math.max(1, bbox.gx1 - bbox.gx0);
+  const h = Math.max(1, bbox.gy1 - bbox.gy0);
+  const longest = Math.max(w, h);
+  return Math.max(1, Math.min(6, Math.round(TARGET_PX / longest)));
+}
+
+// ----------------------------------------------------------------------------
+// gif.js loader (shared singleton)
+// ----------------------------------------------------------------------------
+async function loadGifJs(): Promise<{ GIF: any; workerUrl: string }> {
+  if (typeof (window as any).GIF !== "function") {
+    const mod = await import("gif.js/dist/gif.js");
+    const GIFCtor = (mod as any).default ?? (mod as any).GIF ?? (window as any).GIF;
+    if (typeof GIFCtor !== "function") throw new Error("GIF encoder failed to load");
+    (window as any).GIF = GIFCtor;
+  }
+  if (!(window as any).__gifWorkerUrl) {
+    const mod = await import("gif.js/dist/gif.worker.js?url");
+    (window as any).__gifWorkerUrl = (mod as any).default;
+  }
+  return { GIF: (window as any).GIF, workerUrl: (window as any).__gifWorkerUrl };
+}
+
+function encodeGif(
+  frames: Frame[],
+  atlas: HTMLImageElement,
+  bbox: BBox,
+  ppu: number,
+  fps: number,
+  GIF: any,
+  workerUrl: string,
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const { w, h } = canvasSize(bbox, ppu, PAD);
+    const SENTINEL = { r: 255, g: 0, b: 255 };
+    const sentinelHex = 0xff00ff;
+    const gif = new GIF({
+      workers: 2,
+      quality: 10,
+      width: w,
+      height: h,
+      workerScript: workerUrl,
+      transparent: sentinelHex,
+    });
+    const off = document.createElement("canvas");
+    off.width = w; off.height = h;
+    const octx = off.getContext("2d")!;
+    const delay = Math.max(20, Math.round(1000 / fps));
+    for (const fr of frames) {
+      octx.clearRect(0, 0, w, h);
+      renderFrameToCtx(octx, fr, atlas, bbox, ppu, PAD, false);
+      const img = octx.getImageData(0, 0, w, h);
+      const d = img.data;
+      for (let p = 0; p < d.length; p += 4) {
+        if (d[p + 3] < 128) {
+          d[p] = SENTINEL.r; d[p + 1] = SENTINEL.g; d[p + 2] = SENTINEL.b; d[p + 3] = 255;
+        } else {
+          d[p + 3] = 255;
+        }
+      }
+      octx.putImageData(img, 0, 0);
+      gif.addFrame(octx, { copy: true, delay });
+    }
+    gif.on("finished", (blob: Blob) => resolve(blob));
+    gif.on("abort", () => reject(new Error("GIF encoding aborted")));
+    gif.render();
+  });
+}
+
 // ----------------------------------------------------------------------------
 // Single-animation player
 // ----------------------------------------------------------------------------
@@ -29,27 +100,18 @@ interface PlayerProps {
   name: string;
   frames: Frame[];
   atlas: HTMLImageElement;
-  showAdvanced: boolean;
 }
 
-function AnimationPlayer({ name, frames, atlas, showAdvanced }: PlayerProps) {
+function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
   const [frameIdx, setFrameIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(30);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>();
 
-  // Auto-pick a scale that fits the animation into a roughly uniform target size.
-  const TARGET_PX = 140;
   const baseBbox = useMemo(() => computeBbox(frames), [frames]);
-  const autoPpu = useMemo(() => {
-    const w = Math.max(1, baseBbox.gx1 - baseBbox.gx0);
-    const h = Math.max(1, baseBbox.gy1 - baseBbox.gy0);
-    const longest = Math.max(w, h);
-    const raw = TARGET_PX / longest;
-    // Snap to a sensible integer-ish range so pixel art stays crisp
-    return Math.max(1, Math.min(6, Math.round(raw)));
-  }, [baseBbox]);
+  const autoPpu = useMemo(() => autoScaleFor(baseBbox), [baseBbox]);
   const [ppu, setPpu] = useState(autoPpu);
   useEffect(() => { setPpu(autoPpu); }, [autoPpu]);
 
@@ -98,7 +160,6 @@ function AnimationPlayer({ name, frames, atlas, showAdvanced }: PlayerProps) {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [playing, fps, frames]);
 
-  // Keep frame index in range
   useEffect(() => {
     if (frameIdx >= frames.length) setFrameIdx(0);
   }, [frames, frameIdx]);
@@ -109,16 +170,24 @@ function AnimationPlayer({ name, frames, atlas, showAdvanced }: PlayerProps) {
         {name}
       </div>
       <canvas ref={canvasRef} className="block" style={{ imageRendering: "pixelated" }} />
-      <div className="flex gap-1">
-        <Button size="sm" variant="outline" onClick={() => setPlaying((p) => !p)} disabled={frames.length < 2}>
-          {playing ? "Pause" : "Play"}
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => { setPlaying(false); setFrameIdx(0); }}>
-          Reset
-        </Button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setShowAdvanced((s) => !s)}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {showAdvanced ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        Additional options
+      </button>
       {showAdvanced && (
         <div className="w-full space-y-2 pt-2 border-t border-border">
+          <div className="flex gap-1 justify-center">
+            <Button size="sm" variant="outline" onClick={() => setPlaying((p) => !p)} disabled={frames.length < 2}>
+              {playing ? "Pause" : "Play"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { setPlaying(false); setFrameIdx(0); }}>
+              Reset
+            </Button>
+          </div>
           <div className="space-y-1">
             <Label className="text-xs">Frame {frameIdx + 1} / {frames.length}</Label>
             <Slider
@@ -144,7 +213,7 @@ function AnimationPlayer({ name, frames, atlas, showAdvanced }: PlayerProps) {
 }
 
 // ----------------------------------------------------------------------------
-// Loader + grid
+// Loader + list + export-all
 // ----------------------------------------------------------------------------
 export function UnitAnimationViewer({ iconName }: Props) {
   const stem = useMemo(() => deriveStem(iconName), [iconName]);
@@ -153,7 +222,7 @@ export function UnitAnimationViewer({ iconName }: Props) {
   const [timelines, setTimelines] = useState<Timelines | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,6 +274,39 @@ export function UnitAnimationViewer({ iconName }: Props) {
     return () => { cancelled = true; };
   }, [stem]);
 
+  const exportAll = async () => {
+    if (!atlas || !timelines) return;
+    try {
+      const names = Object.keys(timelines);
+      setExportProgress({ current: 0, total: names.length });
+      const { GIF, workerUrl } = await loadGifJs();
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      for (let i = 0; i < names.length; i++) {
+        const name = names[i];
+        const frames = timelines[name];
+        const baseBbox = computeBbox(frames);
+        const ppu = autoScaleFor(baseBbox);
+        const bbox = tightenBbox(frames, atlas, baseBbox, ppu, PAD);
+        const blob = await encodeGif(frames, atlas, bbox, ppu, 30, GIF, workerUrl);
+        zip.file(`${name}.gif`, blob);
+        setExportProgress({ current: i + 1, total: names.length });
+      }
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${stem}_animations.zip`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setExportProgress(null);
+    } catch (e: any) {
+      console.error(e);
+      setErrorMsg(`Export failed: ${e.message}`);
+      setExportProgress(null);
+    }
+  };
+
   if (status === "loading") {
     return <div className="text-sm text-muted-foreground">Loading animations…</div>;
   }
@@ -224,14 +326,24 @@ export function UnitAnimationViewer({ iconName }: Props) {
 
   return (
     <div className="space-y-4">
-      <button
-        type="button"
-        onClick={() => setShowAdvanced((s) => !s)}
-        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
-        {showAdvanced ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        Additional options
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs text-muted-foreground">
+          {animNames.length} animation{animNames.length === 1 ? "" : "s"}
+        </span>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={exportAll}
+          disabled={exportProgress !== null}
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          {exportProgress
+            ? `Exporting ${exportProgress.current}/${exportProgress.total}…`
+            : "Export all as ZIP"}
+        </Button>
+      </div>
+      {errorMsg && <div className="text-xs text-destructive">{errorMsg}</div>}
       <div className="flex flex-col gap-4">
         {animNames.map((name) => (
           <AnimationPlayer
@@ -239,7 +351,6 @@ export function UnitAnimationViewer({ iconName }: Props) {
             name={name}
             frames={timelines[name]}
             atlas={atlas}
-            showAdvanced={showAdvanced}
           />
         ))}
       </div>
