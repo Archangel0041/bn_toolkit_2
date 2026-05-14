@@ -265,13 +265,6 @@ export default function UnitDetail() {
         )}
 
         <div className="space-y-4">
-          {/* Animations */}
-          {unit.identity.icon && (
-            <StatSection title="Animations" icon={<Film className="h-4 w-4" />} defaultOpen>
-              <UnitAnimationViewer iconName={unit.identity.icon} />
-            </StatSection>
-          )}
-
           {/* Main Stats */}
           {stats && (
             <StatSection title="Main Stats" icon={<Activity className="h-4 w-4" />} defaultOpen>
@@ -654,6 +647,13 @@ export default function UnitDetail() {
                   <span className="font-medium">{formatDuration(unit.healing.heal_time)}</span>
                 </div>
               </div>
+            </StatSection>
+          )}
+
+          {/* Animations - at the bottom, fetched on mount */}
+          {unit.identity.icon && (
+            <StatSection title="Animations" icon={<Film className="h-4 w-4" />} defaultOpen>
+              <UnitAnimationViewer iconName={unit.identity.icon} />
             </StatSection>
           )}
         </div>
