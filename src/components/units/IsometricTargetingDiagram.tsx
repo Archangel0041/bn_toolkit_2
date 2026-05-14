@@ -196,24 +196,6 @@ export function IsometricTargetingDiagram({
         )}
       </div>
 
-      <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 border border-yellow-400 bg-yellow-500/40 rounded-sm" />
-          <span>Target</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 border border-red-400/80 bg-red-500/45 rounded-sm" />
-          <span>{isFixed ? "Hit Area" : "Splash"}</span>
-        </div>
-        {avgDamage !== undefined && (
-          <div className="flex items-center gap-1">
-            <span>
-              Avg {fmt(avgDamage)}/shot × {totalShots} shot{totalShots === 1 ? "" : "s"}
-              {isRandom ? " (% = chance to be hit at least once)" : ""}
-            </span>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
