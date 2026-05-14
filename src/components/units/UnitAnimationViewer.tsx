@@ -159,9 +159,11 @@ interface PlayerProps {
   label?: string;
   frames: Frame[];
   atlas: HTMLImageElement;
+  /** Minimal mode: no label, no advanced options toggle — just the canvas. */
+  minimal?: boolean;
 }
 
-function AnimationPlayer({ name, label, frames, atlas }: PlayerProps) {
+function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
   const [frameIdx, setFrameIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(30);
@@ -249,28 +251,32 @@ function AnimationPlayer({ name, label, frames, atlas }: PlayerProps) {
 
   return (
     <div className="flex flex-col items-center gap-2 p-3 rounded-md border border-border bg-card/40">
-      <div className="w-full text-center">
-        <div className="text-sm font-medium truncate" title={label || name}>
-          {label || name}
-        </div>
-        {label && (
-          <div className="text-[10px] text-muted-foreground/70 font-mono truncate" title={name}>
-            {name}
+      {!minimal && (
+        <div className="w-full text-center">
+          <div className="text-sm font-medium truncate" title={label || name}>
+            {label || name}
           </div>
-        )}
-      </div>
+          {label && (
+            <div className="text-[10px] text-muted-foreground/70 font-mono truncate" title={name}>
+              {name}
+            </div>
+          )}
+        </div>
+      )}
       <div className="rounded p-1" style={{ background: wrapperBg }}>
         <canvas ref={canvasRef} className="block" style={{ imageRendering: "pixelated" }} />
       </div>
-      <button
-        type="button"
-        onClick={() => setShowAdvanced((s) => !s)}
-        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
-        {showAdvanced ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        Additional options
-      </button>
-      {showAdvanced && (
+      {!minimal && (
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((s) => !s)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {showAdvanced ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          Additional options
+        </button>
+      )}
+      {!minimal && showAdvanced && (
         <div className="w-full space-y-2 pt-2 border-t border-border">
           <div className="flex gap-1 justify-center flex-wrap">
             <Button size="sm" variant="outline" onClick={() => setPlaying((p) => !p)} disabled={frames.length < 2}>
@@ -499,6 +505,7 @@ export function UnitAnimationViewer({ iconName, labelMap, groups, filterNames, c
                   label={labelMap?.[name]}
                   frames={timelines[name]}
                   atlas={atlas}
+                  minimal={compact}
                 />
               ))}
             </div>
