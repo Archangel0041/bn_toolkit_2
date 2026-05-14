@@ -31,11 +31,25 @@ export function IsometricTargetingDiagram({
   minRange,
   maxRange,
   isFixed,
+  minDamage,
+  maxDamage,
   centerUnitId = 709,
   className,
 }: Props) {
   const positions = targetArea?.data ?? [];
   const isSingleTarget = !targetArea || (targetArea.targetType === 1 && positions.length === 0);
+  const isRandom = !!targetArea?.random;
+
+  // Average damage per shot (used to compute per-tile expected damage).
+  const avgDamage =
+    minDamage !== undefined && maxDamage !== undefined
+      ? (minDamage + maxDamage) / 2
+      : undefined;
+
+  // Total weight for random attacks (used to derive per-tile probability).
+  const totalWeight = isRandom
+    ? positions.reduce((s, p) => s + (p.weight ?? 1), 0) || 1
+    : 0;
 
   // Always include the center (0,0) so the dummy can sit somewhere.
   let minX = 0, maxX = 0, minY = 0, maxY = 0;
@@ -48,17 +62,34 @@ export function IsometricTargetingDiagram({
   const width = Math.max(1, maxX - minX + 1);
   const height = Math.max(1, maxY - minY + 1);
 
-  // Build a value grid: damage % for each occupied tile, null otherwise.
-  const grid: (number | null)[][] = Array.from({ length: height }, () =>
+  type Cell = {
+    damagePercent: number;
+    weight?: number;
+    probability?: number; // 0..1, only for random attacks
+    expectedDamage?: number;
+  } | null;
+
+  const grid: Cell[][] = Array.from({ length: height }, () =>
     Array.from({ length: width }, () => null),
   );
   for (const p of positions) {
-    grid[p.y - minY][p.x - minX] = p.damagePercent ?? 100;
+    const dmgPct = p.damagePercent ?? 100;
+    const probability = isRandom ? (p.weight ?? 1) / totalWeight : undefined;
+    const baseExpected = avgDamage !== undefined ? (avgDamage * dmgPct) / 100 : undefined;
+    const expectedDamage =
+      baseExpected !== undefined && probability !== undefined
+        ? baseExpected * probability
+        : baseExpected;
+    grid[p.y - minY][p.x - minX] = {
+      damagePercent: dmgPct,
+      weight: p.weight,
+      probability,
+      expectedDamage,
+    };
   }
   const centerX = -minX;
   const centerY = -minY;
 
-  // Pixel position of the center cell within the un-tilted grid.
   const cellPitch = CELL_PX + GAP_PX;
   const centerCx = centerX * cellPitch + CELL_PX / 2;
   const centerCy = centerY * cellPitch + CELL_PX / 2;
@@ -68,13 +99,15 @@ export function IsometricTargetingDiagram({
   const dummy = getUnitById(centerUnitId);
   const dummyIconUrl = dummy?.identity.icon ? getUnitImageUrl(dummy.identity.icon) : null;
 
-  // Outer canvas needs extra room for the rotated grid; rotated bbox ≈ (W+H)/√2.
-  const outerW = Math.ceil((gridW + gridH) * 0.72) + 48;
-  const outerH = Math.ceil((gridW + gridH) * 0.42) + 64;
+  const outerW = Math.ceil((gridW + gridH) * 0.72) + 64;
+  const outerH = Math.ceil((gridW + gridH) * 0.42) + 80;
+
+  const fmt = (n: number) => (n >= 100 ? Math.round(n).toString() : n.toFixed(n >= 10 ? 0 : 1));
 
   return (
-    <div className={cn("space-y-2 p-2 bg-muted/30 rounded-lg", className)}>
-      <div className="flex flex-wrap gap-1">
+    <div className={cn("space-y-2 p-3 bg-muted/30 rounded-lg", className)}>
+      <div className="text-xs font-semibold text-foreground/90 text-center">AOE Pattern</div>
+      <div className="flex flex-wrap gap-1 justify-center">
         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
           {LineOfFireLabels[lineOfFire] || "Direct"}
         </Badge>
@@ -91,6 +124,11 @@ export function IsometricTargetingDiagram({
             Fixed
           </Badge>
         )}
+        {isRandom && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-sky-500/20 text-sky-300 border-sky-500/50">
+            Random
+          </Badge>
+        )}
         {isSingleTarget && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0">
             Single Target
@@ -103,10 +141,9 @@ export function IsometricTargetingDiagram({
         style={{
           width: outerW,
           height: outerH,
-          perspective: "800px",
+          perspective: "1000px",
         }}
       >
-        {/* Tilted grid of attack tiles */}
         <div
           className="absolute"
           style={{
@@ -129,21 +166,34 @@ export function IsometricTargetingDiagram({
             }}
           >
             {grid.map((row, y) =>
-              row.map((dmg, x) => {
+              row.map((cell, x) => {
                 const isCenter = x === centerX && y === centerY;
-                const hit = dmg !== null;
+                const hit = cell !== null;
                 return (
                   <div
                     key={`${x}-${y}`}
                     className={cn(
-                      "flex items-center justify-center text-[10px] font-bold select-none",
+                      "flex flex-col items-center justify-center text-center select-none leading-tight",
                       isCenter && hit && "border-2 border-yellow-400 bg-yellow-500/40 text-yellow-50",
                       isCenter && !hit && "border-2 border-yellow-400 bg-yellow-500/10",
                       !isCenter && hit && "border border-red-400/80 bg-red-500/45 text-white",
                       !isCenter && !hit && "border border-muted-foreground/15 bg-transparent",
                     )}
                   >
-                    {hit && dmg !== 100 ? `${dmg}` : hit ? "100" : ""}
+                    {hit && cell && (
+                      <>
+                        {cell.expectedDamage !== undefined ? (
+                          <span className="text-[13px] font-bold">{fmt(cell.expectedDamage)}</span>
+                        ) : (
+                          <span className="text-[11px] font-bold">{cell.damagePercent}%</span>
+                        )}
+                        {cell.probability !== undefined && (
+                          <span className="text-[9px] font-medium opacity-90">
+                            {(cell.probability * 100).toFixed(cell.probability * 100 >= 10 ? 0 : 1)}%
+                          </span>
+                        )}
+                      </>
+                    )}
                   </div>
                 );
               }),
@@ -151,15 +201,9 @@ export function IsometricTargetingDiagram({
           </div>
         </div>
 
-        {/* Upright dummy unit positioned over the center tile.
-            We project the cell center through the same rotation by leaving the
-            tilted grid centered at the canvas center, then placing the dummy
-            using the cell's offset from the grid center, rotated 45° in 2D
-            (the rotateX foreshortens the Y axis to ~cos(55°) ≈ 0.574). */}
         {dummyIconUrl && (() => {
           const dx = (centerCx - gridW / 2);
           const dy = (centerCy - gridH / 2);
-          // Rotate (dx, dy) by -45° in 2D, then squash Y by cos(55°).
           const ang = -45 * (Math.PI / 180);
           const cos = Math.cos(ang), sin = Math.sin(ang);
           const rx = dx * cos - dy * sin;
@@ -168,12 +212,12 @@ export function IsometricTargetingDiagram({
             <img
               src={dummyIconUrl}
               alt={dummy?.identity.name || "Target"}
-              className="absolute pointer-events-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)]"
+              className="absolute pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]"
               style={{
                 left: `calc(50% + ${rx}px)`,
                 top: `calc(50% + ${ry}px)`,
                 transform: "translate(-50%, -75%)",
-                width: CELL_PX * 1.4,
+                width: CELL_PX * 1.3,
                 height: "auto",
                 imageRendering: "pixelated",
               }}
@@ -192,6 +236,11 @@ export function IsometricTargetingDiagram({
           <span className="inline-block w-2 h-2 border border-red-400/80 bg-red-500/45 rounded-sm" />
           <span>{isFixed ? "Hit Area" : "Splash"}</span>
         </div>
+        {avgDamage !== undefined && (
+          <div className="flex items-center gap-1">
+            <span>Avg dmg/shot: {fmt(avgDamage)}</span>
+          </div>
+        )}
       </div>
     </div>
   );
