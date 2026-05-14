@@ -572,6 +572,31 @@ export default function UnitDetail() {
                                 </div>
                               </div>
                             )}
+
+                            {(weapon.frontattack_animation || weapon.backattack_animation) && unit.identity.icon && (() => {
+                              const wname = t(weapon.name);
+                              const lbls: Record<string, string> = {};
+                              const names: string[] = [];
+                              if (weapon.backattack_animation) {
+                                lbls[weapon.backattack_animation] = `${wname} (Back)`;
+                                names.push(weapon.backattack_animation);
+                              }
+                              if (weapon.frontattack_animation) {
+                                lbls[weapon.frontattack_animation] = `${wname} (Front)`;
+                                names.push(weapon.frontattack_animation);
+                              }
+                              return (
+                                <div className="mt-3 pt-3 border-t">
+                                  <UnitAnimationViewer
+                                    iconName={unit.identity.icon}
+                                    labelMap={lbls}
+                                    filterNames={names}
+                                    groups={[{ title: "", names }]}
+                                    compact
+                                  />
+                                </div>
+                              );
+                            })()}
                           </div>
                         );
                       })}
