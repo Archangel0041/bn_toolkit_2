@@ -210,8 +210,15 @@ function AnimationPlayer({ name, label, frames, atlas }: PlayerProps) {
 
   return (
     <div className="flex flex-col items-center gap-2 p-3 rounded-md border border-border bg-card/40">
-      <div className="text-xs font-medium text-muted-foreground truncate w-full text-center" title={name}>
-        {name}
+      <div className="w-full text-center">
+        <div className="text-sm font-medium truncate" title={label || name}>
+          {label || name}
+        </div>
+        {label && (
+          <div className="text-[10px] text-muted-foreground/70 font-mono truncate" title={name}>
+            {name}
+          </div>
+        )}
       </div>
       <div className="rounded p-1" style={{ background: wrapperBg }}>
         <canvas ref={canvasRef} className="block" style={{ imageRendering: "pixelated" }} />
