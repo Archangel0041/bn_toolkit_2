@@ -254,12 +254,42 @@ export default function TimelinePreview() {
     };
   }, [playing, fps, timeline]);
 
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFiles = (files: FileList | File[]) => {
+    for (const f of Array.from(files)) {
+      const name = f.name.toLowerCase();
+      if (f.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp)$/.test(name)) {
+        handleTexture(f);
+      } else {
+        handleTimeline(f);
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground p-6 space-y-4">
+    <div
+      className="min-h-screen bg-background text-foreground p-6 space-y-4"
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+      }}
+    >
       <h1 className="text-2xl font-bold">Timeline Preview (temp)</h1>
       <p className="text-sm text-muted-foreground">
-        Upload a texture image and a msgpack-encoded timeline. Decoded structure logged to console.
+        Drag &amp; drop a texture image and a msgpack timeline anywhere on the page, or use the pickers below.
       </p>
+
+      <div
+        className={`border-2 border-dashed rounded-md p-6 text-center text-sm transition-colors ${
+          dragOver ? "border-primary bg-primary/10" : "border-border text-muted-foreground"
+        }`}
+      >
+        {dragOver ? "Drop files to load" : "Drop texture (image) + timeline (.bytes) here"}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
         <div className="space-y-2">
@@ -271,7 +301,7 @@ export default function TimelinePreview() {
           />
         </div>
         <div className="space-y-2">
-          <Label>Timeline (.msgpack / .bin)</Label>
+          <Label>Timeline (.bytes / .msgpack / .bin)</Label>
           <Input
             type="file"
             accept=".bytes,.msgpack,.bin,.mp,application/octet-stream"
