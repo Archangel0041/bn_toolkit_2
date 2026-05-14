@@ -12,13 +12,17 @@ interface Props {
   minRange: number;
   maxRange: number;
   isFixed: boolean;
+  /** Min damage per shot (for computing tile damage). */
+  minDamage?: number;
+  /** Max damage per shot (for computing tile damage). */
+  maxDamage?: number;
   /** Unit ID to render (upright) at the target reticle. Defaults to the in-game dummy (709). */
   centerUnitId?: number;
   className?: string;
 }
 
-const CELL_PX = 38;
-const GAP_PX = 2;
+const CELL_PX = 64;
+const GAP_PX = 3;
 
 export function IsometricTargetingDiagram({
   targetArea,
