@@ -409,16 +409,25 @@ export default function TimelinePreview() {
   const [gifProgress, setGifProgress] = useState<number | null>(null);
   const [gifTransparent, setGifTransparent] = useState(true);
 
-  const loadGifJs = async (): Promise<any> => {
-    if ((window as any).GIF) return (window as any).GIF;
-    await new Promise<void>((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js";
-      s.onload = () => res();
-      s.onerror = () => rej(new Error("Failed to load gif.js"));
-      document.head.appendChild(s);
-    });
-    return (window as any).GIF;
+  const loadGifJs = async (): Promise<{ GIF: any; workerUrl: string }> => {
+    if (!(window as any).GIF) {
+      await new Promise<void>((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js";
+        s.onload = () => res();
+        s.onerror = () => rej(new Error("Failed to load gif.js"));
+        document.head.appendChild(s);
+      });
+    }
+    if (!(window as any).__gifWorkerUrl) {
+      const res = await fetch("https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js");
+      if (!res.ok) throw new Error("Failed to fetch gif.worker.js");
+      const text = await res.text();
+      (window as any).__gifWorkerUrl = URL.createObjectURL(
+        new Blob([text], { type: "application/javascript" }),
+      );
+    }
+    return { GIF: (window as any).GIF, workerUrl: (window as any).__gifWorkerUrl };
   };
 
   const exportGif = async () => {
