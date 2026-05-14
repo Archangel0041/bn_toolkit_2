@@ -17,6 +17,8 @@ const TARGET_PX = 140;
 interface Props {
   /** The unit's icon name (e.g. "artillery_icon"). The trailing "_icon" is stripped to derive the asset stem. */
   iconName: string;
+  /** Optional map of raw animation name → human-friendly label (e.g. "Rifle attack — Aimed Shot"). */
+  labelMap?: Record<string, string>;
 }
 
 function deriveStem(iconName: string): string {
@@ -115,11 +117,12 @@ function downloadBlob(blob: Blob, filename: string) {
 // ----------------------------------------------------------------------------
 interface PlayerProps {
   name: string;
+  label?: string;
   frames: Frame[];
   atlas: HTMLImageElement;
 }
 
-function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
+function AnimationPlayer({ name, label, frames, atlas }: PlayerProps) {
   const [frameIdx, setFrameIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(30);
@@ -207,8 +210,15 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
 
   return (
     <div className="flex flex-col items-center gap-2 p-3 rounded-md border border-border bg-card/40">
-      <div className="text-xs font-medium text-muted-foreground truncate w-full text-center" title={name}>
-        {name}
+      <div className="w-full text-center">
+        <div className="text-sm font-medium truncate" title={label || name}>
+          {label || name}
+        </div>
+        {label && (
+          <div className="text-[10px] text-muted-foreground/70 font-mono truncate" title={name}>
+            {name}
+          </div>
+        )}
       </div>
       <div className="rounded p-1" style={{ background: wrapperBg }}>
         <canvas ref={canvasRef} className="block" style={{ imageRendering: "pixelated" }} />
@@ -306,7 +316,7 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
 // ----------------------------------------------------------------------------
 // Loader + list + export-all
 // ----------------------------------------------------------------------------
-export function UnitAnimationViewer({ iconName }: Props) {
+export function UnitAnimationViewer({ iconName, labelMap }: Props) {
   const stem = useMemo(() => deriveStem(iconName), [iconName]);
 
   const [atlas, setAtlas] = useState<HTMLImageElement | null>(null);
@@ -440,6 +450,7 @@ export function UnitAnimationViewer({ iconName }: Props) {
           <AnimationPlayer
             key={name}
             name={name}
+            label={labelMap?.[name]}
             frames={timelines[name]}
             atlas={atlas}
           />
