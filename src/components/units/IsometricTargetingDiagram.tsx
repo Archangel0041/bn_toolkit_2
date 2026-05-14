@@ -244,7 +244,10 @@ export function IsometricTargetingDiagram({
         </div>
         {avgDamage !== undefined && (
           <div className="flex items-center gap-1">
-            <span>Avg dmg/shot: {fmt(avgDamage)}</span>
+            <span>
+              Avg {fmt(avgDamage)}/shot × {totalShots} shot{totalShots === 1 ? "" : "s"}
+              {isRandom ? " (% = chance to be hit at least once)" : ""}
+            </span>
           </div>
         )}
       </div>
