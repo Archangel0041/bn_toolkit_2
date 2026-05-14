@@ -17,6 +17,8 @@ const TARGET_PX = 140;
 interface Props {
   /** The unit's icon name (e.g. "artillery_icon"). The trailing "_icon" is stripped to derive the asset stem. */
   iconName: string;
+  /** Optional map of raw animation name → human-friendly label (e.g. "Rifle attack — Aimed Shot"). */
+  labelMap?: Record<string, string>;
 }
 
 function deriveStem(iconName: string): string {
