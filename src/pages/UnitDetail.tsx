@@ -608,10 +608,9 @@ export default function UnitDetail() {
                             )}
 
                             {(() => {
-                              const info = abilityInfoMap[abilId];
                               const wname = t(weapon.name);
                               const hasAnim = (weapon.frontattack_animation || weapon.backattack_animation) && unit.identity.icon;
-                              if (!info && !hasAnim) return null;
+                              if (!hasAnim) return null;
 
                               const lbls: Record<string, string> = {};
                               const names: string[] = [];
@@ -624,33 +623,14 @@ export default function UnitDetail() {
                                 names.push(weapon.frontattack_animation);
                               }
                               return (
-                                <div className="mt-3 pt-3 border-t flex flex-wrap items-start gap-3">
-                                  {info && (
-                                    <IsometricTargetingDiagram
-                                      targetArea={info.targetArea}
-                                      lineOfFire={info.lineOfFire}
-                                      attackDirection={info.attackDirection}
-                                      minRange={info.minRange}
-                                      maxRange={info.maxRange}
-                                      isFixed={info.isFixed}
-                                      minDamage={info.minDamage}
-                                      maxDamage={info.maxDamage}
-                                      shotsPerAttack={info.shotsPerAttack}
-                                      attacksPerUse={info.attacksPerUse}
-                                      className="shrink-0"
-                                    />
-                                  )}
-                                  {hasAnim && (
-                                    <div className="flex-1 min-w-[200px]">
-                                      <UnitAnimationViewer
-                                        iconName={unit.identity.icon}
-                                        labelMap={lbls}
-                                        filterNames={names}
-                                        groups={[{ title: "", names }]}
-                                        compact
-                                      />
-                                    </div>
-                                  )}
+                                <div className="mt-3 pt-3 border-t">
+                                  <UnitAnimationViewer
+                                    iconName={unit.identity.icon}
+                                    labelMap={lbls}
+                                    filterNames={names}
+                                    groups={[{ title: "", names }]}
+                                    compact
+                                  />
                                 </div>
                               );
                             })()}
