@@ -403,7 +403,7 @@ export default function UnitDetail() {
                         
                         return (
                           <div key={abilId} className="p-4 bg-background">
-                            <div className="flex items-start gap-3 mb-3">
+                            <div className="flex items-center gap-3 mb-3">
                               {abilityIconUrl && (
                                 <img 
                                   src={abilityIconUrl} 
@@ -426,25 +426,6 @@ export default function UnitDetail() {
                                   <span>{damageTypeName} Damage</span>
                                 </div>
                               </div>
-                              {(() => {
-                                const info = abilityInfoMap[abilId];
-                                if (!info) return null;
-                                return (
-                                  <IsometricTargetingDiagram
-                                    targetArea={info.targetArea}
-                                    lineOfFire={info.lineOfFire}
-                                    attackDirection={info.attackDirection}
-                                    minRange={info.minRange}
-                                    maxRange={info.maxRange}
-                                    isFixed={info.isFixed}
-                                    minDamage={info.minDamage}
-                                    maxDamage={info.maxDamage}
-                                    shotsPerAttack={info.shotsPerAttack}
-                                    attacksPerUse={info.attacksPerUse}
-                                    className="shrink-0"
-                                  />
-                                );
-                              })()}
                             </div>
                             <TooltipProvider>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1 text-sm">
