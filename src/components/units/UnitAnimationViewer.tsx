@@ -36,14 +36,24 @@ function AnimationPlayer({ name, frames, atlas, showAdvanced }: PlayerProps) {
   const [frameIdx, setFrameIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(30);
-  const [ppu, setPpu] = useState(3);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number>();
+
+  // Auto-pick a scale that fits the animation into a roughly uniform target size.
+  const TARGET_PX = 140;
+  const baseBbox = useMemo(() => computeBbox(frames), [frames]);
+  const autoPpu = useMemo(() => {
+    const w = Math.max(1, baseBbox.gx1 - baseBbox.gx0);
+    const h = Math.max(1, baseBbox.gy1 - baseBbox.gy0);
+    const longest = Math.max(w, h);
+    const raw = TARGET_PX / longest;
+    // Snap to a sensible integer-ish range so pixel art stays crisp
+    return Math.max(1, Math.min(6, Math.round(raw)));
+  }, [baseBbox]);
+  const [ppu, setPpu] = useState(autoPpu);
+  useEffect(() => { setPpu(autoPpu); }, [autoPpu]);
 
   const bbox: BBox = useMemo(() => {
-    const conservative = computeBbox(frames);
-    return tightenBbox(frames, atlas, conservative, ppu, PAD);
-  }, [frames, atlas, ppu]);
+    return tightenBbox(frames, atlas, baseBbox, ppu, PAD);
+  }, [frames, atlas, baseBbox, ppu]);
 
   // Render
   useEffect(() => {
