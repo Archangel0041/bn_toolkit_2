@@ -263,8 +263,12 @@ function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
           )}
         </div>
       )}
-      <div className="rounded p-1" style={{ background: wrapperBg }}>
-        <canvas ref={canvasRef} className="block" style={{ imageRendering: "pixelated" }} />
+      <div className="rounded p-1 max-w-full overflow-hidden flex items-center justify-center" style={{ background: wrapperBg }}>
+        <canvas
+          ref={canvasRef}
+          className="block max-w-full h-auto"
+          style={{ imageRendering: "pixelated" }}
+        />
       </div>
       {!minimal && (
         <button
