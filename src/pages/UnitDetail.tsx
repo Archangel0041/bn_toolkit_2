@@ -34,6 +34,8 @@ import {
   ArrowLeft, Swords, Clock, Coins, Wrench, Plus, Check, Activity, Shield, Film
 } from "lucide-react";
 import { UnitAnimationViewer } from "@/components/units/UnitAnimationViewer";
+import { TargetingPatternDiagram } from "@/components/battle/TargetingPatternDiagram";
+import { getUnitAbilities } from "@/lib/battleCalculations";
 import { UnitTag, UnitTagLabels } from "@/data/gameEnums";
 import { expandTargetTags } from "@/lib/tagHierarchy";
 
@@ -182,6 +184,19 @@ export default function UnitDetail() {
   const prevStats = selectedRank > 1 ? allStats[selectedRank - 2] : undefined;
   const inCompare = isInCompare(unit.id);
   const canAddToCompare = compareUnits.length < 2;
+
+  // Targeting/range info per ability (from the simulator's data pipeline).
+  const abilityInfoMap = (() => {
+    const map: Record<number, ReturnType<typeof getUnitAbilities>[number]> = {};
+    try {
+      for (const info of getUnitAbilities(unit.id, selectedRank)) {
+        map[info.abilityId] = info;
+      }
+    } catch (e) {
+      console.warn("getUnitAbilities failed", e);
+    }
+    return map;
+  })();
 
   const classDisplayName = t(getClassDisplayName(unit.identity.class_name));
   const sideLabels: Record<number, string> = {
@@ -573,8 +588,12 @@ export default function UnitDetail() {
                               </div>
                             )}
 
-                            {(weapon.frontattack_animation || weapon.backattack_animation) && unit.identity.icon && (() => {
+                            {(() => {
+                              const info = abilityInfoMap[abilId];
                               const wname = t(weapon.name);
+                              const hasAnim = (weapon.frontattack_animation || weapon.backattack_animation) && unit.identity.icon;
+                              if (!info && !hasAnim) return null;
+
                               const lbls: Record<string, string> = {};
                               const names: string[] = [];
                               if (weapon.backattack_animation) {
@@ -586,14 +605,29 @@ export default function UnitDetail() {
                                 names.push(weapon.frontattack_animation);
                               }
                               return (
-                                <div className="mt-3 pt-3 border-t">
-                                  <UnitAnimationViewer
-                                    iconName={unit.identity.icon}
-                                    labelMap={lbls}
-                                    filterNames={names}
-                                    groups={[{ title: "", names }]}
-                                    compact
-                                  />
+                                <div className="mt-3 pt-3 border-t flex flex-wrap items-start gap-3">
+                                  {info && (
+                                    <TargetingPatternDiagram
+                                      targetArea={info.targetArea}
+                                      lineOfFire={info.lineOfFire}
+                                      attackDirection={info.attackDirection}
+                                      minRange={info.minRange}
+                                      maxRange={info.maxRange}
+                                      isFixed={info.isFixed}
+                                      className="shrink-0"
+                                    />
+                                  )}
+                                  {hasAnim && (
+                                    <div className="flex-1 min-w-[200px]">
+                                      <UnitAnimationViewer
+                                        iconName={unit.identity.icon}
+                                        labelMap={lbls}
+                                        filterNames={names}
+                                        groups={[{ title: "", names }]}
+                                        compact
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })()}
