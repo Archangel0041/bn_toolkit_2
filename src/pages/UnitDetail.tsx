@@ -607,7 +607,7 @@ export default function UnitDetail() {
                               return (
                                 <div className="mt-3 pt-3 border-t flex flex-wrap items-start gap-3">
                                   {info && (
-                                    <TargetingPatternDiagram
+                                    <IsometricTargetingDiagram
                                       targetArea={info.targetArea}
                                       lineOfFire={info.lineOfFire}
                                       attackDirection={info.attackDirection}
