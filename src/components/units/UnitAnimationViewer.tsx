@@ -272,6 +272,16 @@ function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
           style={{ imageRendering: "pixelated" }}
         />
       </div>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={downloadGif}
+        disabled={downloading}
+        className="gap-1 h-7 px-2 text-xs"
+      >
+        <Download className="h-3 w-3" />
+        {downloading ? "Encoding…" : "Download GIF"}
+      </Button>
       {!minimal && (
         <button
           type="button"
