@@ -103,7 +103,7 @@ export function IsometricTargetingDiagram({
 
   return (
     <div className={cn("space-y-2 p-3 bg-muted/30 rounded-lg", className)}>
-      <div className="text-xs font-semibold text-foreground/90 text-center">AOE Pattern</div>
+      
       <div className="flex flex-wrap gap-1 justify-center">
         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
           {LineOfFireLabels[lineOfFire] || "Direct"}
