@@ -274,7 +274,7 @@ export default function TimelinePreview() {
           <Label>Timeline (.msgpack / .bin)</Label>
           <Input
             type="file"
-            accept="*"
+            accept=".bytes,.msgpack,.bin,.mp,application/octet-stream"
             onChange={(e) => e.target.files?.[0] && handleTimeline(e.target.files[0])}
           />
         </div>
