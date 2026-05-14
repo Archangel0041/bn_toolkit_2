@@ -181,13 +181,13 @@ export function IsometricTargetingDiagram({
           <img
             src={dummyIconUrl}
             alt={dummy?.identity.name || "Target"}
-            className="absolute pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]"
+            className="absolute pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
             style={{
-              left: centerCx,
-              top: centerCy,
-              transform: "translate(-50%, -55%)",
-              width: CELL_PX * 0.45,
-              opacity: 0.85,
+              // Anchor to top-left corner of the center cell.
+              left: centerCx - CELL_PX / 2 + 2,
+              top: centerCy - CELL_PX / 2 + 2,
+              width: CELL_PX * 0.32,
+              opacity: 0.9,
               height: "auto",
               imageRendering: "pixelated",
             }}
