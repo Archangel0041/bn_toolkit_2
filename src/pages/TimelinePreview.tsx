@@ -411,21 +411,12 @@ export default function TimelinePreview() {
 
   const loadGifJs = async (): Promise<{ GIF: any; workerUrl: string }> => {
     if (!(window as any).GIF) {
-      await new Promise<void>((res, rej) => {
-        const s = document.createElement("script");
-        s.src = "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js";
-        s.onload = () => res();
-        s.onerror = () => rej(new Error("Failed to load gif.js"));
-        document.head.appendChild(s);
-      });
+      // @ts-ignore – gif.js has no types and assigns window.GIF on import
+      await import("gif.js/dist/gif.js");
     }
     if (!(window as any).__gifWorkerUrl) {
-      const res = await fetch("https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js");
-      if (!res.ok) throw new Error("Failed to fetch gif.worker.js");
-      const text = await res.text();
-      (window as any).__gifWorkerUrl = URL.createObjectURL(
-        new Blob([text], { type: "application/javascript" }),
-      );
+      const mod = await import("gif.js/dist/gif.worker.js?url");
+      (window as any).__gifWorkerUrl = mod.default;
     }
     return { GIF: (window as any).GIF, workerUrl: (window as any).__gifWorkerUrl };
   };
