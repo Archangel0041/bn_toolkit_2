@@ -406,6 +406,88 @@ export default function TimelinePreview() {
     a.click();
   };
 
+  const [gifProgress, setGifProgress] = useState<number | null>(null);
+  const [gifTransparent, setGifTransparent] = useState(true);
+
+  const loadGifJs = async (): Promise<any> => {
+    if ((window as any).GIF) return (window as any).GIF;
+    await new Promise<void>((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js";
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("Failed to load gif.js"));
+      document.head.appendChild(s);
+    });
+    return (window as any).GIF;
+  };
+
+  const exportGif = async () => {
+    if (!frames || !atlas || !bbox) return;
+    try {
+      setGifProgress(0);
+      const GIF = await loadGifJs();
+      const { w, h } = canvasSize(bbox, ppu, PAD);
+
+      // GIF can't store true alpha — use a sentinel color (magenta) marked transparent.
+      // Any pixel with alpha < 128 becomes magenta; opaque pixels render as-is.
+      const SENTINEL = { r: 255, g: 0, b: 255 };
+      const sentinelHex = 0xff00ff;
+
+      const gif = new GIF({
+        workers: 2,
+        quality: 10,
+        width: w,
+        height: h,
+        workerScript: "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js",
+        transparent: gifTransparent && bgMode === "transparent" ? sentinelHex : null,
+      });
+
+      const off = document.createElement("canvas");
+      off.width = w; off.height = h;
+      const octx = off.getContext("2d")!;
+      const delay = Math.max(20, Math.round(1000 / fps));
+
+      for (let i = 0; i < frames.length; i++) {
+        octx.clearRect(0, 0, w, h);
+        if (bgMode === "white") { octx.fillStyle = "#ffffff"; octx.fillRect(0, 0, w, h); }
+        else if (bgMode === "black") { octx.fillStyle = "#000000"; octx.fillRect(0, 0, w, h); }
+        renderFrameToCtx(octx, frames[i], atlas, bbox, ppu, PAD, smooth);
+
+        if (gifTransparent && bgMode === "transparent") {
+          const img = octx.getImageData(0, 0, w, h);
+          const d = img.data;
+          for (let p = 0; p < d.length; p += 4) {
+            if (d[p + 3] < 128) {
+              d[p] = SENTINEL.r; d[p + 1] = SENTINEL.g; d[p + 2] = SENTINEL.b; d[p + 3] = 255;
+            } else {
+              d[p + 3] = 255;
+            }
+          }
+          octx.putImageData(img, 0, 0);
+        }
+
+        gif.addFrame(octx, { copy: true, delay });
+      }
+
+      gif.on("progress", (p: number) => setGifProgress(p));
+      gif.on("finished", (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${animName || "animation"}.gif`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setGifProgress(null);
+      });
+      gif.render();
+    } catch (e: any) {
+      console.error(e);
+      setError(`GIF export failed: ${e.message}`);
+      setGifProgress(null);
+    }
+  };
+
+
   const animNames = timelines ? Object.keys(timelines) : [];
   const totalFrames = frames?.length ?? 0;
 
@@ -489,6 +571,17 @@ export default function TimelinePreview() {
           </Button>
           <Button variant="outline" onClick={() => { setPlaying(false); setFrameIdx(0); }}>Reset</Button>
           <Button variant="outline" onClick={exportPng} disabled={!atlas || !frames}>Export frame PNG</Button>
+          <Button onClick={exportGif} disabled={!atlas || !frames || gifProgress !== null}>
+            {gifProgress !== null ? `GIF ${(gifProgress * 100).toFixed(0)}%` : "Export GIF"}
+          </Button>
+          <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={gifTransparent}
+              onChange={(e) => setGifTransparent(e.target.checked)}
+            />
+            Transparent GIF
+          </label>
         </div>
       )}
 
