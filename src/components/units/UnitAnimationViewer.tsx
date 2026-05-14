@@ -19,6 +19,8 @@ interface Props {
   iconName: string;
   /** Optional map of raw animation name → human-friendly label (e.g. "Rifle attack — Aimed Shot"). */
   labelMap?: Record<string, string>;
+  /** Optional ordered groups (e.g. Idle, per-weapon attacks). Names not present go into "Other". */
+  groups?: Array<{ title: string; names: string[] }>;
 }
 
 function deriveStem(iconName: string): string {
