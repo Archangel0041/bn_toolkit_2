@@ -99,9 +99,6 @@ export function IsometricTargetingDiagram({
   const dummy = getUnitById(centerUnitId);
   const dummyIconUrl = dummy?.identity.icon ? getUnitImageUrl(dummy.identity.icon) : null;
 
-  const outerW = Math.ceil((gridW + gridH) * 0.72) + 64;
-  const outerH = Math.ceil((gridW + gridH) * 0.42) + 80;
-
   const fmt = (n: number) => (n >= 100 ? Math.round(n).toString() : n.toFixed(n >= 10 ? 0 : 1));
 
   return (
@@ -136,101 +133,66 @@ export function IsometricTargetingDiagram({
         )}
       </div>
 
-      <div
-        className="relative mx-auto"
-        style={{
-          width: outerW,
-          height: outerH,
-          perspective: "1000px",
-        }}
-      >
+      <div className="relative mx-auto" style={{ width: gridW, height: gridH }}>
         <div
-          className="absolute"
+          className="grid"
           style={{
-            left: "50%",
-            top: "50%",
-            width: gridW,
-            height: gridH,
-            transform: `translate(-50%, -50%) rotateX(55deg) rotateZ(-45deg)`,
-            transformStyle: "preserve-3d",
+            gridTemplateColumns: `repeat(${width}, ${CELL_PX}px)`,
+            gridTemplateRows: `repeat(${height}, ${CELL_PX}px)`,
+            gap: `${GAP_PX}px`,
           }}
         >
-          <div
-            className="grid"
-            style={{
-              gridTemplateColumns: `repeat(${width}, ${CELL_PX}px)`,
-              gridTemplateRows: `repeat(${height}, ${CELL_PX}px)`,
-              gap: `${GAP_PX}px`,
-              width: gridW,
-              height: gridH,
-            }}
-          >
-            {grid.map((row, y) =>
-              row.map((cell, x) => {
-                const isCenter = x === centerX && y === centerY;
-                const hit = cell !== null;
-                return (
-                  <div
-                    key={`${x}-${y}`}
-                    className={cn(
-                      "flex flex-col items-center justify-center text-center select-none leading-tight",
-                      isCenter && hit && "border-2 border-yellow-400 bg-yellow-500/40 text-yellow-50",
-                      isCenter && !hit && "border-2 border-yellow-400 bg-yellow-500/10",
-                      !isCenter && hit && "border border-red-400/80 bg-red-500/45 text-white",
-                      !isCenter && !hit && "border border-muted-foreground/15 bg-transparent",
-                    )}
-                  >
-                    {hit && cell && (
-                      <div
-                        className="flex flex-col items-center justify-center leading-tight"
-                        style={{
-                          transform: "rotateZ(45deg) rotateX(-55deg)",
-                          transformStyle: "preserve-3d",
-                        }}
-                      >
-                        {cell.expectedDamage !== undefined ? (
-                          <span className="text-[13px] font-bold">{fmt(cell.expectedDamage)}</span>
-                        ) : (
-                          <span className="text-[11px] font-bold">{cell.damagePercent}%</span>
-                        )}
-                        {cell.hitChance !== undefined && (
-                          <span className="text-[9px] font-medium opacity-90">
-                            {(cell.hitChance * 100).toFixed(cell.hitChance * 100 >= 10 ? 0 : 1)}%
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              }),
-            )}
-          </div>
+          {grid.map((row, y) =>
+            row.map((cell, x) => {
+              const isCenter = x === centerX && y === centerY;
+              const hit = cell !== null;
+              return (
+                <div
+                  key={`${x}-${y}`}
+                  className={cn(
+                    "flex flex-col items-center justify-center text-center select-none leading-tight rounded-sm",
+                    isCenter && hit && "border-2 border-yellow-400 bg-yellow-500/40 text-yellow-50",
+                    isCenter && !hit && "border-2 border-yellow-400 bg-yellow-500/10",
+                    !isCenter && hit && "border border-red-400/80 bg-red-500/45 text-white",
+                    !isCenter && !hit && "border border-muted-foreground/15 bg-transparent",
+                  )}
+                >
+                  {hit && cell && (
+                    <>
+                      {cell.expectedDamage !== undefined ? (
+                        <span className="text-[13px] font-bold">{fmt(cell.expectedDamage)}</span>
+                      ) : (
+                        <span className="text-[11px] font-bold">{cell.damagePercent}%</span>
+                      )}
+                      {cell.hitChance !== undefined && (
+                        <span className="text-[9px] font-medium opacity-90">
+                          {(cell.hitChance * 100).toFixed(cell.hitChance * 100 >= 10 ? 0 : 1)}%
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            }),
+          )}
         </div>
 
-        {dummyIconUrl && (() => {
-          const dx = (centerCx - gridW / 2);
-          const dy = (centerCy - gridH / 2);
-          const ang = -45 * (Math.PI / 180);
-          const cos = Math.cos(ang), sin = Math.sin(ang);
-          const rx = dx * cos - dy * sin;
-          const ry = (dx * sin + dy * cos) * Math.cos(55 * Math.PI / 180);
-          return (
-            <img
-              src={dummyIconUrl}
-              alt={dummy?.identity.name || "Target"}
-              className="absolute pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]"
-              style={{
-                left: `calc(50% + ${rx}px)`,
-                top: `calc(50% + ${ry}px)`,
-                transform: "translate(-50%, -75%)",
-                width: CELL_PX * 1.3,
-                height: "auto",
-                imageRendering: "pixelated",
-              }}
-              onError={(e) => { e.currentTarget.style.display = "none"; }}
-            />
-          );
-        })()}
+        {dummyIconUrl && (
+          <img
+            src={dummyIconUrl}
+            alt={dummy?.identity.name || "Target"}
+            className="absolute pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]"
+            style={{
+              left: centerCx,
+              top: centerCy,
+              transform: "translate(-50%, -55%)",
+              width: CELL_PX * 0.9,
+              height: "auto",
+              imageRendering: "pixelated",
+            }}
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
+        )}
       </div>
 
       <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
