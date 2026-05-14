@@ -252,9 +252,20 @@ function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
   const wrapperBg = effectiveBg ?? undefined;
 
   return (
-    <div className="flex flex-col items-center gap-2 p-3 rounded-md border border-border bg-card/40">
+    <div className="relative flex flex-col items-center gap-2 p-3 rounded-md border border-border bg-card/40">
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={downloadGif}
+        disabled={downloading}
+        title={downloading ? "Encoding…" : "Download GIF"}
+        aria-label="Download GIF"
+        className="absolute top-1 right-1 h-6 w-6"
+      >
+        <Download className="h-3.5 w-3.5" />
+      </Button>
       {!minimal && (
-        <div className="w-full text-center">
+        <div className="w-full text-center pr-7">
           <div className="text-sm font-medium truncate" title={label || name}>
             {label || name}
           </div>
@@ -272,16 +283,6 @@ function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
           style={{ imageRendering: "pixelated" }}
         />
       </div>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={downloadGif}
-        disabled={downloading}
-        className="gap-1 h-7 px-2 text-xs"
-      >
-        <Download className="h-3 w-3" />
-        {downloading ? "Encoding…" : "Download GIF"}
-      </Button>
       {!minimal && (
         <button
           type="button"
