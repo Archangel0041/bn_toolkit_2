@@ -308,7 +308,7 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
 // ----------------------------------------------------------------------------
 // Loader + list + export-all
 // ----------------------------------------------------------------------------
-export function UnitAnimationViewer({ iconName }: Props) {
+export function UnitAnimationViewer({ iconName, labelMap }: Props) {
   const stem = useMemo(() => deriveStem(iconName), [iconName]);
 
   const [atlas, setAtlas] = useState<HTMLImageElement | null>(null);
