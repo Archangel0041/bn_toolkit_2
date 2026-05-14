@@ -106,6 +106,7 @@ function AppContent() {
                   } 
                 />
                 
+                <Route path="/timeline-preview" element={<Suspense fallback={<SimulatorLoader />}><TimelinePreview /></Suspense>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
