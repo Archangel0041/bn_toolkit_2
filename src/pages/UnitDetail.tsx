@@ -185,6 +185,19 @@ export default function UnitDetail() {
   const inCompare = isInCompare(unit.id);
   const canAddToCompare = compareUnits.length < 2;
 
+  // Targeting/range info per ability (from the simulator's data pipeline).
+  const abilityInfoMap = (() => {
+    const map: Record<number, ReturnType<typeof getUnitAbilities>[number]> = {};
+    try {
+      for (const info of getUnitAbilities(unit.id, selectedRank)) {
+        map[info.abilityId] = info;
+      }
+    } catch (e) {
+      console.warn("getUnitAbilities failed", e);
+    }
+    return map;
+  })();
+
   const classDisplayName = t(getClassDisplayName(unit.identity.class_name));
   const sideLabels: Record<number, string> = {
     1: "Friendly",
