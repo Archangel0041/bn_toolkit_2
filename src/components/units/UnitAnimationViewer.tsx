@@ -53,6 +53,7 @@ function encodeGif(
   bbox: BBox,
   ppu: number,
   fps: number,
+  bg: string | null, // null = transparent
   GIF: any,
   workerUrl: string,
 ): Promise<Blob> {
@@ -60,13 +61,14 @@ function encodeGif(
     const { w, h } = canvasSize(bbox, ppu, PAD);
     const SENTINEL = { r: 255, g: 0, b: 255 };
     const sentinelHex = 0xff00ff;
+    const transparent = bg === null;
     const gif = new GIF({
       workers: 2,
       quality: 10,
       width: w,
       height: h,
       workerScript: workerUrl,
-      transparent: sentinelHex,
+      transparent: transparent ? sentinelHex : null,
     });
     const off = document.createElement("canvas");
     off.width = w; off.height = h;
@@ -74,23 +76,38 @@ function encodeGif(
     const delay = Math.max(20, Math.round(1000 / fps));
     for (const fr of frames) {
       octx.clearRect(0, 0, w, h);
-      renderFrameToCtx(octx, fr, atlas, bbox, ppu, PAD, false);
-      const img = octx.getImageData(0, 0, w, h);
-      const d = img.data;
-      for (let p = 0; p < d.length; p += 4) {
-        if (d[p + 3] < 128) {
-          d[p] = SENTINEL.r; d[p + 1] = SENTINEL.g; d[p + 2] = SENTINEL.b; d[p + 3] = 255;
-        } else {
-          d[p + 3] = 255;
-        }
+      if (!transparent) {
+        octx.fillStyle = bg!;
+        octx.fillRect(0, 0, w, h);
       }
-      octx.putImageData(img, 0, 0);
+      renderFrameToCtx(octx, fr, atlas, bbox, ppu, PAD, false);
+      if (transparent) {
+        const img = octx.getImageData(0, 0, w, h);
+        const d = img.data;
+        for (let p = 0; p < d.length; p += 4) {
+          if (d[p + 3] < 128) {
+            d[p] = SENTINEL.r; d[p + 1] = SENTINEL.g; d[p + 2] = SENTINEL.b; d[p + 3] = 255;
+          } else {
+            d[p + 3] = 255;
+          }
+        }
+        octx.putImageData(img, 0, 0);
+      }
       gif.addFrame(octx, { copy: true, delay });
     }
     gif.on("finished", (blob: Blob) => resolve(blob));
     gif.on("abort", () => reject(new Error("GIF encoding aborted")));
     gif.render();
   });
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ----------------------------------------------------------------------------
@@ -107,6 +124,9 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(30);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [bgMode, setBgMode] = useState<"transparent" | "color">("transparent");
+  const [bgColor, setBgColor] = useState<string>("#1a1a1a");
+  const [downloading, setDownloading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>();
 
@@ -118,6 +138,8 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
   const bbox: BBox = useMemo(() => {
     return tightenBbox(frames, atlas, baseBbox, ppu, PAD);
   }, [frames, atlas, baseBbox, ppu]);
+
+  const effectiveBg = bgMode === "transparent" ? null : bgColor;
 
   // Render
   useEffect(() => {
@@ -133,12 +155,16 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
     const off = document.createElement("canvas");
     off.width = w; off.height = h;
     const octx = off.getContext("2d")!;
+    if (effectiveBg) {
+      octx.fillStyle = effectiveBg;
+      octx.fillRect(0, 0, w, h);
+    }
     renderFrameToCtx(octx, frames[frameIdx] || frames[0], atlas, bbox, ppu, PAD, false);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
-  }, [frames, atlas, bbox, ppu, frameIdx]);
+  }, [frames, atlas, bbox, ppu, frameIdx, effectiveBg]);
 
   // Playback
   useEffect(() => {
@@ -164,12 +190,31 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
     if (frameIdx >= frames.length) setFrameIdx(0);
   }, [frames, frameIdx]);
 
+  const downloadGif = async () => {
+    try {
+      setDownloading(true);
+      const { GIF, workerUrl } = await loadGifJs();
+      const blob = await encodeGif(frames, atlas, bbox, ppu, fps, effectiveBg, GIF, workerUrl);
+      downloadBlob(blob, `${name}.gif`);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const wrapperBg = bgMode === "transparent"
+    ? "repeating-conic-gradient(hsl(var(--muted)) 0% 25%, hsl(var(--background)) 0% 50%) 50% / 16px 16px"
+    : effectiveBg ?? undefined;
+
   return (
     <div className="flex flex-col items-center gap-2 p-3 rounded-md border border-border bg-card/40">
       <div className="text-xs font-medium text-muted-foreground truncate w-full text-center" title={name}>
         {name}
       </div>
-      <canvas ref={canvasRef} className="block" style={{ imageRendering: "pixelated" }} />
+      <div className="rounded p-1" style={{ background: wrapperBg }}>
+        <canvas ref={canvasRef} className="block" style={{ imageRendering: "pixelated" }} />
+      </div>
       <button
         type="button"
         onClick={() => setShowAdvanced((s) => !s)}
@@ -180,12 +225,16 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
       </button>
       {showAdvanced && (
         <div className="w-full space-y-2 pt-2 border-t border-border">
-          <div className="flex gap-1 justify-center">
+          <div className="flex gap-1 justify-center flex-wrap">
             <Button size="sm" variant="outline" onClick={() => setPlaying((p) => !p)} disabled={frames.length < 2}>
               {playing ? "Pause" : "Play"}
             </Button>
             <Button size="sm" variant="outline" onClick={() => { setPlaying(false); setFrameIdx(0); }}>
               Reset
+            </Button>
+            <Button size="sm" variant="outline" onClick={downloadGif} disabled={downloading} className="gap-1">
+              <Download className="h-3 w-3" />
+              {downloading ? "Encoding…" : "GIF"}
             </Button>
           </div>
           <div className="space-y-1">
@@ -205,6 +254,50 @@ function AnimationPlayer({ name, frames, atlas }: PlayerProps) {
           <div className="space-y-1">
             <Label className="text-xs">Scale: {ppu}×</Label>
             <Slider value={[ppu]} min={1} max={6} step={1} onValueChange={(v) => setPpu(v[0])} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Background</Label>
+            <div className="flex gap-1 flex-wrap items-center">
+              <Button
+                size="sm"
+                variant={bgMode === "transparent" ? "default" : "outline"}
+                onClick={() => setBgMode("transparent")}
+              >
+                Transparent
+              </Button>
+              <Button
+                size="sm"
+                variant={bgMode === "color" && bgColor.toLowerCase() === "#ffffff" ? "default" : "outline"}
+                onClick={() => { setBgMode("color"); setBgColor("#ffffff"); }}
+              >
+                White
+              </Button>
+              <Button
+                size="sm"
+                variant={bgMode === "color" && bgColor.toLowerCase() === "#000000" ? "default" : "outline"}
+                onClick={() => { setBgMode("color"); setBgColor("#000000"); }}
+              >
+                Black
+              </Button>
+              <input
+                type="color"
+                value={bgColor}
+                onChange={(e) => { setBgMode("color"); setBgColor(e.target.value); }}
+                className="h-8 w-8 rounded border border-border bg-transparent cursor-pointer"
+                title="Pick a color"
+              />
+              <input
+                type="text"
+                value={bgColor}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setBgColor(v);
+                  if (/^#[0-9a-fA-F]{6}$/.test(v)) setBgMode("color");
+                }}
+                placeholder="#rrggbb"
+                className="h-8 w-24 rounded border border-border bg-background px-2 text-xs font-mono"
+              />
+            </div>
           </div>
         </div>
       )}
@@ -288,7 +381,7 @@ export function UnitAnimationViewer({ iconName }: Props) {
         const baseBbox = computeBbox(frames);
         const ppu = autoScaleFor(baseBbox);
         const bbox = tightenBbox(frames, atlas, baseBbox, ppu, PAD);
-        const blob = await encodeGif(frames, atlas, bbox, ppu, 30, GIF, workerUrl);
+        const blob = await encodeGif(frames, atlas, bbox, ppu, 30, null, GIF, workerUrl);
         zip.file(`${name}.gif`, blob);
         setExportProgress({ current: i + 1, total: names.length });
       }
