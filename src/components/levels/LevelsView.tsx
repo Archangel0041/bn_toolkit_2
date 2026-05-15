@@ -76,6 +76,10 @@ export default function LevelsView() {
     () => (rawLevels ? parseLevels(rawLevels) : []),
     [rawLevels]
   );
+  const configMaxLevel = useMemo(
+    () => (levels.length ? levels[levels.length - 1].level : 70),
+    [levels]
+  );
 
   const missions = useMemo<ParsedMission[]>(
     () => (rawMissions ? parseMissions(rawMissions) : []),
