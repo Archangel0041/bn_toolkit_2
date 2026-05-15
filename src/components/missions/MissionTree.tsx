@@ -158,8 +158,16 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(rfEdges);
+  const { fitView } = useReactFlow();
   useEffect(() => setNodes(rfNodes), [rfNodes, setNodes]);
   useEffect(() => setEdges(rfEdges), [rfEdges, setEdges]);
+  // Re-fit the viewport whenever the visible mission set changes (filters, search, mode).
+  useEffect(() => {
+    const id = requestAnimationFrame(() =>
+      fitView({ padding: 0.15, maxZoom: 1, minZoom: 0.5, duration: 300 })
+    );
+    return () => cancelAnimationFrame(id);
+  }, [rfNodes, fitView]);
 
   return (
     <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-card overflow-hidden">
