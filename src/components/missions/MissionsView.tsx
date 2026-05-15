@@ -403,6 +403,8 @@ export default function MissionsView() {
             npcs={npcs}
             dialogues={dialogues}
             unitsById={unitsById}
+            jobs={jobs}
+            encounters={encounters}
           />
 
           <div className="rounded-lg border p-4 space-y-3">
