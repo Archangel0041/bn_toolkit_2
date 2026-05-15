@@ -407,6 +407,56 @@ export default function MissionsView() {
             edges={visibleEdges}
             availableNow={availableNow}
           />
+
+          <div className="rounded-lg border p-4 space-y-3">
+            <div>
+              <h2 className="text-lg font-semibold">Total rewards in tree</h2>
+              <p className="text-xs text-muted-foreground">
+                Summed across the {visibleMissions.length} missions currently shown.
+              </p>
+            </div>
+            {Object.keys(rewardTotals.resources).length === 0 &&
+            Object.keys(rewardTotals.units).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No rewards on these missions.</p>
+            ) : (
+              <>
+                {Object.keys(rewardTotals.resources).length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    {Object.entries(rewardTotals.resources)
+                      .sort(([a], [b]) => (a === "xp" ? -1 : b === "xp" ? 1 : a.localeCompare(b)))
+                      .map(([k, v]) => (
+                        <div
+                          key={k}
+                          className="flex items-center justify-between rounded border bg-muted/40 px-2 py-1.5"
+                        >
+                          <span className="text-xs capitalize text-muted-foreground">
+                            {k.replace(/_/g, " ")}
+                          </span>
+                          <span className="text-sm font-semibold tabular-nums">
+                            {v.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+                {Object.keys(rewardTotals.units).length > 0 && (
+                  <div>
+                    <div className="mb-1 text-xs font-medium text-muted-foreground">Units</div>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(rewardTotals.units).map(([id, qty]) => (
+                        <div
+                          key={id}
+                          className="rounded border bg-muted/40 px-2 py-1 text-xs tabular-nums"
+                        >
+                          #{id} × {qty}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </>
       )}
     </div>
