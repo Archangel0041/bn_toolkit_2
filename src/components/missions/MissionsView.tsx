@@ -44,6 +44,14 @@ const titleCase = (s: string) =>
 export default function MissionsView() {
   const { accountLevel } = useAccountLevel();
   const { t } = useLanguage();
+  const { data: gameData } = useGameData();
+  const unitsById = useMemo(() => {
+    const map = new Map<number, { name: string; icon?: string }>();
+    for (const u of gameData?.parsedUnits ?? []) {
+      map.set(u.id, { name: u.identity?.name, icon: u.identity?.icon });
+    }
+    return map;
+  }, [gameData?.parsedUnits]);
   const [raw, setRaw] = useState<Record<string, any[]> | null>(null);
   const [characters, setCharacters] = useState<Record<string, CharacterEntry>>({});
   const [error, setError] = useState<string | null>(null);
