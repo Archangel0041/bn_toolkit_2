@@ -686,3 +686,56 @@ function MissionDetailPanel({
     </div>
   );
 }
+
+interface DialogSectionProps {
+  title: string;
+  baseKey?: string;
+  suffix: string;
+  t: (k: string) => string;
+  defaultOpen?: boolean;
+}
+
+function DialogSection({ title, baseKey, suffix, t, defaultOpen = false }: DialogSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  // baseKey looks like "<base>_title". Strip "_title" to get the base prefix.
+  const base = baseKey ? baseKey.replace(/_title$/, "") : "";
+  const lines = useMemo(() => {
+    if (!base) return [] as string[];
+    const out: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      const k = `mis_${base}_${suffix}_${i}_body_0`;
+      const tr = t(k);
+      if (!tr || tr === k) {
+        if (i === 0) continue; // try next
+        break;
+      }
+      out.push(tr);
+    }
+    // Edge case: only check first 6 even if found gaps
+    return out;
+  }, [base, suffix, t]);
+
+  if (lines.length === 0) return null;
+
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+      >
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        <span>{title} ({lines.length})</span>
+      </button>
+      {open && (
+        <div className="mt-1 space-y-1">
+          {lines.map((line, i) => (
+            <p key={i} className="rounded border bg-muted/30 px-2 py-1 text-xs leading-snug text-foreground">
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
