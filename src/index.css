@@ -139,3 +139,28 @@
     scrollbar-width: thin;
   }
 }
+/* React Flow controls — make visible on dark mode */
+.mission-tree-canvas .react-flow__controls {
+  box-shadow: 0 1px 3px hsl(var(--background) / 0.4);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.mission-tree-canvas .react-flow__controls-button {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-bottom: 1px solid hsl(var(--border));
+  width: 28px;
+  height: 28px;
+}
+.mission-tree-canvas .react-flow__controls-button:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+.mission-tree-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+  max-width: 14px;
+  max-height: 14px;
+}
+.mission-tree-canvas .react-flow__attribution {
+  background: transparent;
+}
