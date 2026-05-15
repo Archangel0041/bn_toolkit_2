@@ -107,14 +107,6 @@ function AppContent() {
                   } 
                 />
                 
-                <Route
-                  path="/missions"
-                  element={
-                    <Suspense fallback={<SimulatorLoader />}>
-                      <Missions />
-                    </Suspense>
-                  }
-                />
 
                 {/* <Route path="/timeline-preview" element={<Suspense fallback={<SimulatorLoader />}><TimelinePreview /></Suspense>} /> */}
                 <Route path="*" element={<NotFound />} />
