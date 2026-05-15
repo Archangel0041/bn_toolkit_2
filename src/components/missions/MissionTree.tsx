@@ -424,11 +424,53 @@ function MissionTreeInner({
 
   const byId = useMemo(() => new Map(missions.map((m) => [m.id, m])), [missions]);
 
+  // Transitive reduction per edge type: if A→B and B→...→C exist (same type),
+  // drop the redundant direct edge A→C. Keeps the graph visually clean and
+  // produces the shortest possible arrows in the dagre layout.
+  const reducedEdges = useMemo(() => {
+    const byType = new Map<MissionPrereqEdgeType, MissionEdge[]>();
+    for (const e of edges) {
+      if (!byType.has(e.type)) byType.set(e.type, []);
+      byType.get(e.type)!.push(e);
+    }
+    const keep: MissionEdge[] = [];
+    for (const [, group] of byType) {
+      const adj = new Map<number, Set<number>>();
+      for (const e of group) {
+        if (!adj.has(e.from)) adj.set(e.from, new Set());
+        adj.get(e.from)!.add(e.to);
+      }
+      for (const e of group) {
+        const succs = adj.get(e.from)!;
+        // BFS from each other direct successor of e.from; if e.to is reachable
+        // via a path of length >=2, this edge is redundant.
+        let redundant = false;
+        const visited = new Set<number>();
+        const stack: number[] = [];
+        for (const s of succs) {
+          if (s === e.to) continue;
+          stack.push(s);
+        }
+        while (stack.length) {
+          const cur = stack.pop()!;
+          if (visited.has(cur)) continue;
+          visited.add(cur);
+          if (cur === e.to) { redundant = true; break; }
+          for (const next of adj.get(cur) ?? []) {
+            if (!visited.has(next)) stack.push(next);
+          }
+        }
+        if (!redundant) keep.push(e);
+      }
+    }
+    return keep;
+  }, [edges]);
+
   const { forward, backward, edgeTypeMap } = useMemo(() => {
     const f = new Map<number, Set<number>>();
     const b = new Map<number, Set<number>>();
     const types = new Map<string, MissionPrereqEdgeType>();
-    for (const e of edges) {
+    for (const e of reducedEdges) {
       if (!f.has(e.from)) f.set(e.from, new Set());
       f.get(e.from)!.add(e.to);
       if (!b.has(e.to)) b.set(e.to, new Set());
@@ -436,7 +478,7 @@ function MissionTreeInner({
       types.set(`${e.from}->${e.to}`, e.type);
     }
     return { forward: f, backward: b, edgeTypeMap: types };
-  }, [edges]);
+  }, [reducedEdges]);
 
   const chain = useMemo(() => {
     if (pinnedId == null) return null;
@@ -459,7 +501,7 @@ function MissionTreeInner({
   }, [pinnedId, forward, backward]);
 
   const { rfNodes, rfEdges } = useMemo(() => {
-    const { positions, edgePoints } = layout(missions, edges);
+    const { positions, edgePoints } = layout(missions, reducedEdges);
     const rfNodes: Node[] = missions.map((m) => {
       const pos = positions.get(m.id) ?? { x: 0, y: 0 };
       const title = localize(m.title, m.title);
@@ -490,7 +532,7 @@ function MissionTreeInner({
       };
     });
 
-    const rfEdges: Edge[] = edges.map((e, i) => {
+    const rfEdges: Edge[] = reducedEdges.map((e, i) => {
       const inChain = chain ? chain.has(e.from) && chain.has(e.to) : true;
       const points = edgePoints.get(`${e.from}->${e.to}`);
       return {
@@ -511,7 +553,7 @@ function MissionTreeInner({
     });
 
     return { rfNodes, rfEdges };
-  }, [missions, edges, availableNow, highlightId, t, localize, chain, pinnedId, characters, unitsById]);
+  }, [missions, reducedEdges, availableNow, highlightId, t, localize, chain, pinnedId, characters, unitsById]);
 
   const [nodes, setNodes] = useNodesState(rfNodes);
   const [edgesState, setEdges] = useEdgesState(rfEdges);
