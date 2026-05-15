@@ -7,12 +7,12 @@ import {
   type ParsedMission,
 } from "@/lib/missions";
 import { MissionTree } from "@/components/missions/MissionTree";
+import { MissionPicker } from "@/components/missions/MissionPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLanguage } from "@/contexts/LanguageContext";
 
