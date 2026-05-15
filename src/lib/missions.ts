@@ -15,8 +15,10 @@ export interface ParsedMission {
   title: string;
   description?: string;
   giver?: string;
-  /** Highest player_level requirement found in start_rules + objective completion rules. */
+  /** Highest player_level requirement found directly on this mission. */
   level: number;
+  /** Effective level after propagating prerequisite mission levels (max of self + all required prereqs). */
+  displayLevel: number;
   prereqMissionIds: {
     all: number[]; // complete_all_missions_prereq_config
     any: number[]; // complete_any_mission_prereq_config
