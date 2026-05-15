@@ -3,7 +3,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   ReactFlowProvider,
   type Node,
   type Edge,
