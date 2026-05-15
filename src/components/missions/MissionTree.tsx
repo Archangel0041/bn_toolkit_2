@@ -29,6 +29,7 @@ interface MissionTreeProps {
   edges: MissionEdge[];
   availableNow?: Set<number>;
   highlightId?: number;
+  characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
@@ -146,7 +147,7 @@ export function MissionTree(props: MissionTreeProps) {
   );
 }
 
-function MissionTreeInner({ missions, edges, availableNow, highlightId }: MissionTreeProps) {
+function MissionTreeInner({ missions, edges, availableNow, highlightId, characters }: MissionTreeProps) {
   const { t } = useLanguage();
   const [pinnedId, setPinnedId] = useState<number | null>(null);
 
@@ -199,7 +200,12 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
         isHighlight: highlightId === m.id || pinnedId === m.id,
         isDimmed: chain ? !chain.has(m.id) : false,
         missionId: m.id,
-        iconUrl: m.giver ? getMissionIconUrl(m.giver) : undefined,
+        iconUrl: (() => {
+          if (!m.giver) return undefined;
+          const ch = characters?.[m.giver.toLowerCase()];
+          const key = ch?.small_icon ?? ch?.regular_icon;
+          return key ? getMissionIconUrl(key) : getMissionIconUrl(m.giver);
+        })(),
       };
       return {
         id: String(m.id),
@@ -228,7 +234,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
     });
 
     return { rfNodes, rfEdges };
-  }, [missions, edges, availableNow, highlightId, t, chain, pinnedId]);
+  }, [missions, edges, availableNow, highlightId, t, chain, pinnedId, characters]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(rfEdges);

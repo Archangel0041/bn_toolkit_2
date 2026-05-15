@@ -257,6 +257,18 @@ export async function loadMissions(): Promise<Record<string, any[]>> {
   return fetchFromBucket(CONFIG_BUCKET, "missions.json");
 }
 
+export interface CharacterEntry {
+  large_icon?: string;
+  regular_icon?: string;
+  small_icon?: string;
+  name?: string;
+  [k: string]: any;
+}
+
+export async function loadCharacters(): Promise<Record<string, CharacterEntry>> {
+  return fetchFromBucket(CONFIG_BUCKET, "characters.json");
+}
+
 // Localization loaders - use BigInt parser to preserve large numeric IDs
 export async function loadGameTextSharedData(): Promise<any> {
   return fetchFromBucket(LOCALIZATIONS_BUCKET, "tables/GameText Shared Data.json", true, true);

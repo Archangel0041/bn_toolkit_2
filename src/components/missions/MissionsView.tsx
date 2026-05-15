@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { loadMissions } from "@/lib/dataLoader";
+import { loadMissions, loadCharacters, type CharacterEntry } from "@/lib/dataLoader";
 import {
   parseMissions,
   buildMissionEdges,
@@ -38,6 +38,7 @@ export default function MissionsView() {
   const { accountLevel } = useAccountLevel();
   const { t } = useLanguage();
   const [raw, setRaw] = useState<Record<string, any[]> | null>(null);
+  const [characters, setCharacters] = useState<Record<string, CharacterEntry>>({});
   const [error, setError] = useState<string | null>(null);
 
   const [mode, setMode] = useState<"all" | "remaining">("remaining");
@@ -65,6 +66,9 @@ export default function MissionsView() {
     loadMissions()
       .then(setRaw)
       .catch((e) => setError(String(e)));
+    loadCharacters()
+      .then(setCharacters)
+      .catch(() => {});
   }, []);
 
   const allParsed = useMemo(() => (raw ? parseMissions(raw) : []), [raw]);
@@ -406,6 +410,7 @@ export default function MissionsView() {
             missions={visibleMissions}
             edges={visibleEdges}
             availableNow={availableNow}
+            characters={characters}
           />
 
           <div className="rounded-lg border p-4 space-y-3">
