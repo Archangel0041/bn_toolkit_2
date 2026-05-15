@@ -15,6 +15,9 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useGameData } from "@/contexts/GameDataContext";
+import { getResourceIconUrl } from "@/lib/resourceImages";
+import { getUnitImageUrl } from "@/lib/unitImages";
 
 const COMPLETED_KEY = "missions:completed";
 const VISIBLE_KEY = "missions:visible";
