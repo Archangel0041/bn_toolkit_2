@@ -22,6 +22,8 @@ export interface ParsedObjective {
   count?: number;
   unitId?: number;
   opponentId?: number;
+  icon?: string;
+  speakerNpcId?: number;
   prereqRaw?: Record<string, unknown>;
 }
 
@@ -138,7 +140,14 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
           type: prereq?._t ?? o._t,
           count: typeof prereq?.count === "number" ? prereq.count : undefined,
           unitId: typeof prereq?.unit_id === "number" ? prereq.unit_id : undefined,
-          opponentId: typeof prereq?.opponent_id === "number" ? prereq.opponent_id : undefined,
+          opponentId:
+            typeof prereq?.opponent_id === "number"
+              ? prereq.opponent_id
+              : typeof identity?.npc_id === "number"
+                ? identity.npc_id
+                : undefined,
+          icon: typeof identity?.icon === "string" ? identity.icon : undefined,
+          speakerNpcId: typeof identity?.npc_id === "number" ? identity.npc_id : undefined,
           prereqRaw: prereq,
         };
       }

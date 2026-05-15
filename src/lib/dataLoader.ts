@@ -269,6 +269,18 @@ export async function loadCharacters(): Promise<Record<string, CharacterEntry>> 
   return fetchFromBucket(CONFIG_BUCKET, "characters.json");
 }
 
+export interface NpcEntry {
+  name?: string;
+  description?: string;
+  icon?: string;
+  level?: number;
+  [k: string]: any;
+}
+
+export async function loadNpcs(): Promise<Record<string, NpcEntry>> {
+  return fetchFromBucket(CONFIG_BUCKET, "npcs.json");
+}
+
 // Localization loaders - use BigInt parser to preserve large numeric IDs
 export async function loadGameTextSharedData(): Promise<any> {
   return fetchFromBucket(LOCALIZATIONS_BUCKET, "tables/GameText Shared Data.json", true, true);
