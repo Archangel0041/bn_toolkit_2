@@ -234,7 +234,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
     });
 
     return { rfNodes, rfEdges };
-  }, [missions, edges, availableNow, highlightId, t, chain, pinnedId]);
+  }, [missions, edges, availableNow, highlightId, t, chain, pinnedId, characters]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(rfEdges);
