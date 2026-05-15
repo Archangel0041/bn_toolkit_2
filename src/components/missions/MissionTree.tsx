@@ -103,7 +103,15 @@ function MissionNode({ data }: { data: MissionNodeData }) {
 
 const nodeTypes = { mission: MissionNode };
 
-export function MissionTree({ missions, edges, availableNow, highlightId }: MissionTreeProps) {
+export function MissionTree(props: MissionTreeProps) {
+  return (
+    <ReactFlowProvider>
+      <MissionTreeInner {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+function MissionTreeInner({ missions, edges, availableNow, highlightId }: MissionTreeProps) {
   const { t } = useLanguage();
 
   const { rfNodes, rfEdges, levels, rowY } = useMemo(() => {
