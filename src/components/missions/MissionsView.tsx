@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { loadMissions } from "@/lib/dataLoader";
+import { loadMissions, loadCharacters, type CharacterEntry } from "@/lib/dataLoader";
 import {
   parseMissions,
   buildMissionEdges,
