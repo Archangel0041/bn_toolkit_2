@@ -74,6 +74,9 @@ export default function MissionsView() {
     return Math.max(65, accountLevel);
   });
   const [setupComplete, setSetupComplete] = useState<boolean>(false);
+  const [showUpcoming, setShowUpcoming] = useState<boolean>(
+    () => localStorage.getItem(SHOW_UPCOMING_KEY) === "1"
+  );
 
   // Account level from settings is the source of truth — keep both inputs in sync.
   // Level cap floors at the player's current level but never auto-shrinks below 65
