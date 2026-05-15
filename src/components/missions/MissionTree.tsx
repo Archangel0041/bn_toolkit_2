@@ -200,7 +200,12 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
         isHighlight: highlightId === m.id || pinnedId === m.id,
         isDimmed: chain ? !chain.has(m.id) : false,
         missionId: m.id,
-        iconUrl: m.giver ? getMissionIconUrl(m.giver) : undefined,
+        iconUrl: (() => {
+          if (!m.giver) return undefined;
+          const ch = characters?.[m.giver.toLowerCase()];
+          const key = ch?.small_icon ?? ch?.regular_icon;
+          return key ? getMissionIconUrl(key) : getMissionIconUrl(m.giver);
+        })(),
       };
       return {
         id: String(m.id),
