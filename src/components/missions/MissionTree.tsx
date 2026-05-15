@@ -246,8 +246,8 @@ function MissionNode({ data }: { data: MissionNodeData }) {
   return (
     <div
       className={[
-        "relative h-full w-full rounded-md border px-2 py-1.5 text-left shadow-sm transition-all bg-card text-card-foreground",
-        data.isAvailable ? "border-primary ring-1 ring-primary/40" : "border-border",
+        "relative h-full w-full rounded-md border-2 px-2 py-1.5 text-left shadow-md transition-all bg-card text-card-foreground",
+        data.isAvailable ? "border-primary ring-2 ring-primary/40" : "border-border/80",
         data.isHighlight ? "ring-2 ring-accent" : "",
         data.isDimmed ? "opacity-30" : "",
       ].join(" ")}
@@ -530,7 +530,7 @@ function MissionTreeInner({
   const pinned = pinnedId != null ? byId.get(pinnedId) : null;
 
   return (
-    <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-card overflow-hidden">
+    <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-muted/40 overflow-hidden mission-tree-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edgesState}
