@@ -296,7 +296,7 @@ export default function MissionsView() {
         </Button>
       </div>
 
-      <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
+      <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[auto_1fr_auto_auto_auto] sm:items-end">
         <div className="flex flex-col gap-1">
           <Label className="text-xs">Mode</Label>
           <Tabs value={mode} onValueChange={(v) => setMode(v as "all" | "remaining")}>
@@ -330,9 +330,22 @@ export default function MissionsView() {
           />
         </div>
 
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="level-cap" className="text-xs">Level cap</Label>
+          <Input
+            id="level-cap"
+            type="number"
+            className="w-24"
+            min={1}
+            max={200}
+            value={levelCap}
+            onChange={(e) => setLevelCap(parseInt(e.target.value || "1", 10))}
+          />
+        </div>
+
         <div className="flex items-center gap-2">
           <Switch id="hide-above" checked={hideAbove} onCheckedChange={setHideAbove} />
-          <Label htmlFor="hide-above" className="text-xs">Hide above my level</Label>
+          <Label htmlFor="hide-above" className="text-xs">Cap at level cap</Label>
         </div>
       </div>
 
