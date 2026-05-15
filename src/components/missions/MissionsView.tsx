@@ -195,30 +195,67 @@ export default function MissionsView() {
       </div>
 
       {mode === "remaining" && (
-        <div className="rounded-lg border p-3">
-          <Label htmlFor="completed-ids" className="text-xs">
-            Completed mission IDs (comma or space separated)
-          </Label>
-          <Textarea
-            id="completed-ids"
-            className="mt-1 font-mono text-xs"
-            rows={2}
-            placeholder="1, 2, 5, 12 …"
-            value={completedText}
-            onChange={(e) => setCompletedText(e.target.value)}
-          />
-          <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{completedIds.size} marked complete</span>
-            <span>·</span>
-            <span>{availableNow?.size ?? 0} available now</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto h-7"
-              onClick={() => setCompletedText("")}
-            >
-              Clear
-            </Button>
+        <div className="grid gap-3 rounded-lg border p-3 md:grid-cols-2">
+          <div>
+            <Label htmlFor="visible-ids" className="text-xs">
+              Visible mission IDs (currently in your in-game list)
+            </Label>
+            <Textarea
+              id="visible-ids"
+              className="mt-1 font-mono text-xs"
+              rows={2}
+              placeholder="e.g. 42, 87, 103 — anything at or below your level not in this list is assumed done (with its prereqs)"
+              value={visibleText}
+              onChange={(e) => setVisibleText(e.target.value)}
+            />
+            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+              <span>{visibleIds.size} visible</span>
+              {visibleIds.size > 0 && (
+                <>
+                  <span>·</span>
+                  <span>
+                    {effectiveCompletedIds.size - completedIds.size} inferred done
+                  </span>
+                </>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-7"
+                onClick={() => setVisibleText("")}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="completed-ids" className="text-xs">
+              Explicitly completed mission IDs
+            </Label>
+            <Textarea
+              id="completed-ids"
+              className="mt-1 font-mono text-xs"
+              rows={2}
+              placeholder="1, 2, 5, 12 …"
+              value={completedText}
+              onChange={(e) => setCompletedText(e.target.value)}
+            />
+            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+              <span>{completedIds.size} marked complete</span>
+              <span>·</span>
+              <span>{effectiveCompletedIds.size} total complete</span>
+              <span>·</span>
+              <span>{availableNow?.size ?? 0} available now</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-7"
+                onClick={() => setCompletedText("")}
+              >
+                Clear
+              </Button>
+            </div>
           </div>
         </div>
       )}
