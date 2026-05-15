@@ -21,6 +21,8 @@ import { getUnitImageUrl } from "@/lib/unitImages";
 const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
 const LEVEL_CAP_KEY = "missions:levelCap";
+const SHOW_UPCOMING_KEY = "missions:showUpcoming";
+const UPCOMING_LEVELS = 10;
 
 const idsToText = (ids: number[]) =>
   [...new Set(ids)].sort((a, b) => a - b).join(", ");
@@ -72,6 +74,9 @@ export default function MissionsView() {
     return Math.max(65, accountLevel);
   });
   const [setupComplete, setSetupComplete] = useState<boolean>(false);
+  const [showUpcoming, setShowUpcoming] = useState<boolean>(
+    () => localStorage.getItem(SHOW_UPCOMING_KEY) === "1"
+  );
 
   // Account level from settings is the source of truth — keep both inputs in sync.
   // Level cap floors at the player's current level but never auto-shrinks below 65
@@ -115,11 +120,14 @@ export default function MissionsView() {
   useEffect(() => {
     localStorage.setItem(LEVEL_CAP_KEY, String(levelCap));
   }, [levelCap]);
-
-  // If user clears their current missions, force them back into setup.
   useEffect(() => {
-    if (setupComplete && visibleIds.size === 0) setSetupComplete(false);
-  }, [setupComplete, visibleIds]);
+    localStorage.setItem(SHOW_UPCOMING_KEY, showUpcoming ? "1" : "0");
+  }, [showUpcoming]);
+
+  // If user clears their current missions and isn't in "upcoming" mode, force back to setup.
+  useEffect(() => {
+    if (setupComplete && visibleIds.size === 0 && !showUpcoming) setSetupComplete(false);
+  }, [setupComplete, visibleIds, showUpcoming]);
 
   /**
    * Inferred-completed: anything at/below current level that isn't a visible
@@ -180,6 +188,9 @@ export default function MissionsView() {
   // Effective cap: when "Cap at current level" is on, only show up to current
   // level. Otherwise show up to user-defined level cap.
   const effectiveCap = hideAbove ? currentLevel : levelCap;
+  const upcomingMode = visibleIds.size === 0 && showUpcoming;
+  const upcomingMin = currentLevel + 1;
+  const upcomingMax = Math.min(levelCap, currentLevel + UPCOMING_LEVELS);
 
   const { visibleMissions, availableNow } = useMemo(() => {
     const r = filterRemaining(allParsed, {
@@ -187,7 +198,14 @@ export default function MissionsView() {
       completedIds: effectiveCompletedIds,
       hideAboveLevel: false,
     });
-    let missions = r.remaining.filter((m) => m.displayLevel <= effectiveCap);
+    let missions: ParsedMission[];
+    if (upcomingMode) {
+      missions = allParsed.filter(
+        (m) => m.displayLevel >= upcomingMin && m.displayLevel <= upcomingMax
+      );
+    } else {
+      missions = r.remaining.filter((m) => m.displayLevel <= effectiveCap);
+    }
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -202,7 +220,7 @@ export default function MissionsView() {
       });
     }
     return { visibleMissions: missions, availableNow: r.availableNow };
-  }, [allParsed, currentLevel, effectiveCap, effectiveCompletedIds, search, t]);
+  }, [allParsed, currentLevel, effectiveCap, effectiveCompletedIds, search, t, upcomingMode, upcomingMin, upcomingMax]);
 
   const rewardTotals = useMemo(() => {
     const resources: Record<string, number> = {};
@@ -292,16 +310,23 @@ export default function MissionsView() {
               placeholder="Type a mission name…"
             />
             <p className="text-xs text-muted-foreground">
-              Add at least one mission to continue.
+              Add at least one mission, or skip to preview the next {UPCOMING_LEVELS} levels of upcoming missions.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center gap-2 pt-2">
             <Button
-              onClick={() => setSetupComplete(true)}
+              onClick={() => { setShowUpcoming(false); setSetupComplete(true); }}
               disabled={!raw || visibleIds.size === 0}
             >
               {raw ? "Show mission tree" : "Loading missions…"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setShowUpcoming(true); setSetupComplete(true); }}
+              disabled={!raw}
+            >
+              Just show upcoming (lvl {currentLevel + 1}–{Math.min(levelCap, currentLevel + UPCOMING_LEVELS)})
             </Button>
           </div>
         </div>
@@ -315,7 +340,9 @@ export default function MissionsView() {
         <div>
           <h1 className="text-3xl font-bold mb-1">Mission Tree</h1>
           <p className="text-muted-foreground text-sm">
-            Showing remaining missions up to level {effectiveCap}.{" "}
+            {upcomingMode
+              ? `Showing upcoming missions (level ${upcomingMin}–${upcomingMax}).`
+              : `Showing remaining missions up to level ${effectiveCap}.`}{" "}
             {raw ? `${allParsed.length} missions loaded.` : "Loading…"}
           </p>
         </div>
