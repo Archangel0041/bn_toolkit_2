@@ -659,14 +659,35 @@ function MissionDetailPanel({
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
-        {mission.description && (
-          <p className="text-xs text-muted-foreground">
-            {localize(mission.description, mission.description)}
-          </p>
-        )}
+        {(() => {
+          const base = mission.title?.replace(/_title$/, "") ?? "";
+          const hintLines: string[] = [];
+          if (base) {
+            for (let i = 0; i < 12; i++) {
+              const k = `mis_${base}_20hint_${i}_body_0`;
+              const tr = t(k);
+              if (!tr || tr === k) {
+                if (i === 0) continue;
+                break;
+              }
+              hintLines.push(tr);
+            }
+          }
+          const fallback = mission.description
+            ? localize(mission.description, mission.description)
+            : "";
+          const lines = hintLines.length > 0 ? hintLines : fallback ? [fallback] : [];
+          if (lines.length === 0) return null;
+          return (
+            <div className="space-y-1">
+              {lines.map((line, i) => (
+                <p key={i} className="text-xs text-muted-foreground">{line}</p>
+              ))}
+            </div>
+          );
+        })()}
 
         <DialogSection title="Pre-mission Dialog" baseKey={mission.title} suffix="10startdialog" t={t} />
-        <DialogSection title="Hint" baseKey={mission.title} suffix="20hint" t={t} defaultOpen />
         <DialogSection title="Completion Dialog" baseKey={mission.title} suffix="70enddialog" t={t} />
         <DialogSection title="Reward Dialog" baseKey={mission.title} suffix="60reward" t={t} />
 
