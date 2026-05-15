@@ -49,7 +49,7 @@ export default function LevelsView() {
 
   const [search, setSearch] = useState("");
   const [showFutureOnly, setShowFutureOnly] = useState(false);
-  const [maxLevel, setMaxLevel] = useState(200);
+  const [maxLevel, setMaxLevel] = useState(70);
 
   useEffect(() => {
     let alive = true;
