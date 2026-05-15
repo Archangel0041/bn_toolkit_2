@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { decode } from "@msgpack/msgpack";
 import { supabase } from "@/integrations/supabase/client";
+import { loadAnimationFileMap } from "@/lib/dataLoader";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -62,6 +63,27 @@ function loadAssets(stem: string): Promise<{ atlas: HTMLImageElement; timelines:
 
 function deriveStem(iconName: string): string {
   return iconName.replace(/_icon$/i, "").replace(/\.png$/i, "");
+}
+
+// Module-level cache for the animation_file_map.json (animationName -> stem).
+let fileMapPromise: Promise<Record<string, string>> | null = null;
+function getFileMap(): Promise<Record<string, string>> {
+  if (!fileMapPromise) {
+    fileMapPromise = loadAnimationFileMap()
+      .then((raw) => {
+        const out: Record<string, string> = {};
+        for (const k in raw) {
+          const f = raw[k]?.file;
+          if (typeof f === "string" && f) out[k] = f;
+        }
+        return out;
+      })
+      .catch((e) => {
+        fileMapPromise = null;
+        throw e;
+      });
+  }
+  return fileMapPromise;
 }
 
 function autoScaleFor(bbox: BBox): number {
@@ -379,10 +401,24 @@ function AnimationPlayer({ name, label, frames, atlas, minimal }: PlayerProps) {
 // Loader + list + export-all
 // ----------------------------------------------------------------------------
 export function UnitAnimationViewer({ iconName, labelMap, groups, filterNames, compact }: Props) {
-  const stem = useMemo(() => deriveStem(iconName), [iconName]);
+  const fallbackStem = useMemo(() => deriveStem(iconName), [iconName]);
 
-  const [atlas, setAtlas] = useState<HTMLImageElement | null>(null);
-  const [timelines, setTimelines] = useState<Timelines | null>(null);
+  // Names the caller wants to display. If neither groups nor filterNames are
+  // provided, we fall back to "show everything in the icon-derived stem".
+  const requestedNames = useMemo<string[] | null>(() => {
+    if (filterNames && filterNames.length) return Array.from(new Set(filterNames));
+    if (groups && groups.length) {
+      const set = new Set<string>();
+      for (const g of groups) g.names.forEach((n) => set.add(n));
+      return Array.from(set);
+    }
+    return null;
+  }, [filterNames, groups]);
+
+  type Resolved = { atlas: HTMLImageElement; frames: Frame[]; stem: string };
+  const [resolved, setResolved] = useState<Map<string, Resolved> | null>(null);
+  const [allTimelines, setAllTimelines] = useState<Timelines | null>(null); // for fallback "show all"
+  const [fallbackAtlas, setFallbackAtlas] = useState<HTMLImageElement | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
@@ -391,52 +427,131 @@ export function UnitAnimationViewer({ iconName, labelMap, groups, filterNames, c
     let cancelled = false;
     setStatus("loading");
     setErrorMsg(null);
-    setAtlas(null);
-    setTimelines(null);
+    setResolved(null);
+    setAllTimelines(null);
+    setFallbackAtlas(null);
 
-    loadAssets(stem)
-      .then(({ atlas, timelines }) => {
-        if (cancelled) return;
-        setAtlas(atlas);
-        setTimelines(timelines);
-        setStatus("ready");
-      })
-      .catch((e: Error) => {
-        if (cancelled) return;
-        if (e.message.includes("not found")) {
-          setStatus("missing");
+    (async () => {
+      try {
+        const map = await getFileMap();
+        // Determine stems to load + which name lives in which stem.
+        const nameToStem = new Map<string, string>();
+        const stems = new Set<string>();
+
+        if (requestedNames) {
+          for (const n of requestedNames) {
+            const s = map[n] ?? fallbackStem;
+            if (!s) continue;
+            nameToStem.set(n, s);
+            stems.add(s);
+          }
+          // If nothing resolved at all, treat as missing.
+          if (stems.size === 0) {
+            if (!cancelled) setStatus("missing");
+            return;
+          }
         } else {
-          setStatus("error");
-          setErrorMsg(e.message);
+          // Fallback path: just load the unit's icon stem and show every animation in it.
+          if (!fallbackStem) {
+            if (!cancelled) setStatus("missing");
+            return;
+          }
+          stems.add(fallbackStem);
         }
-      });
+
+        // Load every distinct stem in parallel; tolerate per-stem failures.
+        const stemList = Array.from(stems);
+        const loaded = await Promise.allSettled(stemList.map((s) => loadAssets(s)));
+
+        const stemAssets = new Map<string, { atlas: HTMLImageElement; timelines: Timelines }>();
+        for (let i = 0; i < stemList.length; i++) {
+          const r = loaded[i];
+          if (r.status === "fulfilled") stemAssets.set(stemList[i], r.value);
+        }
+        if (cancelled) return;
+
+        if (stemAssets.size === 0) {
+          setStatus("missing");
+          return;
+        }
+
+        if (requestedNames) {
+          const out = new Map<string, Resolved>();
+          for (const n of requestedNames) {
+            const s = nameToStem.get(n);
+            if (!s) continue;
+            const assets = stemAssets.get(s);
+            if (!assets) continue;
+            const frames = assets.timelines[n];
+            if (!frames) continue;
+            out.set(n, { atlas: assets.atlas, frames, stem: s });
+          }
+          if (out.size === 0) {
+            setStatus("missing");
+            return;
+          }
+          setResolved(out);
+        } else {
+          // Fallback: take the single loaded stem and expose its timelines.
+          const only = stemAssets.get(fallbackStem)!;
+          setAllTimelines(only.timelines);
+          setFallbackAtlas(only.atlas);
+        }
+
+        setStatus("ready");
+      } catch (e: any) {
+        if (cancelled) return;
+        setStatus("error");
+        setErrorMsg(e?.message ?? String(e));
+      }
+    })();
 
     return () => { cancelled = true; };
-  }, [stem]);
+  }, [requestedNames, fallbackStem]);
+
+  // Build the list of (name, frames, atlas, stem) entries available for rendering.
+  type Entry = { name: string; frames: Frame[]; atlas: HTMLImageElement; stem: string };
+  const entries = useMemo<Entry[]>(() => {
+    if (resolved) {
+      return Array.from(resolved.entries()).map(([name, r]) => ({
+        name, frames: r.frames, atlas: r.atlas, stem: r.stem,
+      }));
+    }
+    if (allTimelines && fallbackAtlas) {
+      return Object.keys(allTimelines).map((name) => ({
+        name, frames: allTimelines[name], atlas: fallbackAtlas, stem: fallbackStem,
+      }));
+    }
+    return [];
+  }, [resolved, allTimelines, fallbackAtlas, fallbackStem]);
+
+  const entryByName = useMemo(() => {
+    const m = new Map<string, Entry>();
+    for (const e of entries) m.set(e.name, e);
+    return m;
+  }, [entries]);
 
   const exportAll = async () => {
-    if (!atlas || !timelines) return;
+    if (entries.length === 0) return;
     try {
-      const names = Object.keys(timelines);
-      setExportProgress({ current: 0, total: names.length });
+      setExportProgress({ current: 0, total: entries.length });
       const { GIF, workerUrl } = await loadGifJs();
       const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
-      for (let i = 0; i < names.length; i++) {
-        const name = names[i];
-        const frames = timelines[name];
-        const baseBbox = computeBbox(frames);
+      for (let i = 0; i < entries.length; i++) {
+        const e = entries[i];
+        const baseBbox = computeBbox(e.frames);
         const ppu = autoScaleFor(baseBbox);
-        const bbox = tightenBbox(frames, atlas, baseBbox, ppu, PAD);
-        const blob = await encodeGif(frames, atlas, bbox, ppu, 30, null, GIF, workerUrl);
-        zip.file(`${name}.gif`, blob);
-        setExportProgress({ current: i + 1, total: names.length });
+        const bbox = tightenBbox(e.frames, e.atlas, baseBbox, ppu, PAD);
+        const blob = await encodeGif(e.frames, e.atlas, bbox, ppu, 30, null, GIF, workerUrl);
+        zip.file(`${e.name}.gif`, blob);
+        setExportProgress({ current: i + 1, total: entries.length });
       }
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${stem}_animations.zip`;
+      a.download = `${fallbackStem || "animations"}_animations.zip`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setExportProgress(null);
@@ -454,34 +569,34 @@ export function UnitAnimationViewer({ iconName, labelMap, groups, filterNames, c
     if (compact) return null;
     return (
       <div className="text-sm text-muted-foreground">
-        No animation assets found for <code>{stem}</code>.
+        No animation assets found for <code>{fallbackStem}</code>.
       </div>
     );
   }
   if (status === "error") {
     return <div className="text-sm text-destructive">Failed to load animation: {errorMsg}</div>;
   }
-  if (!atlas || !timelines) return null;
+  if (entries.length === 0) return null;
 
-  // Apply name filter (only animations actually present in the timelines).
-  const filterSet = filterNames ? new Set(filterNames.filter((n) => n in timelines)) : null;
-  const animNames = Object.keys(timelines).filter((n) => !filterSet || filterSet.has(n));
-  if (animNames.length === 0) return null;
+  // Apply name filter (only animations actually present).
+  const filterSet = filterNames ? new Set(filterNames.filter((n) => entryByName.has(n))) : null;
 
   // Build resolved groups.
   const used = new Set<string>();
   const resolvedGroups: Array<{ title: string; names: string[] }> = [];
   if (groups) {
     for (const g of groups) {
-      const present = g.names.filter((n) => n in timelines && (!filterSet || filterSet.has(n)) && !used.has(n));
+      const present = g.names.filter((n) => entryByName.has(n) && (!filterSet || filterSet.has(n)) && !used.has(n));
       if (present.length === 0) continue;
       present.forEach((n) => used.add(n));
       resolvedGroups.push({ title: g.title, names: present });
     }
   }
-  const leftover = animNames.filter((n) => !used.has(n));
-  if (leftover.length > 0) {
-    resolvedGroups.push({ title: resolvedGroups.length === 0 ? (compact ? "" : "Animations") : "Other", names: leftover });
+  const leftoverNames = entries
+    .map((e) => e.name)
+    .filter((n) => !used.has(n) && (!filterSet || filterSet.has(n)));
+  if (leftoverNames.length > 0) {
+    resolvedGroups.push({ title: resolvedGroups.length === 0 ? (compact ? "" : "Animations") : "Other", names: leftoverNames });
   }
 
   return (
@@ -489,7 +604,7 @@ export function UnitAnimationViewer({ iconName, labelMap, groups, filterNames, c
       {!compact && (
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-muted-foreground">
-            {animNames.length} animation{animNames.length === 1 ? "" : "s"}
+            {entries.length} animation{entries.length === 1 ? "" : "s"}
           </span>
           <Button
             size="sm"
@@ -515,16 +630,19 @@ export function UnitAnimationViewer({ iconName, labelMap, groups, filterNames, c
               </h4>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {g.names.map((name) => (
-                <AnimationPlayer
-                  key={name}
-                  name={name}
-                  label={labelMap?.[name]}
-                  frames={timelines[name]}
-                  atlas={atlas}
-                  minimal={compact}
-                />
-              ))}
+              {g.names.map((name) => {
+                const e = entryByName.get(name)!;
+                return (
+                  <AnimationPlayer
+                    key={name}
+                    name={name}
+                    label={labelMap?.[name]}
+                    frames={e.frames}
+                    atlas={e.atlas}
+                    minimal={compact}
+                  />
+                );
+              })}
             </div>
           </div>
         ))}
