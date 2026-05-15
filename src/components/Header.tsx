@@ -157,16 +157,7 @@ export function Header() {
               <SheetTitle>Menu</SheetTitle>
             </SheetHeader>
             <div className="mt-6 flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-muted-foreground">Navigation</span>
-                <Link
-                  to="/missions"
-                  className="text-sm font-medium hover:underline"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Missions
-                </Link>
-              </div>
+              
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-medium text-muted-foreground">Account</span>
                 {accountSection}
