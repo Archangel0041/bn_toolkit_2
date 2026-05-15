@@ -571,6 +571,8 @@ function MissionTreeInner({
           unitsById={unitsById}
           npcs={npcs}
           dialogues={dialogues}
+          jobs={jobs}
+          encounters={encounters}
           onClose={() => setPinnedId(null)}
         />
       )}
@@ -588,6 +590,8 @@ interface MissionDetailPanelProps {
   unitsById?: Map<number, UnitInfo>;
   npcs?: Record<string, NpcInfo>;
   dialogues?: Record<string, DialogueLine[]>;
+  jobs?: Record<string, JobInfoEntry>;
+  encounters?: Record<string, EncounterEntry>;
   onClose: () => void;
 }
 
@@ -601,6 +605,8 @@ function MissionDetailPanel({
   unitsById,
   npcs,
   dialogues,
+  jobs,
+  encounters,
   onClose,
 }: MissionDetailPanelProps) {
   const { t } = useLanguage();
