@@ -17,6 +17,7 @@ import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const COMPLETED_KEY = "missions:completed";
+const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
 
 export default function MissionsView() {
@@ -30,6 +31,9 @@ export default function MissionsView() {
   const [currentLevel, setCurrentLevel] = useState(accountLevel);
   const [completedText, setCompletedText] = useState<string>(
     () => localStorage.getItem(COMPLETED_KEY) ?? ""
+  );
+  const [visibleText, setVisibleText] = useState<string>(
+    () => localStorage.getItem(VISIBLE_KEY) ?? ""
   );
   const [hideAbove, setHideAbove] = useState<boolean>(
     () => localStorage.getItem(HIDE_ABOVE_KEY) === "1"
@@ -54,12 +58,54 @@ export default function MissionsView() {
     return ids;
   }, [completedText]);
 
+  const visibleIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const tok of visibleText.split(/[\s,]+/)) {
+      const n = parseInt(tok, 10);
+      if (!isNaN(n)) ids.add(n);
+    }
+    return ids;
+  }, [visibleText]);
+
   useEffect(() => {
     localStorage.setItem(COMPLETED_KEY, completedText);
   }, [completedText]);
   useEffect(() => {
+    localStorage.setItem(VISIBLE_KEY, visibleText);
+  }, [visibleText]);
+  useEffect(() => {
     localStorage.setItem(HIDE_ABOVE_KEY, hideAbove ? "1" : "0");
   }, [hideAbove]);
+
+  /**
+   * Inferred-completed: if a mission whose displayLevel ≤ currentLevel is *not* in the
+   * visible-missions list and not explicitly marked complete, assume the player already
+   * finished it — and recursively assume all of its mission prerequisites are done too.
+   * Only kicks in when the user has provided at least one visible mission ID.
+   */
+  const effectiveCompletedIds = useMemo(() => {
+    const completed = new Set(completedIds);
+    if (visibleIds.size === 0 || allParsed.length === 0) return completed;
+
+    const byId = new Map(allParsed.map((m) => [m.id, m]));
+    const markCompleted = (id: number, depth = 0) => {
+      if (completed.has(id) || depth > 64) return;
+      completed.add(id);
+      const m = byId.get(id);
+      if (!m) return;
+      for (const pid of m.prereqMissionIds.all) markCompleted(pid, depth + 1);
+      for (const pid of m.prereqMissionIds.any) markCompleted(pid, depth + 1);
+      for (const pid of m.prereqMissionIds.active) markCompleted(pid, depth + 1);
+    };
+
+    for (const m of allParsed) {
+      if (m.displayLevel > currentLevel) continue;
+      if (visibleIds.has(m.id)) continue;
+      if (completed.has(m.id)) continue;
+      markCompleted(m.id);
+    }
+    return completed;
+  }, [allParsed, completedIds, visibleIds, currentLevel]);
 
   const { visibleMissions, availableNow } = useMemo(() => {
     let missions: ParsedMission[];
@@ -67,7 +113,7 @@ export default function MissionsView() {
     if (mode === "remaining") {
       const r = filterRemaining(allParsed, {
         currentLevel,
-        completedIds,
+        completedIds: effectiveCompletedIds,
         hideAboveLevel: hideAbove,
       });
       missions = r.remaining;
@@ -89,7 +135,7 @@ export default function MissionsView() {
       });
     }
     return { visibleMissions: missions, availableNow };
-  }, [allParsed, mode, currentLevel, completedIds, hideAbove, search, t]);
+  }, [allParsed, mode, currentLevel, effectiveCompletedIds, hideAbove, search, t]);
 
   const visibleEdges = useMemo(() => {
     const ids = new Set(visibleMissions.map((m) => m.id));
@@ -149,30 +195,67 @@ export default function MissionsView() {
       </div>
 
       {mode === "remaining" && (
-        <div className="rounded-lg border p-3">
-          <Label htmlFor="completed-ids" className="text-xs">
-            Completed mission IDs (comma or space separated)
-          </Label>
-          <Textarea
-            id="completed-ids"
-            className="mt-1 font-mono text-xs"
-            rows={2}
-            placeholder="1, 2, 5, 12 …"
-            value={completedText}
-            onChange={(e) => setCompletedText(e.target.value)}
-          />
-          <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{completedIds.size} marked complete</span>
-            <span>·</span>
-            <span>{availableNow?.size ?? 0} available now</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto h-7"
-              onClick={() => setCompletedText("")}
-            >
-              Clear
-            </Button>
+        <div className="grid gap-3 rounded-lg border p-3 md:grid-cols-2">
+          <div>
+            <Label htmlFor="visible-ids" className="text-xs">
+              Visible mission IDs (currently in your in-game list)
+            </Label>
+            <Textarea
+              id="visible-ids"
+              className="mt-1 font-mono text-xs"
+              rows={2}
+              placeholder="e.g. 42, 87, 103 — anything at or below your level not in this list is assumed done (with its prereqs)"
+              value={visibleText}
+              onChange={(e) => setVisibleText(e.target.value)}
+            />
+            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+              <span>{visibleIds.size} visible</span>
+              {visibleIds.size > 0 && (
+                <>
+                  <span>·</span>
+                  <span>
+                    {effectiveCompletedIds.size - completedIds.size} inferred done
+                  </span>
+                </>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-7"
+                onClick={() => setVisibleText("")}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="completed-ids" className="text-xs">
+              Explicitly completed mission IDs
+            </Label>
+            <Textarea
+              id="completed-ids"
+              className="mt-1 font-mono text-xs"
+              rows={2}
+              placeholder="1, 2, 5, 12 …"
+              value={completedText}
+              onChange={(e) => setCompletedText(e.target.value)}
+            />
+            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+              <span>{completedIds.size} marked complete</span>
+              <span>·</span>
+              <span>{effectiveCompletedIds.size} total complete</span>
+              <span>·</span>
+              <span>{availableNow?.size ?? 0} available now</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-7"
+                onClick={() => setCompletedText("")}
+              >
+                Clear
+              </Button>
+            </div>
           </div>
         </div>
       )}
