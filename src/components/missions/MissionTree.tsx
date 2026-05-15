@@ -112,7 +112,7 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
       const title = localized && localized !== m.title ? localized : m.title;
       const data: MissionNodeData = {
         title,
-        level: m.level,
+        level: m.displayLevel,
         giver: m.giver,
         otherCount: m.otherPrereqCount,
         otherTypes: m.otherPrereqTypes,
