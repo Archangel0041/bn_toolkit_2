@@ -52,6 +52,10 @@ export default function MissionsView() {
   const [hideAbove, setHideAbove] = useState<boolean>(
     () => localStorage.getItem(HIDE_ABOVE_KEY) === "1"
   );
+  const [levelCap, setLevelCap] = useState<number>(() => {
+    const saved = parseInt(localStorage.getItem(LEVEL_CAP_KEY) ?? "", 10);
+    return isNaN(saved) ? accountLevel : saved;
+  });
   // Always start gated on tab mount — user must explicitly click "Show mission tree".
   const [setupComplete, setSetupComplete] = useState<boolean>(false);
 
