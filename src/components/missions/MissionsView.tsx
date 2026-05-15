@@ -40,6 +40,53 @@ const titleCase = (s: string) =>
   s.replace(/[_-]+/g, " ").trim().split(/\s+/)
     .map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)).join(" ");
 
+/**
+ * Number input that lets the user fully clear / retype the value without
+ * snapping to a fallback (like 1) on every keystroke. The committed number
+ * is only updated when the input parses to a valid number; otherwise the
+ * raw text is preserved locally. On blur, an empty / invalid value reverts
+ * to the last committed number.
+ */
+function LevelInput({
+  id, value, onChange, className, min = 1, max = 200,
+}: {
+  id?: string;
+  value: number;
+  onChange: (n: number) => void;
+  className?: string;
+  min?: number;
+  max?: number;
+}) {
+  const [text, setText] = useState(String(value));
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!focusedRef.current) setText(String(value));
+  }, [value]);
+  return (
+    <Input
+      id={id}
+      type="number"
+      className={className}
+      min={min}
+      max={max}
+      value={text}
+      onFocus={() => { focusedRef.current = true; }}
+      onChange={(e) => {
+        const v = e.target.value;
+        setText(v);
+        const n = parseInt(v, 10);
+        if (!isNaN(n)) onChange(n);
+      }}
+      onBlur={() => {
+        focusedRef.current = false;
+        const n = parseInt(text, 10);
+        if (isNaN(n)) setText(String(value));
+        else setText(String(n));
+      }}
+    />
+  );
+}
+
 export default function MissionsView() {
   const { accountLevel } = useAccountLevel();
   const { t } = useLanguage();
