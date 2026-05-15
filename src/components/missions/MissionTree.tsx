@@ -20,6 +20,7 @@ import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
+import type { DialogueLine } from "@/lib/dataLoader";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
