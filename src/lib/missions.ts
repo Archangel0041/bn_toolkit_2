@@ -15,6 +15,12 @@ export interface MissionRewards {
   units: Record<string, number>;
 }
 
+export interface ParsedObjective {
+  title?: string;
+  description?: string;
+  type?: string;
+}
+
 export interface ParsedMission {
   id: number;
   title: string;
@@ -32,6 +38,7 @@ export interface ParsedMission {
   otherPrereqCount: number;
   otherPrereqTypes: string[];
   rewards: MissionRewards;
+  objectives: ParsedObjective[];
 }
 
 type RawComponent = Record<string, any>;
