@@ -153,16 +153,17 @@ export default function MissionsView() {
   const { visibleMissions, availableNow } = useMemo(() => {
     let missions: ParsedMission[];
     let availableNow: Set<number> | undefined;
+    const cap = Math.max(currentLevel, levelCap);
     if (mode === "remaining") {
       const r = filterRemaining(allParsed, {
         currentLevel,
         completedIds: effectiveCompletedIds,
-        hideAboveLevel: hideAbove,
+        hideAboveLevel: false,
       });
-      missions = r.remaining;
+      missions = hideAbove ? r.remaining.filter((m) => m.displayLevel <= cap) : r.remaining;
       availableNow = r.availableNow;
     } else {
-      missions = hideAbove ? allParsed.filter((m) => m.displayLevel <= currentLevel) : allParsed;
+      missions = hideAbove ? allParsed.filter((m) => m.displayLevel <= cap) : allParsed;
     }
 
     if (search.trim()) {
@@ -178,7 +179,21 @@ export default function MissionsView() {
       });
     }
     return { visibleMissions: missions, availableNow };
-  }, [allParsed, mode, currentLevel, effectiveCompletedIds, hideAbove, search, t]);
+  }, [allParsed, mode, currentLevel, levelCap, effectiveCompletedIds, hideAbove, search, t]);
+
+  const rewardTotals = useMemo(() => {
+    const resources: Record<string, number> = {};
+    const units: Record<string, number> = {};
+    for (const m of visibleMissions) {
+      for (const [k, v] of Object.entries(m.rewards.resources)) {
+        resources[k] = (resources[k] ?? 0) + (Number(v) || 0);
+      }
+      for (const [k, v] of Object.entries(m.rewards.units)) {
+        units[k] = (units[k] ?? 0) + (Number(v) || 0);
+      }
+    }
+    return { resources, units };
+  }, [visibleMissions]);
 
   const visibleEdges = useMemo(() => {
     const ids = new Set(visibleMissions.map((m) => m.id));
