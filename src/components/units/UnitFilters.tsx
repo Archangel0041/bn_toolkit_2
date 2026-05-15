@@ -296,8 +296,10 @@ export const UnitFilters = forwardRef<HTMLDivElement, UnitFiltersProps>(function
           </PopoverContent>
         </Popover>
 
+        </div>
+
         {hasFilters && (
-          <Button variant="ghost" onClick={clearFilters} className="gap-2">
+          <Button variant="ghost" onClick={clearFilters} className="gap-2 col-span-2 sm:col-auto">
             <X className="h-4 w-4" />
             Clear
           </Button>
