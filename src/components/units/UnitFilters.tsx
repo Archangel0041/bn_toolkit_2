@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Filter, X, Target, Zap, Flame, Shield } from "lucide-react";
+import { Search, Filter, X, Target, Zap, Flame, Shield, Users } from "lucide-react";
 import { TargetCategories, TargetCategoryLabels } from "@/lib/unitAbilityFilters";
 import { DamageType, DamageTypeLabels, UnitTagLabels } from "@/data/gameEnums";
 
