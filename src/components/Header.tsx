@@ -140,12 +140,6 @@ export function Header() {
 
         {/* Desktop controls */}
         <div className="hidden sm:flex items-center gap-2">
-          <Link
-            to="/missions"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Missions
-          </Link>
           {accountSection}
           <ThemeToggle />
           <LanguageSelector />
