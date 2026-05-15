@@ -17,7 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const NODE_W = 220;
 const NODE_H = 64;
-const ROW_H = 130; // vertical spacing per level band
+const ROW_H = 130;
 
 interface MissionTreeProps {
   missions: ParsedMission[];
@@ -26,16 +26,15 @@ interface MissionTreeProps {
   highlightId?: number;
 }
 
-const EDGE_STYLES: Record<MissionPrereqEdgeType, { strokeDasharray?: string; label: string }> = {
-  "complete-all": { label: "requires complete" },
-  "complete-any": { strokeDasharray: "6 4", label: "requires any of" },
-  active: { strokeDasharray: "2 4", label: "requires active" },
-  inactive: { strokeDasharray: "2 4", label: "requires inactive" },
-  "not-started": { strokeDasharray: "1 4", label: "requires not started" },
+const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
+  "complete-all": undefined,
+  "complete-any": "6 4",
+  active: "2 4",
+  inactive: "2 4",
+  "not-started": "1 4",
 };
 
 function layout(missions: ParsedMission[], edges: MissionEdge[]) {
-  // Group by level row; X positions assigned via dagre but Y pinned by level.
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: "TB", nodesep: 30, ranksep: 60, marginx: 40 });
   g.setDefaultEdgeLabel(() => ({}));
@@ -43,7 +42,6 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   for (const e of edges) g.setEdge(String(e.from), String(e.to));
   dagre.layout(g);
 
-  // Determine row index per unique level (sorted ascending)
   const levels = Array.from(new Set(missions.map((m) => m.level))).sort((a, b) => a - b);
   const rowY = new Map(levels.map((lvl, i) => [lvl, i * ROW_H + 40]));
 
@@ -55,6 +53,54 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   return { positions, levels, rowY };
 }
 
+interface MissionNodeData extends Record<string, unknown> {
+  title: string;
+  level: number;
+  giver?: string;
+  otherCount: number;
+  otherTypes: string[];
+  isAvailable?: boolean;
+  isHighlight?: boolean;
+  missionId: number;
+}
+
+function MissionNode({ data }: { data: MissionNodeData }) {
+  return (
+    <div
+      className={[
+        "h-full w-full rounded-md border px-2 py-1.5 text-left shadow-sm transition-colors bg-card text-card-foreground",
+        data.isAvailable ? "border-primary ring-1 ring-primary/40" : "border-border",
+        data.isHighlight ? "ring-2 ring-accent" : "",
+      ].join(" ")}
+    >
+      <div className="flex items-start justify-between gap-1">
+        <div className="truncate text-[11px] font-semibold leading-tight" title={data.title}>
+          {data.title}
+        </div>
+        <span className="shrink-0 rounded bg-muted px-1 text-[9px] font-medium text-muted-foreground">
+          Lv{data.level}
+        </span>
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-1">
+        <span className="truncate text-[9px] text-muted-foreground" title={data.giver}>
+          {data.giver ?? "—"}
+        </span>
+        <span className="shrink-0 text-[9px] text-muted-foreground/70">#{data.missionId}</span>
+      </div>
+      {data.otherCount > 0 && (
+        <div
+          className="mt-0.5 truncate text-[9px] text-amber-600 dark:text-amber-400"
+          title={data.otherTypes.join(", ")}
+        >
+          +{data.otherCount} other req
+        </div>
+      )}
+    </div>
+  );
+}
+
+const nodeTypes = { mission: MissionNode };
+
 export function MissionTree({ missions, edges, availableNow, highlightId }: MissionTreeProps) {
   const { t } = useLanguage();
 
@@ -62,67 +108,51 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
     const { positions, levels, rowY } = layout(missions, edges);
     const rfNodes: Node[] = missions.map((m) => {
       const pos = positions.get(m.id) ?? { x: 0, y: 0 };
-      const isAvailable = availableNow?.has(m.id);
-      const isHighlight = highlightId === m.id;
-      const titleText = (() => {
-        const localized = t(m.title);
-        return localized && localized !== m.title ? localized : m.title;
-      })();
+      const localized = t(m.title);
+      const title = localized && localized !== m.title ? localized : m.title;
+      const data: MissionNodeData = {
+        title,
+        level: m.level,
+        giver: m.giver,
+        otherCount: m.otherPrereqCount,
+        otherTypes: m.otherPrereqTypes,
+        isAvailable: availableNow?.has(m.id),
+        isHighlight: highlightId === m.id,
+        missionId: m.id,
+      };
       return {
         id: String(m.id),
         position: pos,
-        data: { 
-          label: null,
-          meta: { title: titleText, level: m.level, giver: m.giver, otherCount: m.otherPrereqCount, isAvailable, isHighlight, otherTypes: m.otherPrereqTypes, id: m.id }
-        },
+        data,
         type: "mission",
-        style: {
-          width: NODE_W,
-          height: NODE_H,
-          padding: 0,
-          border: "none",
-          background: "transparent",
-        },
+        style: { width: NODE_W, height: NODE_H, padding: 0, border: "none", background: "transparent" },
       };
     });
 
-    const rfEdges: Edge[] = edges.map((e, i) => {
-      const style = EDGE_STYLES[e.type];
-      return {
-        id: `e${i}`,
-        source: String(e.from),
-        target: String(e.to),
-        type: "smoothstep",
-        animated: false,
-        style: {
-          stroke: "hsl(var(--muted-foreground))",
-          strokeWidth: 1.2,
-          strokeDasharray: style.strokeDasharray,
-          opacity: 0.6,
-        },
-        markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--muted-foreground))" },
-      };
-    });
+    const rfEdges: Edge[] = edges.map((e, i) => ({
+      id: `e${i}`,
+      source: String(e.from),
+      target: String(e.to),
+      type: "smoothstep",
+      style: {
+        stroke: "hsl(var(--muted-foreground))",
+        strokeWidth: 1.2,
+        strokeDasharray: EDGE_DASH[e.type],
+        opacity: 0.55,
+      },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--muted-foreground))" },
+    }));
 
     return { rfNodes, rfEdges, levels, rowY };
   }, [missions, edges, availableNow, highlightId, t]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(rfEdges);
-
   useEffect(() => setNodes(rfNodes), [rfNodes, setNodes]);
   useEffect(() => setEdges(rfEdges), [rfEdges, setEdges]);
 
-  const nodeTypesMap = useMemo(
-    () => ({
-      mission: MissionNode as any,
-    }),
-    []
-  );
-
   return (
-    <div className="relative h-[calc(100vh-280px)] min-h-[500px] w-full rounded-lg border bg-card">
-      {/* Level band labels (left gutter) */}
+    <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-card overflow-hidden">
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 border-r bg-background/40 backdrop-blur-sm">
         {levels.map((lvl) => (
           <div
@@ -140,10 +170,10 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
           edges={edgesState}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypesMap}
+          nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-          minZoom={0.1}
+          minZoom={0.05}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
         >
@@ -152,45 +182,6 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
           <MiniMap pannable zoomable className="!bg-card" />
         </ReactFlow>
       </div>
-    </div>
-  );
-}
-
-function MissionNode({ data }: { data: any }) {
-  const meta = data?.meta ?? data;
-  const isAvailable = meta.isAvailable;
-  const isHighlight = meta.isHighlight;
-  return (
-    <div
-      className={[
-        "h-full w-full rounded-md border px-2 py-1.5 text-left shadow-sm transition-colors",
-        "bg-card text-card-foreground",
-        isAvailable ? "border-primary ring-1 ring-primary/40" : "border-border",
-        isHighlight ? "ring-2 ring-accent" : "",
-      ].join(" ")}
-    >
-      <div className="flex items-start justify-between gap-1">
-        <div className="truncate text-[11px] font-semibold leading-tight" title={meta.title}>
-          {meta.title}
-        </div>
-        <span className="shrink-0 rounded bg-muted px-1 text-[9px] font-medium text-muted-foreground">
-          Lv{meta.level}
-        </span>
-      </div>
-      <div className="mt-1 flex items-center justify-between gap-1">
-        <span className="truncate text-[9px] text-muted-foreground" title={meta.giver}>
-          {meta.giver ?? "—"}
-        </span>
-        <span className="shrink-0 text-[9px] text-muted-foreground/70">#{meta.id}</span>
-      </div>
-      {meta.otherCount > 0 && (
-        <div
-          className="mt-0.5 truncate text-[9px] text-amber-600 dark:text-amber-400"
-          title={meta.otherTypes?.join(", ")}
-        >
-          +{meta.otherCount} req
-        </div>
-      )}
     </div>
   );
 }
