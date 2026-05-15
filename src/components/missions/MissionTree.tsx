@@ -26,6 +26,8 @@ import { getUnitImageUrl } from "@/lib/unitImages";
 
 const NODE_W = 240;
 const NODE_H = 96;
+const ROW_GAP = 190;
+const COL_GAP = 90;
 
 interface UnitInfo { name?: string; icon?: string }
 
@@ -72,18 +74,75 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   dagre.layout(g);
 
   const positions = new Map<number, { x: number; y: number }>();
+  const byLevel = new Map<number, ParsedMission[]>();
   for (const m of missions) {
-    const node = g.node(String(m.id));
-    positions.set(m.id, {
-      x: (node?.x ?? 0) - NODE_W / 2,
-      y: (node?.y ?? 0) - NODE_H / 2,
+    const level = Number.isFinite(m.displayLevel) ? m.displayLevel : 0;
+    if (!byLevel.has(level)) byLevel.set(level, []);
+    byLevel.get(level)!.push(m);
+  }
+  const sortedLevels = [...byLevel.keys()].sort((a, b) => a - b);
+  for (const [row, level] of sortedLevels.entries()) {
+    const rowMissions = [...(byLevel.get(level) ?? [])].sort((a, b) => {
+      const ax = g.node(String(a.id))?.x ?? 0;
+      const bx = g.node(String(b.id))?.x ?? 0;
+      return ax === bx ? a.id - b.id : ax - bx;
+    });
+    const rowWidth = Math.max(0, (rowMissions.length - 1) * (NODE_W + COL_GAP));
+    rowMissions.forEach((m, col) => {
+      positions.set(m.id, {
+        x: col * (NODE_W + COL_GAP) - rowWidth / 2,
+        y: row * ROW_GAP,
+      });
     });
   }
+
+  const allPositions = [...positions.values()];
+  const leftLane = Math.min(...allPositions.map((p) => p.x), 0) - COL_GAP;
+  const rightLane = Math.max(...allPositions.map((p) => p.x + NODE_W), NODE_W) + COL_GAP;
   const edgePoints = new Map<string, { x: number; y: number }[]>();
-  for (const e of edges) {
-    const ge = g.edge(String(e.from), String(e.to));
-    if (ge?.points) edgePoints.set(`${e.from}->${e.to}`, ge.points);
-  }
+  edges.forEach((e, index) => {
+    const from = positions.get(e.from);
+    const to = positions.get(e.to);
+    if (!from || !to) return;
+    const fromCenterX = from.x + NODE_W / 2;
+    const toCenterX = to.x + NODE_W / 2;
+    const fromRow = Math.round(from.y / ROW_GAP);
+    const toRow = Math.round(to.y / ROW_GAP);
+    const sameRow = fromRow === toRow;
+    if (sameRow) {
+      const goesRight = toCenterX >= fromCenterX;
+      const laneY = from.y + NODE_H + 28 + (index % 3) * 12;
+      edgePoints.set(`${e.from}->${e.to}`, [
+        { x: goesRight ? from.x + NODE_W : from.x, y: from.y + NODE_H / 2 },
+        { x: goesRight ? from.x + NODE_W + 28 : from.x - 28, y: from.y + NODE_H / 2 },
+        { x: goesRight ? from.x + NODE_W + 28 : from.x - 28, y: laneY },
+        { x: goesRight ? to.x - 28 : to.x + NODE_W + 28, y: laneY },
+        { x: goesRight ? to.x - 28 : to.x + NODE_W + 28, y: to.y + NODE_H / 2 },
+        { x: goesRight ? to.x : to.x + NODE_W, y: to.y + NODE_H / 2 },
+      ]);
+      return;
+    }
+
+    const downward = to.y > from.y;
+    const start = { x: fromCenterX, y: downward ? from.y + NODE_H : from.y };
+    const end = { x: toCenterX, y: downward ? to.y : to.y + NODE_H };
+    const skippedRows = Math.abs(toRow - fromRow) > 1;
+    if (skippedRows) {
+      const laneX = toCenterX >= fromCenterX ? rightLane + (index % 4) * 18 : leftLane - (index % 4) * 18;
+      edgePoints.set(`${e.from}->${e.to}`, [
+        start,
+        { x: start.x, y: start.y + (downward ? 28 : -28) },
+        { x: laneX, y: start.y + (downward ? 28 : -28) },
+        { x: laneX, y: end.y + (downward ? -28 : 28) },
+        { x: end.x, y: end.y + (downward ? -28 : 28) },
+        end,
+      ]);
+      return;
+    }
+
+    const midY = (start.y + end.y) / 2;
+    edgePoints.set(`${e.from}->${e.to}`, [start, { x: start.x, y: midY }, { x: end.x, y: midY }, end]);
+  });
   return { positions, edgePoints };
 }
 
