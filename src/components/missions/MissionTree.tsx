@@ -181,6 +181,40 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   const allPos = [...positions.values()];
   const leftLane = Math.min(...allPos.map((p) => p.x), 0) - COL_GAP;
   const rightLane = Math.max(...allPos.map((p) => p.x + NODE_W), NODE_W) + COL_GAP;
+
+  // Node bounding rects (with small padding) for obstacle checks.
+  const PAD = 6;
+  const nodeRects: { id: number; x1: number; y1: number; x2: number; y2: number }[] = [];
+  for (const [id, p] of positions) {
+    nodeRects.push({ id, x1: p.x - PAD, y1: p.y - PAD, x2: p.x + NODE_W + PAD, y2: p.y + NODE_H + PAD });
+  }
+  const segHitsAny = (
+    fromId: number,
+    toId: number,
+    ax: number, ay: number, bx: number, by: number,
+  ) => {
+    // Axis-aligned segment vs rect intersection (segments are vertical or horizontal).
+    const isVert = ax === bx;
+    const yMin = Math.min(ay, by), yMax = Math.max(ay, by);
+    const xMin = Math.min(ax, bx), xMax = Math.max(ax, bx);
+    for (const r of nodeRects) {
+      if (r.id === fromId || r.id === toId) continue;
+      if (isVert) {
+        if (ax > r.x1 && ax < r.x2 && yMax > r.y1 && yMin < r.y2) return true;
+      } else {
+        if (ay > r.y1 && ay < r.y2 && xMax > r.x1 && xMin < r.x2) return true;
+      }
+    }
+    return false;
+  };
+  const elbowClear = (
+    fromId: number, toId: number,
+    sx: number, sy: number, ex: number, ey: number, midY: number,
+  ) =>
+    !segHitsAny(fromId, toId, sx, sy, sx, midY) &&
+    !segHitsAny(fromId, toId, sx, midY, ex, midY) &&
+    !segHitsAny(fromId, toId, ex, midY, ex, ey);
+
   const edgePoints = new Map<string, { x: number; y: number }[]>();
   edges.forEach((e, index) => {
     const from = positions.get(e.from);
@@ -208,23 +242,53 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
     const downward = to.y > from.y;
     const start = { x: fromCenterX, y: downward ? from.y + NODE_H : from.y };
     const end = { x: toCenterX, y: downward ? to.y : to.y + NODE_H };
-    const skippedRows = Math.abs(toRow - fromRow) > 1;
-    const sameColumn = Math.abs(fromCenterX - toCenterX) < 1;
-    if (skippedRows && !sameColumn) {
-      const laneX = toCenterX >= fromCenterX ? rightLane + (index % 4) * 18 : leftLane - (index % 4) * 18;
-      edgePoints.set(`${e.from}->${e.to}`, [
-        start,
-        { x: start.x, y: start.y + (downward ? 28 : -28) },
-        { x: laneX, y: start.y + (downward ? 28 : -28) },
-        { x: laneX, y: end.y + (downward ? -28 : 28) },
-        { x: end.x, y: end.y + (downward ? -28 : 28) },
-        end,
-      ]);
+    const midY = (start.y + end.y) / 2;
+
+    // Try the simple 3-segment elbow first; only fall back to a side lane if
+    // it would cut through another node.
+    if (elbowClear(e.from, e.to, start.x, start.y, end.x, end.y, midY)) {
+      edgePoints.set(`${e.from}->${e.to}`, [start, { x: start.x, y: midY }, { x: end.x, y: midY }, end]);
       return;
     }
 
-    const midY = (start.y + end.y) / 2;
-    edgePoints.set(`${e.from}->${e.to}`, [start, { x: start.x, y: midY }, { x: end.x, y: midY }, end]);
+    // Try a near-side detour (just outside the source/target column) before
+    // going all the way out to the global lane.
+    const goesRight = toCenterX >= fromCenterX;
+    const detourCandidates = [
+      goesRight ? Math.max(from.x, to.x) + NODE_W + 24 : Math.min(from.x, to.x) - 24,
+      goesRight ? Math.max(from.x, to.x) + NODE_W + 48 : Math.min(from.x, to.x) - 48,
+    ];
+    for (const laneX of detourCandidates) {
+      const stub = downward ? 18 : -18;
+      const ok =
+        !segHitsAny(e.from, e.to, start.x, start.y, start.x, start.y + stub) &&
+        !segHitsAny(e.from, e.to, start.x, start.y + stub, laneX, start.y + stub) &&
+        !segHitsAny(e.from, e.to, laneX, start.y + stub, laneX, end.y - stub) &&
+        !segHitsAny(e.from, e.to, laneX, end.y - stub, end.x, end.y - stub) &&
+        !segHitsAny(e.from, e.to, end.x, end.y - stub, end.x, end.y);
+      if (ok) {
+        edgePoints.set(`${e.from}->${e.to}`, [
+          start,
+          { x: start.x, y: start.y + stub },
+          { x: laneX, y: start.y + stub },
+          { x: laneX, y: end.y - stub },
+          { x: end.x, y: end.y - stub },
+          end,
+        ]);
+        return;
+      }
+    }
+
+    // Last resort: route via the global outer lane.
+    const laneX = goesRight ? rightLane + (index % 4) * 18 : leftLane - (index % 4) * 18;
+    edgePoints.set(`${e.from}->${e.to}`, [
+      start,
+      { x: start.x, y: start.y + (downward ? 28 : -28) },
+      { x: laneX, y: start.y + (downward ? 28 : -28) },
+      { x: laneX, y: end.y + (downward ? -28 : 28) },
+      { x: end.x, y: end.y + (downward ? -28 : 28) },
+      end,
+    ]);
   });
   return { positions, edgePoints };
 }
