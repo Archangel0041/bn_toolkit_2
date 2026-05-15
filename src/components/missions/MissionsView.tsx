@@ -321,15 +321,17 @@ export default function MissionsView() {
             >
               {raw ? "Show mission tree" : "Loading missions…"}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => { setShowUpcoming(true); setSetupComplete(true); }}
-              disabled={!raw || currentLevel + 1 > levelCap}
-            >
-              {currentLevel + 1 > levelCap
-                ? "No upcoming missions"
-                : `Just show upcoming (lvl ${currentLevel + 1}–${Math.min(levelCap, currentLevel + UPCOMING_LEVELS)})`}
-            </Button>
+            {visibleIds.size === 0 && (
+              <Button
+                variant="outline"
+                onClick={() => { setShowUpcoming(true); setSetupComplete(true); }}
+                disabled={!raw || currentLevel + 1 > levelCap}
+              >
+                {currentLevel + 1 > levelCap
+                  ? "No upcoming missions"
+                  : `Just show upcoming (lvl ${currentLevel + 1}–${Math.min(levelCap, currentLevel + UPCOMING_LEVELS)})`}
+              </Button>
+            )}
           </div>
         </div>
       </div>
