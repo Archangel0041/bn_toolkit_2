@@ -85,7 +85,7 @@ function MissionNode({ data }: { data: MissionNodeData }) {
   return (
     <div
       className={[
-        "h-full w-full rounded-md border px-2 py-1.5 text-left shadow-sm transition-all bg-card text-card-foreground",
+        "relative h-full w-full rounded-md border px-2 py-1.5 text-left shadow-sm transition-all bg-card text-card-foreground",
         data.isAvailable ? "border-primary ring-1 ring-primary/40" : "border-border",
         data.isHighlight ? "ring-2 ring-accent" : "",
         data.isDimmed ? "opacity-30" : "",
