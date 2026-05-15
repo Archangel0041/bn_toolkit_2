@@ -27,7 +27,7 @@ export default function MissionsView() {
   const [raw, setRaw] = useState<Record<string, any[]> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [mode, setMode] = useState<"all" | "remaining">("all");
+  const [mode, setMode] = useState<"all" | "remaining">("remaining");
   const [search, setSearch] = useState("");
   const [currentLevel, setCurrentLevel] = useState(accountLevel);
   const [completedText, setCompletedText] = useState<string>(
@@ -39,6 +39,13 @@ export default function MissionsView() {
   const [hideAbove, setHideAbove] = useState<boolean>(
     () => localStorage.getItem(HIDE_ABOVE_KEY) === "1"
   );
+  const [setupComplete, setSetupComplete] = useState<boolean>(
+    () => localStorage.getItem(SETUP_KEY) === "1"
+  );
+
+  useEffect(() => {
+    localStorage.setItem(SETUP_KEY, setupComplete ? "1" : "0");
+  }, [setupComplete]);
 
   useEffect(() => setCurrentLevel(accountLevel), [accountLevel]);
 
