@@ -58,12 +58,54 @@ export default function MissionsView() {
     return ids;
   }, [completedText]);
 
+  const visibleIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const tok of visibleText.split(/[\s,]+/)) {
+      const n = parseInt(tok, 10);
+      if (!isNaN(n)) ids.add(n);
+    }
+    return ids;
+  }, [visibleText]);
+
   useEffect(() => {
     localStorage.setItem(COMPLETED_KEY, completedText);
   }, [completedText]);
   useEffect(() => {
+    localStorage.setItem(VISIBLE_KEY, visibleText);
+  }, [visibleText]);
+  useEffect(() => {
     localStorage.setItem(HIDE_ABOVE_KEY, hideAbove ? "1" : "0");
   }, [hideAbove]);
+
+  /**
+   * Inferred-completed: if a mission whose displayLevel ≤ currentLevel is *not* in the
+   * visible-missions list and not explicitly marked complete, assume the player already
+   * finished it — and recursively assume all of its mission prerequisites are done too.
+   * Only kicks in when the user has provided at least one visible mission ID.
+   */
+  const effectiveCompletedIds = useMemo(() => {
+    const completed = new Set(completedIds);
+    if (visibleIds.size === 0 || allParsed.length === 0) return completed;
+
+    const byId = new Map(allParsed.map((m) => [m.id, m]));
+    const markCompleted = (id: number, depth = 0) => {
+      if (completed.has(id) || depth > 64) return;
+      completed.add(id);
+      const m = byId.get(id);
+      if (!m) return;
+      for (const pid of m.prereqMissionIds.all) markCompleted(pid, depth + 1);
+      for (const pid of m.prereqMissionIds.any) markCompleted(pid, depth + 1);
+      for (const pid of m.prereqMissionIds.active) markCompleted(pid, depth + 1);
+    };
+
+    for (const m of allParsed) {
+      if (m.displayLevel > currentLevel) continue;
+      if (visibleIds.has(m.id)) continue;
+      if (completed.has(m.id)) continue;
+      markCompleted(m.id);
+    }
+    return completed;
+  }, [allParsed, completedIds, visibleIds, currentLevel]);
 
   const { visibleMissions, availableNow } = useMemo(() => {
     let missions: ParsedMission[];
