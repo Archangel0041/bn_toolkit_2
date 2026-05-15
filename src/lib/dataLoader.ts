@@ -281,6 +281,16 @@ export async function loadNpcs(): Promise<Record<string, NpcEntry>> {
   return fetchFromBucket(CONFIG_BUCKET, "npcs.json");
 }
 
+export interface DialogueLine {
+  speaker?: string;
+  text?: { body?: string; title?: string }[];
+  view?: number;
+}
+
+export async function loadDialogues(): Promise<Record<string, DialogueLine[]>> {
+  return fetchFromBucket(CONFIG_BUCKET, "dialogues.json");
+}
+
 // Localization loaders - use BigInt parser to preserve large numeric IDs
 export async function loadGameTextSharedData(): Promise<any> {
   return fetchFromBucket(LOCALIZATIONS_BUCKET, "tables/GameText Shared Data.json", true, true);
