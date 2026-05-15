@@ -131,10 +131,15 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
         const comps: RawComponent[] = o.objective_components ?? [];
         const identity = comps.find((c) => c?._t === "objective_identity_config");
         const completion = comps.find((c) => c?._t === "objective_completion_config");
+        const prereq = completion?.prereq as RawComponent | undefined;
         return {
           title: identity?.objective_text ?? o.title ?? o.name ?? o.objective_name,
           description: o.description ?? o.objective_description,
-          type: completion?.prereq?._t ?? o._t,
+          type: prereq?._t ?? o._t,
+          count: typeof prereq?.count === "number" ? prereq.count : undefined,
+          unitId: typeof prereq?.unit_id === "number" ? prereq.unit_id : undefined,
+          opponentId: typeof prereq?.opponent_id === "number" ? prereq.opponent_id : undefined,
+          prereqRaw: prereq,
         };
       }
     );
