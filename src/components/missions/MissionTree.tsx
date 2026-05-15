@@ -135,12 +135,12 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
       target: String(e.to),
       type: "smoothstep",
       style: {
-        stroke: "hsl(var(--muted-foreground))",
-        strokeWidth: 1.2,
+        stroke: "hsl(var(--primary))",
+        strokeWidth: 2,
         strokeDasharray: EDGE_DASH[e.type],
-        opacity: 0.55,
+        opacity: 0.85,
       },
-      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--muted-foreground))" },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary))", width: 18, height: 18 },
     }));
 
     return { rfNodes, rfEdges, levels, rowY };
