@@ -17,6 +17,7 @@ import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const COMPLETED_KEY = "missions:completed";
+const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
 
 export default function MissionsView() {
