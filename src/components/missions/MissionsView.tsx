@@ -21,6 +21,8 @@ import { getUnitImageUrl } from "@/lib/unitImages";
 const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
 const LEVEL_CAP_KEY = "missions:levelCap";
+const SHOW_UPCOMING_KEY = "missions:showUpcoming";
+const UPCOMING_LEVELS = 10;
 
 const idsToText = (ids: number[]) =>
   [...new Set(ids)].sort((a, b) => a - b).join(", ");
