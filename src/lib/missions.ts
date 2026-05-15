@@ -125,6 +125,7 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
       prereqMissionIds,
       otherPrereqCount,
       otherPrereqTypes,
+      rewards,
     });
   }
 
