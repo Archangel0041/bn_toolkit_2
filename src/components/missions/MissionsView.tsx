@@ -54,6 +54,8 @@ export default function MissionsView() {
   const [characters, setCharacters] = useState<Record<string, CharacterEntry>>({});
   const [npcs, setNpcs] = useState<Record<string, NpcEntry>>({});
   const [dialogues, setDialogues] = useState<Record<string, DialogueLine[]>>({});
+  const [jobs, setJobs] = useState<Record<string, JobInfoEntry>>({});
+  const [encounters, setEncounters] = useState<Record<string, EncounterEntry>>({});
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
