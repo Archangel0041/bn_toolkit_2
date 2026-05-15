@@ -32,6 +32,7 @@ const BAND_GAP = 60;
 const COL_GAP = 90;
 
 interface UnitInfo { name?: string; icon?: string }
+interface NpcInfo { name?: string; icon?: string }
 
 interface MissionTreeProps {
   missions: ParsedMission[];
@@ -40,6 +41,7 @@ interface MissionTreeProps {
   highlightId?: number;
   characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
   unitsById?: Map<number, UnitInfo>;
+  npcs?: Record<string, NpcInfo>;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
