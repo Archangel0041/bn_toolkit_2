@@ -501,7 +501,7 @@ function MissionTreeInner({
   }, [pinnedId, forward, backward]);
 
   const { rfNodes, rfEdges } = useMemo(() => {
-    const { positions, edgePoints } = layout(missions, edges);
+    const { positions, edgePoints } = layout(missions, reducedEdges);
     const rfNodes: Node[] = missions.map((m) => {
       const pos = positions.get(m.id) ?? { x: 0, y: 0 };
       const title = localize(m.title, m.title);
