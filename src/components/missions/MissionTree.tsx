@@ -241,7 +241,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
   useEffect(() => {
     if (rfNodes.length === 0) return;
     const handle = setTimeout(() => {
-      fitView({ padding: 0.18, maxZoom: 1, minZoom: 0.4, duration: 350 });
+      fitView({ padding: 0.18, maxZoom: 1, minZoom: 0.05, duration: 350 });
     }, 60);
     return () => clearTimeout(handle);
   }, [rfNodes, fitView]);
@@ -269,8 +269,8 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.4 }}
-        minZoom={0.3}
+        fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.05 }}
+        minZoom={0.05}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
