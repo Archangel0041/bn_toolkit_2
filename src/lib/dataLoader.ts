@@ -291,6 +291,32 @@ export async function loadDialogues(): Promise<Record<string, DialogueLine[]>> {
   return fetchFromBucket(CONFIG_BUCKET, "dialogues.json");
 }
 
+export interface JobInfoEntry {
+  name?: string;
+  icon?: string;
+  build_time?: number;
+  cost?: Record<string, number>;
+  rewards?: Record<string, number>;
+  [k: string]: any;
+}
+
+export async function loadJobInfo(): Promise<Record<string, JobInfoEntry>> {
+  return fetchFromBucket(CONFIG_BUCKET, "job_info.json");
+}
+
+export interface EncounterEntry {
+  name?: string;
+  icon?: string;
+  level?: number;
+  units?: { grid_id: number; unit_id: number }[];
+  player_units?: { grid_id: number; unit_id: number }[];
+  [k: string]: any;
+}
+
+export async function loadEncounters(): Promise<{ armies?: Record<string, EncounterEntry>; tables?: any }> {
+  return fetchFromBucket(CONFIG_BUCKET, "battle/battle_encounters.json");
+}
+
 // Localization loaders - use BigInt parser to preserve large numeric IDs
 export async function loadGameTextSharedData(): Promise<any> {
   return fetchFromBucket(LOCALIZATIONS_BUCKET, "tables/GameText Shared Data.json", true, true);
