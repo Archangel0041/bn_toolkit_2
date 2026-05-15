@@ -675,15 +675,35 @@ function MissionDetailPanel({
               {mission.objectives.map((o, i) => {
                 const title = o.title ? localize(o.title, o.title) : `Objective ${i + 1}`;
                 const desc = o.description ? localize(o.description, o.description) : "";
+                const typeLabel = o.type
+                  ? o.type.replace(/_prereq_config$/, "").replace(/_/g, " ")
+                  : "";
+                let detail = "";
+                if (o.unitId != null) {
+                  const u = unitsById?.get(o.unitId);
+                  const lname = u?.name ? localize(u.name, u.name) : `Unit #${o.unitId}`;
+                  detail = `${o.count ?? 1}× ${lname}`;
+                } else if (o.opponentId != null) {
+                  detail = `Opponent #${o.opponentId}`;
+                } else if (o.count != null) {
+                  detail = `${o.count}×`;
+                }
                 return (
                   <li key={i} className="rounded border bg-muted/30 px-2 py-1">
                     <div className="font-medium">{title}</div>
                     {desc && desc !== title && (
                       <div className="text-[11px] text-muted-foreground">{desc}</div>
                     )}
-                    {o.type && (
-                      <div className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground/70">
-                        {o.type.replace(/_prereq_config$/, "").replace(/_/g, " ")}
+                    {(typeLabel || detail) && (
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/80">
+                        {typeLabel && (
+                          <span className="uppercase tracking-wide">{typeLabel}</span>
+                        )}
+                        {detail && (
+                          <span className="rounded bg-muted px-1 py-px font-medium tabular-nums text-foreground">
+                            {detail}
+                          </span>
+                        )}
                       </div>
                     )}
                   </li>
