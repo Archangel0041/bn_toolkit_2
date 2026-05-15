@@ -29,6 +29,7 @@ interface MissionTreeProps {
   edges: MissionEdge[];
   availableNow?: Set<number>;
   highlightId?: number;
+  characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
