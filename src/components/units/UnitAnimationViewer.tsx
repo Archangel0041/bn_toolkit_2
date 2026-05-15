@@ -65,6 +65,27 @@ function deriveStem(iconName: string): string {
   return iconName.replace(/_icon$/i, "").replace(/\.png$/i, "");
 }
 
+// Module-level cache for the animation_file_map.json (animationName -> stem).
+let fileMapPromise: Promise<Record<string, string>> | null = null;
+function getFileMap(): Promise<Record<string, string>> {
+  if (!fileMapPromise) {
+    fileMapPromise = loadAnimationFileMap()
+      .then((raw) => {
+        const out: Record<string, string> = {};
+        for (const k in raw) {
+          const f = raw[k]?.file;
+          if (typeof f === "string" && f) out[k] = f;
+        }
+        return out;
+      })
+      .catch((e) => {
+        fileMapPromise = null;
+        throw e;
+      });
+  }
+  return fileMapPromise;
+}
+
 function autoScaleFor(bbox: BBox): number {
   const w = Math.max(1, bbox.gx1 - bbox.gx0);
   const h = Math.max(1, bbox.gy1 - bbox.gy0);
