@@ -310,16 +310,23 @@ export default function MissionsView() {
               placeholder="Type a mission name…"
             />
             <p className="text-xs text-muted-foreground">
-              Add at least one mission to continue.
+              Add at least one mission, or skip to preview the next {UPCOMING_LEVELS} levels of upcoming missions.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center gap-2 pt-2">
             <Button
-              onClick={() => setSetupComplete(true)}
+              onClick={() => { setShowUpcoming(false); setSetupComplete(true); }}
               disabled={!raw || visibleIds.size === 0}
             >
               {raw ? "Show mission tree" : "Loading missions…"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setShowUpcoming(true); setSetupComplete(true); }}
+              disabled={!raw}
+            >
+              Just show upcoming (lvl {currentLevel + 1}–{Math.min(levelCap, currentLevel + UPCOMING_LEVELS)})
             </Button>
           </div>
         </div>
