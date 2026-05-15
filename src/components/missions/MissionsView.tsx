@@ -19,6 +19,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 const COMPLETED_KEY = "missions:completed";
 const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
+const SETUP_KEY = "missions:setupComplete";
 
 export default function MissionsView() {
   const { accountLevel } = useAccountLevel();
@@ -26,7 +27,7 @@ export default function MissionsView() {
   const [raw, setRaw] = useState<Record<string, any[]> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [mode, setMode] = useState<"all" | "remaining">("all");
+  const [mode, setMode] = useState<"all" | "remaining">("remaining");
   const [search, setSearch] = useState("");
   const [currentLevel, setCurrentLevel] = useState(accountLevel);
   const [completedText, setCompletedText] = useState<string>(
@@ -38,6 +39,13 @@ export default function MissionsView() {
   const [hideAbove, setHideAbove] = useState<boolean>(
     () => localStorage.getItem(HIDE_ABOVE_KEY) === "1"
   );
+  const [setupComplete, setSetupComplete] = useState<boolean>(
+    () => localStorage.getItem(SETUP_KEY) === "1"
+  );
+
+  useEffect(() => {
+    localStorage.setItem(SETUP_KEY, setupComplete ? "1" : "0");
+  }, [setupComplete]);
 
   useEffect(() => setCurrentLevel(accountLevel), [accountLevel]);
 
@@ -144,14 +152,106 @@ export default function MissionsView() {
     );
   }, [visibleMissions]);
 
+  // Setup gate: until the user fills in their current visible missions (or chooses
+  // to skip), don't render the giant graph at all.
+  if (!setupComplete) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-1">Mission Tree</h1>
+          <p className="text-muted-foreground text-sm">
+            Tell us what missions you currently have so we can show you only what's
+            still ahead. Anything at or below your level that isn't in your visible list
+            is assumed already done (along with its prerequisites).
+          </p>
+        </div>
+
+        {error && (
+          <div className="rounded border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+            Failed to load missions: {error}
+          </div>
+        )}
+
+        <div className="rounded-lg border p-4 space-y-4 max-w-2xl">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="setup-level" className="text-sm font-medium">
+              Your current player level
+            </Label>
+            <Input
+              id="setup-level"
+              type="number"
+              className="w-32"
+              min={1}
+              max={200}
+              value={currentLevel}
+              onChange={(e) => setCurrentLevel(parseInt(e.target.value || "1", 10))}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="setup-visible" className="text-sm font-medium">
+              My current missions (IDs from your in-game mission list)
+            </Label>
+            <Textarea
+              id="setup-visible"
+              className="mt-1 font-mono text-xs"
+              rows={4}
+              placeholder="e.g. 42, 87, 103 …"
+              value={visibleText}
+              onChange={(e) => setVisibleText(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma or space separated. {visibleIds.size} parsed.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="setup-completed" className="text-sm font-medium">
+              Optionally: explicitly completed mission IDs
+            </Label>
+            <Textarea
+              id="setup-completed"
+              className="mt-1 font-mono text-xs"
+              rows={2}
+              placeholder="1, 2, 5 …"
+              value={completedText}
+              onChange={(e) => setCompletedText(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <Button onClick={() => setSetupComplete(true)} disabled={!raw}>
+              {raw ? "Show mission tree" : "Loading missions…"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setMode("all");
+                setSetupComplete(true);
+              }}
+              disabled={!raw}
+            >
+              Skip — show all missions
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-3xl font-bold mb-1">Mission Tree</h1>
-        <p className="text-muted-foreground text-sm">
-          All missions grouped by required player level. Edges flow from prerequisite to
-          dependent. {raw ? `${allParsed.length} missions loaded.` : "Loading…"}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold mb-1">Mission Tree</h1>
+          <p className="text-muted-foreground text-sm">
+            Grouped by required player level. Edges flow from prerequisite to dependent.{" "}
+            {raw ? `${allParsed.length} missions loaded.` : "Loading…"}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setSetupComplete(false)}>
+          Edit setup
+        </Button>
       </div>
 
       <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
@@ -198,13 +298,13 @@ export default function MissionsView() {
         <div className="grid gap-3 rounded-lg border p-3 md:grid-cols-2">
           <div>
             <Label htmlFor="visible-ids" className="text-xs">
-              Visible mission IDs (currently in your in-game list)
+              My current missions (visible in-game)
             </Label>
             <Textarea
               id="visible-ids"
               className="mt-1 font-mono text-xs"
               rows={2}
-              placeholder="e.g. 42, 87, 103 — anything at or below your level not in this list is assumed done (with its prereqs)"
+              placeholder="e.g. 42, 87, 103"
               value={visibleText}
               onChange={(e) => setVisibleText(e.target.value)}
             />

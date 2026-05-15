@@ -135,12 +135,12 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
       target: String(e.to),
       type: "smoothstep",
       style: {
-        stroke: "hsl(var(--muted-foreground))",
-        strokeWidth: 1.2,
+        stroke: "hsl(var(--primary))",
+        strokeWidth: 2,
         strokeDasharray: EDGE_DASH[e.type],
-        opacity: 0.55,
+        opacity: 0.85,
       },
-      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--muted-foreground))" },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary))", width: 18, height: 18 },
     }));
 
     return { rfNodes, rfEdges, levels, rowY };
@@ -172,8 +172,8 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-          minZoom={0.05}
+          fitViewOptions={{ padding: 0.15, maxZoom: 1, minZoom: 0.5 }}
+          minZoom={0.4}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
         >
