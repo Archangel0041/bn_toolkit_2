@@ -180,8 +180,8 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
     return inChain;
   }, [pinnedId, forward, backward]);
 
-  const { rfNodes, rfEdges, levels, rowY } = useMemo(() => {
-    const { positions, levels, rowY } = layout(missions, edges);
+  const { rfNodes, rfEdges } = useMemo(() => {
+    const { positions } = layout(missions, edges);
     const rfNodes: Node[] = missions.map((m) => {
       const pos = positions.get(m.id) ?? { x: 0, y: 0 };
       const localized = t(m.title);
