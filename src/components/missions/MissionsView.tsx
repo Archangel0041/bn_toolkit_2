@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadMissions, loadCharacters, loadNpcs, loadDialogues, loadJobInfo, loadEncounters, type CharacterEntry, type NpcEntry, type DialogueLine, type JobInfoEntry, type EncounterEntry } from "@/lib/dataLoader";
 import {
   parseMissions,
@@ -39,6 +39,53 @@ const parseIdText = (s: string): Set<number> => {
 const titleCase = (s: string) =>
   s.replace(/[_-]+/g, " ").trim().split(/\s+/)
     .map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)).join(" ");
+
+/**
+ * Number input that lets the user fully clear / retype the value without
+ * snapping to a fallback (like 1) on every keystroke. The committed number
+ * is only updated when the input parses to a valid number; otherwise the
+ * raw text is preserved locally. On blur, an empty / invalid value reverts
+ * to the last committed number.
+ */
+function LevelInput({
+  id, value, onChange, className, min = 1, max = 200,
+}: {
+  id?: string;
+  value: number;
+  onChange: (n: number) => void;
+  className?: string;
+  min?: number;
+  max?: number;
+}) {
+  const [text, setText] = useState(String(value));
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!focusedRef.current) setText(String(value));
+  }, [value]);
+  return (
+    <Input
+      id={id}
+      type="number"
+      className={className}
+      min={min}
+      max={max}
+      value={text}
+      onFocus={() => { focusedRef.current = true; }}
+      onChange={(e) => {
+        const v = e.target.value;
+        setText(v);
+        const n = parseInt(v, 10);
+        if (!isNaN(n)) onChange(n);
+      }}
+      onBlur={() => {
+        focusedRef.current = false;
+        const n = parseInt(text, 10);
+        if (isNaN(n)) setText(String(value));
+        else setText(String(n));
+      }}
+    />
+  );
+}
 
 export default function MissionsView() {
   const { accountLevel } = useAccountLevel();
@@ -268,26 +315,20 @@ export default function MissionsView() {
               <Label htmlFor="setup-level" className="text-sm font-medium">
                 Current player level
               </Label>
-              <Input
+              <LevelInput
                 id="setup-level"
-                type="number"
-                min={1}
-                max={200}
                 value={currentLevel}
-                onChange={(e) => setCurrentLevel(parseInt(e.target.value || "1", 10))}
+                onChange={setCurrentLevel}
               />
             </div>
             <div className="flex flex-col gap-1">
               <Label htmlFor="setup-cap" className="text-sm font-medium">
                 Level cap
               </Label>
-              <Input
+              <LevelInput
                 id="setup-cap"
-                type="number"
-                min={1}
-                max={200}
                 value={levelCap}
-                onChange={(e) => setLevelCap(parseInt(e.target.value || "1", 10))}
+                onChange={setLevelCap}
               />
             </div>
           </div>
@@ -368,27 +409,21 @@ export default function MissionsView() {
 
         <div className="flex flex-col gap-1">
           <Label htmlFor="current-level" className="text-xs">Current level</Label>
-          <Input
+          <LevelInput
             id="current-level"
-            type="number"
             className="w-24"
-            min={1}
-            max={200}
             value={currentLevel}
-            onChange={(e) => setCurrentLevel(parseInt(e.target.value || "1", 10))}
+            onChange={setCurrentLevel}
           />
         </div>
 
         <div className="flex flex-col gap-1">
           <Label htmlFor="level-cap" className="text-xs">Level cap</Label>
-          <Input
+          <LevelInput
             id="level-cap"
-            type="number"
             className="w-24"
-            min={1}
-            max={200}
             value={levelCap}
-            onChange={(e) => setLevelCap(parseInt(e.target.value || "1", 10))}
+            onChange={setLevelCap}
           />
         </div>
 
