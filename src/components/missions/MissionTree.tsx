@@ -42,13 +42,13 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   for (const e of edges) g.setEdge(String(e.from), String(e.to));
   dagre.layout(g);
 
-  const levels = Array.from(new Set(missions.map((m) => m.level))).sort((a, b) => a - b);
+  const levels = Array.from(new Set(missions.map((m) => m.displayLevel))).sort((a, b) => a - b);
   const rowY = new Map(levels.map((lvl, i) => [lvl, i * ROW_H + 40]));
 
   const positions = new Map<number, { x: number; y: number }>();
   for (const m of missions) {
     const node = g.node(String(m.id));
-    positions.set(m.id, { x: node?.x ?? 0, y: rowY.get(m.level) ?? 0 });
+    positions.set(m.id, { x: node?.x ?? 0, y: rowY.get(m.displayLevel) ?? 0 });
   }
   return { positions, levels, rowY };
 }
@@ -112,7 +112,7 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
       const title = localized && localized !== m.title ? localized : m.title;
       const data: MissionNodeData = {
         title,
-        level: m.level,
+        level: m.displayLevel,
         giver: m.giver,
         otherCount: m.otherPrereqCount,
         otherTypes: m.otherPrereqTypes,

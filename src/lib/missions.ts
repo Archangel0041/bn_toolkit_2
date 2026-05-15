@@ -15,8 +15,10 @@ export interface ParsedMission {
   title: string;
   description?: string;
   giver?: string;
-  /** Highest player_level requirement found in start_rules + objective completion rules. */
+  /** Highest player_level requirement found directly on this mission. */
   level: number;
+  /** Effective level after propagating prerequisite mission levels (max of self + all required prereqs). */
+  displayLevel: number;
   prereqMissionIds: {
     all: number[]; // complete_all_missions_prereq_config
     any: number[]; // complete_any_mission_prereq_config
@@ -109,12 +111,43 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
       description: identity.description,
       giver: identity.giver,
       level,
+      displayLevel: level,
       prereqMissionIds,
       otherPrereqCount,
       otherPrereqTypes,
     });
   }
-  return out.sort((a, b) => a.level - b.level || a.id - b.id);
+
+  // Propagate level: a mission's displayLevel is max(its own level, displayLevel of every prereq it strictly requires).
+  // We only propagate via "all" (complete-all) and "any" (complete-any) rules — those gate availability.
+  // For "any" we take the MIN of the alternatives (the easiest path), then max with self.
+  const byId = new Map(out.map((m) => [m.id, m]));
+  const memo = new Map<number, number>();
+  const stack = new Set<number>();
+  const compute = (id: number): number => {
+    if (memo.has(id)) return memo.get(id)!;
+    if (stack.has(id)) return byId.get(id)?.level ?? 1; // cycle guard
+    const m = byId.get(id);
+    if (!m) return 0;
+    stack.add(id);
+    let lvl = m.level;
+    for (const pid of m.prereqMissionIds.all) {
+      lvl = Math.max(lvl, compute(pid));
+    }
+    if (m.prereqMissionIds.any.length > 0) {
+      let easiest = Infinity;
+      for (const pid of m.prereqMissionIds.any) {
+        easiest = Math.min(easiest, compute(pid));
+      }
+      if (easiest !== Infinity) lvl = Math.max(lvl, easiest);
+    }
+    stack.delete(id);
+    memo.set(id, lvl);
+    return lvl;
+  };
+  for (const m of out) m.displayLevel = compute(m.id);
+
+  return out.sort((a, b) => a.displayLevel - b.displayLevel || a.id - b.id);
 }
 
 export function buildMissionIndex(missions: ParsedMission[]): Map<number, ParsedMission> {
@@ -163,12 +196,12 @@ export function filterRemaining(
   const { currentLevel, completedIds, hideAboveLevel } = filter;
   const remaining = missions.filter((m) => {
     if (completedIds.has(m.id)) return false;
-    if (hideAboveLevel && m.level > currentLevel) return false;
+    if (hideAboveLevel && m.displayLevel > currentLevel) return false;
     return true;
   });
   const availableNow = new Set<number>();
   for (const m of remaining) {
-    if (m.level > currentLevel) continue;
+    if (m.displayLevel > currentLevel) continue;
     const allOk = m.prereqMissionIds.all.every((id) => completedIds.has(id));
     const anyOk =
       m.prereqMissionIds.any.length === 0 ||

@@ -73,7 +73,7 @@ export default function MissionsView() {
       missions = r.remaining;
       availableNow = r.availableNow;
     } else {
-      missions = hideAbove ? allParsed.filter((m) => m.level <= currentLevel) : allParsed;
+      missions = hideAbove ? allParsed.filter((m) => m.displayLevel <= currentLevel) : allParsed;
     }
 
     if (search.trim()) {
