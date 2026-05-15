@@ -19,6 +19,10 @@ export interface ParsedObjective {
   title?: string;
   description?: string;
   type?: string;
+  count?: number;
+  unitId?: number;
+  opponentId?: number;
+  prereqRaw?: Record<string, unknown>;
 }
 
 export interface ParsedMission {
