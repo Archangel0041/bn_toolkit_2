@@ -64,14 +64,17 @@ export default function MissionsView() {
   );
   const [levelCap, setLevelCap] = useState<number>(() => {
     const saved = parseInt(localStorage.getItem(LEVEL_CAP_KEY) ?? "", 10);
-    return isNaN(saved) ? accountLevel : saved;
+    if (!isNaN(saved)) return saved;
+    return Math.max(65, accountLevel);
   });
   const [setupComplete, setSetupComplete] = useState<boolean>(false);
 
   // Account level from settings is the source of truth — keep both inputs in sync.
+  // Level cap floors at the player's current level but never auto-shrinks below 65
+  // so newly-unlocked / continuation missions remain visible by default.
   useEffect(() => {
     setCurrentLevel(accountLevel);
-    setLevelCap((cur) => (cur < accountLevel ? accountLevel : cur));
+    setLevelCap((cur) => Math.max(cur, accountLevel, 65));
   }, [accountLevel]);
 
   useEffect(() => {
