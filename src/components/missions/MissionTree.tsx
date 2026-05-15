@@ -97,7 +97,7 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   //  - chains = weakly-connected components using only edges where BOTH endpoints share this level.
   //  - within a chain, sub-row = longest-path depth from a chain source (vertical stacking of related missions).
   //  - chains sit side-by-side (different columns) within the band.
-  let cursorY = 0;
+  const levelLayouts: { comps: { ids: number[]; minX: number; maxDepth: number }[] }[] = [];
   for (const level of sortedLevels) {
     const bandMissions = byLevel.get(level) ?? [];
     const bandIds = new Set(bandMissions.map((m) => m.id));
@@ -164,18 +164,26 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
     });
     compList.sort((a, b) => a.minX - b.minX);
 
-    const bandMaxDepth = compList.reduce((m, c) => Math.max(m, c.maxDepth), 0);
-    const numCols = compList.length;
-    const totalWidth = Math.max(0, (numCols - 1) * (NODE_W + COL_GAP));
-    compList.forEach((comp, colIdx) => {
-      const x = colIdx * (NODE_W + COL_GAP) - totalWidth / 2;
-      for (const id of comp.ids) {
-        const depth = depthMemo.get(id) ?? 0;
-        positions.set(id, { x, y: cursorY + depth * SUB_ROW_GAP });
-      }
-    });
+    levelLayouts.push({ comps: compList });
+  }
 
-    cursorY += (bandMaxDepth + 1) * SUB_ROW_GAP + BAND_GAP;
+  const columnCursors = new Map<number, number>();
+  const colStep = NODE_W + COL_GAP;
+  const nominalLevelStep = SUB_ROW_GAP + BAND_GAP;
+  levelLayouts.forEach(({ comps }, levelIdx) => {
+    const numCols = comps.length;
+    const nominalY = levelIdx * nominalLevelStep;
+    comps.forEach((comp, colIdx) => {
+      const columnKey = colIdx - (numCols - 1) / 2;
+      const x = columnKey * colStep;
+      const baseY = Math.max(columnCursors.get(columnKey) ?? 0, nominalY);
+      for (const id of comp.ids) {
+        const depth = comp.ids.indexOf(id);
+        positions.set(id, { x, y: baseY + depth * SUB_ROW_GAP });
+      }
+      columnCursors.set(columnKey, baseY + (comp.maxDepth + 1) * SUB_ROW_GAP + BAND_GAP);
+    });
+  });
   }
 
   const allPos = [...positions.values()];
