@@ -125,8 +125,8 @@ export const UnitFilters = forwardRef<HTMLDivElement, UnitFiltersProps>(function
 
   return (
     <div ref={ref} className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex flex-col sm:flex-row gap-3 sm:flex-wrap">
+        <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by ID or name..."
@@ -135,6 +135,7 @@ export const UnitFilters = forwardRef<HTMLDivElement, UnitFiltersProps>(function
             className="pl-10"
           />
         </div>
+        <div className="grid grid-cols-2 gap-2 sm:contents">
 
         <Select value={nanopodFilter} onValueChange={(v) => setNanopodFilter(v as typeof nanopodFilter)}>
           <SelectTrigger className="w-[140px]">
@@ -295,8 +296,10 @@ export const UnitFilters = forwardRef<HTMLDivElement, UnitFiltersProps>(function
           </PopoverContent>
         </Popover>
 
+        </div>
+
         {hasFilters && (
-          <Button variant="ghost" onClick={clearFilters} className="gap-2">
+          <Button variant="ghost" onClick={clearFilters} className="gap-2 col-span-2 sm:col-auto">
             <X className="h-4 w-4" />
             Clear
           </Button>
