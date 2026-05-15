@@ -12,18 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useGameData } from "@/contexts/GameDataContext";
 import { getResourceIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
 
-const COMPLETED_KEY = "missions:completed";
 const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
 const LEVEL_CAP_KEY = "missions:levelCap";
-const SETUP_KEY = "missions:setupComplete";
 
 const idsToText = (ids: number[]) =>
   [...new Set(ids)].sort((a, b) => a - b).join(", ");
@@ -52,16 +49,13 @@ export default function MissionsView() {
     }
     return map;
   }, [gameData?.parsedUnits]);
+
   const [raw, setRaw] = useState<Record<string, any[]> | null>(null);
   const [characters, setCharacters] = useState<Record<string, CharacterEntry>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const [mode, setMode] = useState<"all" | "remaining">("remaining");
   const [search, setSearch] = useState("");
   const [currentLevel, setCurrentLevel] = useState(accountLevel);
-  const [completedText, setCompletedText] = useState<string>(
-    () => localStorage.getItem(COMPLETED_KEY) ?? ""
-  );
   const [visibleText, setVisibleText] = useState<string>(
     () => localStorage.getItem(VISIBLE_KEY) ?? ""
   );
@@ -72,10 +66,13 @@ export default function MissionsView() {
     const saved = parseInt(localStorage.getItem(LEVEL_CAP_KEY) ?? "", 10);
     return isNaN(saved) ? accountLevel : saved;
   });
-  // Always start gated on tab mount — user must explicitly click "Show mission tree".
   const [setupComplete, setSetupComplete] = useState<boolean>(false);
 
-  useEffect(() => setCurrentLevel(accountLevel), [accountLevel]);
+  // Account level from settings is the source of truth — keep both inputs in sync.
+  useEffect(() => {
+    setCurrentLevel(accountLevel);
+    setLevelCap((cur) => (cur < accountLevel ? accountLevel : cur));
+  }, [accountLevel]);
 
   useEffect(() => {
     loadMissions()
@@ -88,12 +85,8 @@ export default function MissionsView() {
 
   const allParsed = useMemo(() => (raw ? parseMissions(raw) : []), [raw]);
 
-  const completedIds = useMemo(() => parseIdText(completedText), [completedText]);
   const visibleIds = useMemo(() => parseIdText(visibleText), [visibleText]);
 
-  useEffect(() => {
-    localStorage.setItem(COMPLETED_KEY, completedText);
-  }, [completedText]);
   useEffect(() => {
     localStorage.setItem(VISIBLE_KEY, visibleText);
   }, [visibleText]);
@@ -104,21 +97,21 @@ export default function MissionsView() {
     localStorage.setItem(LEVEL_CAP_KEY, String(levelCap));
   }, [levelCap]);
 
+  // If user clears their current missions, force them back into setup.
+  useEffect(() => {
+    if (setupComplete && visibleIds.size === 0) setSetupComplete(false);
+  }, [setupComplete, visibleIds]);
+
   /**
-   * Inferred-completed logic:
-   *   A mission is presumed COMPLETE if it is at/below current level AND it is
-   *   neither one of the user's currently-visible missions nor a downstream
-   *   dependent of one. Rationale: if a visible mission doesn't require it,
-   *   the user has already moved past it.
-   *   We also always mark the prereq chain of visible missions complete (those
-   *   may be above current level if propagation pushed them up).
+   * Inferred-completed: anything at/below current level that isn't a visible
+   * mission and isn't downstream of one is presumed already done. Plus the
+   * full prereq chain of every visible mission.
    */
   const effectiveCompletedIds = useMemo(() => {
-    const completed = new Set(completedIds);
+    const completed = new Set<number>();
     if (allParsed.length === 0) return completed;
     const byId = new Map(allParsed.map((m) => [m.id, m]));
 
-    // 1. Walk prereq chain of each visible mission -> mark complete.
     const markPrereqs = (id: number, seen = new Set<number>()) => {
       if (seen.has(id)) return;
       seen.add(id);
@@ -137,8 +130,6 @@ export default function MissionsView() {
 
     if (visibleIds.size === 0) return completed;
 
-    // 2. Compute downstream set of visible missions (missions that depend on
-    //    them, transitively) — these are NOT completed.
     const dependents = new Map<number, Set<number>>();
     for (const m of allParsed) {
       for (const pid of [...m.prereqMissionIds.all, ...m.prereqMissionIds.any]) {
@@ -158,8 +149,6 @@ export default function MissionsView() {
       }
     }
 
-    // 3. Anything at/below current level that isn't visible and isn't
-    //    downstream of a visible mission is presumed complete.
     for (const m of allParsed) {
       if (m.displayLevel > currentLevel) continue;
       if (visibleIds.has(m.id)) continue;
@@ -167,23 +156,19 @@ export default function MissionsView() {
       completed.add(m.id);
     }
     return completed;
-  }, [allParsed, completedIds, visibleIds, currentLevel]);
+  }, [allParsed, visibleIds, currentLevel]);
+
+  // Effective cap: when "Cap at current level" is on, only show up to current
+  // level. Otherwise show up to user-defined level cap.
+  const effectiveCap = hideAbove ? currentLevel : levelCap;
 
   const { visibleMissions, availableNow } = useMemo(() => {
-    let missions: ParsedMission[];
-    let availableNow: Set<number> | undefined;
-    const cap = Math.max(currentLevel, levelCap);
-    if (mode === "remaining") {
-      const r = filterRemaining(allParsed, {
-        currentLevel,
-        completedIds: effectiveCompletedIds,
-        hideAboveLevel: false,
-      });
-      missions = hideAbove ? r.remaining.filter((m) => m.displayLevel <= cap) : r.remaining;
-      availableNow = r.availableNow;
-    } else {
-      missions = hideAbove ? allParsed.filter((m) => m.displayLevel <= cap) : allParsed;
-    }
+    const r = filterRemaining(allParsed, {
+      currentLevel,
+      completedIds: effectiveCompletedIds,
+      hideAboveLevel: false,
+    });
+    let missions = r.remaining.filter((m) => m.displayLevel <= effectiveCap);
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -197,8 +182,8 @@ export default function MissionsView() {
         );
       });
     }
-    return { visibleMissions: missions, availableNow };
-  }, [allParsed, mode, currentLevel, levelCap, effectiveCompletedIds, hideAbove, search, t]);
+    return { visibleMissions: missions, availableNow: r.availableNow };
+  }, [allParsed, currentLevel, effectiveCap, effectiveCompletedIds, search, t]);
 
   const rewardTotals = useMemo(() => {
     const resources: Record<string, number> = {};
@@ -229,8 +214,8 @@ export default function MissionsView() {
           <h1 className="text-3xl font-bold mb-1">Mission Tree</h1>
           <p className="text-muted-foreground text-sm">
             Tell us what missions you currently have so we can show you only what's
-            still ahead. Anything at or below your level that isn't in your visible list
-            is assumed already done (along with its prerequisites).
+            still ahead. Anything at or below your level that isn't in your visible
+            list is assumed already done (along with its prerequisites).
           </p>
         </div>
 
@@ -241,19 +226,40 @@ export default function MissionsView() {
         )}
 
         <div className="rounded-lg border p-4 space-y-4 max-w-2xl">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="setup-level" className="text-sm font-medium">
-              Your current player level
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="setup-level" className="text-sm font-medium">
+                Current player level
+              </Label>
+              <Input
+                id="setup-level"
+                type="number"
+                min={1}
+                max={200}
+                value={currentLevel}
+                onChange={(e) => setCurrentLevel(parseInt(e.target.value || "1", 10))}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="setup-cap" className="text-sm font-medium">
+                Level cap
+              </Label>
+              <Input
+                id="setup-cap"
+                type="number"
+                min={1}
+                max={200}
+                value={levelCap}
+                onChange={(e) => setLevelCap(parseInt(e.target.value || "1", 10))}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Switch id="setup-hide-above" checked={hideAbove} onCheckedChange={setHideAbove} />
+            <Label htmlFor="setup-hide-above" className="text-sm">
+              Cap at current level
             </Label>
-            <Input
-              id="setup-level"
-              type="number"
-              className="w-32"
-              min={1}
-              max={200}
-              value={currentLevel}
-              onChange={(e) => setCurrentLevel(parseInt(e.target.value || "1", 10))}
-            />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -266,33 +272,17 @@ export default function MissionsView() {
               onChange={(ids) => setVisibleText(idsToText(ids))}
               placeholder="Type a mission name…"
             />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm font-medium">
-              Optionally: explicitly completed missions
-            </Label>
-            <MissionPicker
-              missions={allParsed}
-              selectedIds={completedIds}
-              onChange={(ids) => setCompletedText(idsToText(ids))}
-              placeholder="Search a completed mission…"
-            />
+            <p className="text-xs text-muted-foreground">
+              Add at least one mission to continue.
+            </p>
           </div>
 
           <div className="flex items-center gap-2 pt-2">
-            <Button onClick={() => setSetupComplete(true)} disabled={!raw}>
-              {raw ? "Show mission tree" : "Loading missions…"}
-            </Button>
             <Button
-              variant="ghost"
-              onClick={() => {
-                setMode("all");
-                setSetupComplete(true);
-              }}
-              disabled={!raw}
+              onClick={() => setSetupComplete(true)}
+              disabled={!raw || visibleIds.size === 0}
             >
-              Skip — show all missions
+              {raw ? "Show mission tree" : "Loading missions…"}
             </Button>
           </div>
         </div>
@@ -306,7 +296,7 @@ export default function MissionsView() {
         <div>
           <h1 className="text-3xl font-bold mb-1">Mission Tree</h1>
           <p className="text-muted-foreground text-sm">
-            Grouped by required player level. Edges flow from prerequisite to dependent.{" "}
+            Showing remaining missions up to level {effectiveCap}.{" "}
             {raw ? `${allParsed.length} missions loaded.` : "Loading…"}
           </p>
         </div>
@@ -315,17 +305,7 @@ export default function MissionsView() {
         </Button>
       </div>
 
-      <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[auto_1fr_auto_auto_auto] sm:items-end">
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">Mode</Label>
-          <Tabs value={mode} onValueChange={(v) => setMode(v as "all" | "remaining")}>
-            <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="remaining">Remaining</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
+      <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
         <div className="flex flex-col gap-1">
           <Label htmlFor="mission-search" className="text-xs">Search</Label>
           <Input
@@ -364,51 +344,26 @@ export default function MissionsView() {
 
         <div className="flex items-center gap-2">
           <Switch id="hide-above" checked={hideAbove} onCheckedChange={setHideAbove} />
-          <Label htmlFor="hide-above" className="text-xs">Cap at level cap</Label>
+          <Label htmlFor="hide-above" className="text-xs">Cap at current level</Label>
         </div>
       </div>
 
-      {mode === "remaining" && (
-        <div className="grid gap-3 rounded-lg border p-3 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs">My current missions (search by name)</Label>
-            <MissionPicker
-              missions={allParsed}
-              selectedIds={visibleIds}
-              onChange={(ids) => setVisibleText(idsToText(ids))}
-              placeholder="Type a mission name…"
-            />
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>{visibleIds.size} visible</span>
-              {visibleIds.size > 0 && (
-                <>
-                  <span>·</span>
-                  <span>
-                    {effectiveCompletedIds.size - completedIds.size} inferred done
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Explicitly completed missions</Label>
-            <MissionPicker
-              missions={allParsed}
-              selectedIds={completedIds}
-              onChange={(ids) => setCompletedText(idsToText(ids))}
-              placeholder="Search a completed mission…"
-            />
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>{completedIds.size} marked complete</span>
-              <span>·</span>
-              <span>{effectiveCompletedIds.size} total complete</span>
-              <span>·</span>
-              <span>{availableNow?.size ?? 0} available now</span>
-            </div>
-          </div>
+      <div className="rounded-lg border p-3 space-y-1.5">
+        <Label className="text-xs">My current missions (search by name)</Label>
+        <MissionPicker
+          missions={allParsed}
+          selectedIds={visibleIds}
+          onChange={(ids) => setVisibleText(idsToText(ids))}
+          placeholder="Type a mission name…"
+        />
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>{visibleIds.size} visible</span>
+          <span>·</span>
+          <span>{effectiveCompletedIds.size} inferred done</span>
+          <span>·</span>
+          <span>{availableNow?.size ?? 0} available now</span>
         </div>
-      )}
+      </div>
 
       {error && (
         <div className="rounded border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
