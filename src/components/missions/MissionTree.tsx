@@ -586,6 +586,11 @@ function MissionDetailPanel({
           </p>
         )}
 
+        <DialogSection title="Pre-mission Dialog" baseKey={mission.title} suffix="10startdialog" t={t} />
+        <DialogSection title="Hint" baseKey={mission.title} suffix="20hint" t={t} defaultOpen />
+        <DialogSection title="Completion Dialog" baseKey={mission.title} suffix="70enddialog" t={t} />
+        <DialogSection title="Reward Dialog" baseKey={mission.title} suffix="60reward" t={t} />
+
         <section>
           <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Objectives ({mission.objectives.length})
@@ -602,6 +607,11 @@ function MissionDetailPanel({
                     <div className="font-medium">{title}</div>
                     {desc && desc !== title && (
                       <div className="text-[11px] text-muted-foreground">{desc}</div>
+                    )}
+                    {o.type && (
+                      <div className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                        {o.type.replace(/_prereq_config$/, "").replace(/_/g, " ")}
+                      </div>
                     )}
                   </li>
                 );
