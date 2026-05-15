@@ -7,6 +7,7 @@ const MENU_BG_PATH = "icons/boss_strikes";
 const ENCOUNTER_PATH = "icons/encounters";
 const MISSION_PATH = "icons/missions";
 const NPC_PATH = "icons/npcs";
+const JOB_PATH = "icons/jobs";
 
 export function getResourceIconUrl(resourceKey: string): string {
   const fileName = `resource_${resourceKey}.png`;
