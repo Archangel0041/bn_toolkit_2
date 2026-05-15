@@ -25,6 +25,8 @@ import type { DialogueLine, JobInfoEntry, EncounterEntry } from "@/lib/dataLoade
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl, getJobIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { EncounterGrid } from "@/components/encounters/EncounterGrid";
 
 const NODE_W = 240;
 const NODE_H = 96;
@@ -829,18 +831,36 @@ function MissionDetailPanel({
                             const ename = enc?.name ? localize(enc.name, enc.name) : `Encounter #${id}`;
                             const lvl = typeof enc?.level === "number" ? enc.level : undefined;
                             return (
-                              <Link
-                                key={id}
-                                to={`/battle/${id}`}
-                                title={`Open battle: ${ename}${lvl != null ? ` (Lv ${lvl})` : ""}`}
-                                className="inline-flex items-center gap-1 rounded border bg-background px-1.5 py-0.5 text-[10px] hover:bg-accent hover:text-accent-foreground transition-colors"
-                              >
-                                <Swords className="h-3 w-3" />
-                                <span className="max-w-[140px] truncate">{ename}</span>
-                                {lvl != null && (
-                                  <span className="text-muted-foreground">Lv{lvl}</span>
-                                )}
-                              </Link>
+                              <HoverCard key={id} openDelay={150} closeDelay={100}>
+                                <HoverCardTrigger asChild>
+                                  <a
+                                    href={`/battle/${id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={`Open battle: ${ename}${lvl != null ? ` (Lv ${lvl})` : ""}`}
+                                    className="inline-flex items-center gap-1 rounded border bg-background px-1.5 py-0.5 text-[10px] hover:bg-accent hover:text-accent-foreground transition-colors"
+                                  >
+                                    <Swords className="h-3 w-3" />
+                                    <span className="max-w-[140px] truncate">{ename}</span>
+                                    {lvl != null && (
+                                      <span className="text-muted-foreground">Lv{lvl}</span>
+                                    )}
+                                  </a>
+                                </HoverCardTrigger>
+                                <HoverCardContent className="w-auto p-2" side="top">
+                                  <div className="mb-1 text-xs font-semibold">
+                                    {ename}
+                                    {lvl != null && (
+                                      <span className="ml-1 text-muted-foreground font-normal">Lv {lvl}</span>
+                                    )}
+                                  </div>
+                                  {enc?.units && enc.units.length > 0 ? (
+                                    <EncounterGrid units={enc.units} compact />
+                                  ) : (
+                                    <div className="text-xs text-muted-foreground">No preview available</div>
+                                  )}
+                                </HoverCardContent>
+                              </HoverCard>
                             );
                           })}
                         </div>
