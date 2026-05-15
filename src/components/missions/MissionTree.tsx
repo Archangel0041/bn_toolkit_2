@@ -91,6 +91,8 @@ function MissionNode({ data }: { data: MissionNodeData }) {
         data.isDimmed ? "opacity-30" : "",
       ].join(" ")}
     >
+      <Handle type="target" position={Position.Top} style={{ background: "hsl(var(--primary))", width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: "hsl(var(--primary))", width: 8, height: 8 }} />
       <div className="flex items-start gap-2">
         {data.iconUrl && !imgFailed ? (
           <img
