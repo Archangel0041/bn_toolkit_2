@@ -22,6 +22,8 @@ export interface ParsedObjective {
   count?: number;
   unitId?: number;
   opponentId?: number;
+  icon?: string;
+  speakerNpcId?: number;
   prereqRaw?: Record<string, unknown>;
 }
 
