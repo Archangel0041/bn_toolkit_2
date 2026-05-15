@@ -49,7 +49,7 @@ export default function LevelsView() {
 
   const [search, setSearch] = useState("");
   const [showFutureOnly, setShowFutureOnly] = useState(false);
-  const [maxLevel, setMaxLevel] = useState(200);
+  const [maxLevel, setMaxLevel] = useState(70);
 
   useEffect(() => {
     let alive = true;
@@ -75,6 +75,10 @@ export default function LevelsView() {
   const levels = useMemo<ParsedLevel[]>(
     () => (rawLevels ? parseLevels(rawLevels) : []),
     [rawLevels]
+  );
+  const configMaxLevel = useMemo(
+    () => (levels.length ? levels[levels.length - 1].level : 70),
+    [levels]
   );
 
   const missions = useMemo<ParsedMission[]>(
@@ -168,11 +172,11 @@ export default function LevelsView() {
             id="lvl-cap"
             type="number"
             min={1}
-            max={200}
+            max={configMaxLevel}
             value={maxLevel}
             onChange={(e) => {
               const n = parseInt(e.target.value, 10);
-              if (!isNaN(n)) setMaxLevel(Math.max(1, Math.min(200, n)));
+              if (!isNaN(n)) setMaxLevel(Math.max(1, Math.min(configMaxLevel, n)));
             }}
           />
         </div>
