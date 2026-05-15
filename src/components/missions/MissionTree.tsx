@@ -50,35 +50,20 @@ function titleCase(input: string): string {
 
 function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 110, marginx: 50, marginy: 30 });
+  g.setGraph({ rankdir: "TB", nodesep: 40, ranksep: 80, marginx: 50, marginy: 30 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const m of missions) g.setNode(String(m.id), { width: NODE_W, height: NODE_H });
   for (const e of edges) g.setEdge(String(e.from), String(e.to));
   dagre.layout(g);
 
-  const levels = Array.from(new Set(missions.map((m) => m.displayLevel))).sort((a, b) => a - b);
-  const rowY = new Map(levels.map((lvl, i) => [lvl, i * ROW_H + 50]));
-
-  // Use dagre's x but force y per level row, and de-overlap nodes that land
-  // on the same row by spreading them along x.
+  // Use dagre's natural tree layout — it ranks nodes by dependency depth, so
+  // chains visibly cascade top-down instead of being squashed into level rows.
   const positions = new Map<number, { x: number; y: number }>();
-  const byLevel = new Map<number, ParsedMission[]>();
   for (const m of missions) {
-    if (!byLevel.has(m.displayLevel)) byLevel.set(m.displayLevel, []);
-    byLevel.get(m.displayLevel)!.push(m);
+    const node = g.node(String(m.id));
+    positions.set(m.id, { x: node?.x ?? 0, y: node?.y ?? 0 });
   }
-  for (const [lvl, list] of byLevel) {
-    list.sort((a, b) => (g.node(String(a.id))?.x ?? 0) - (g.node(String(b.id))?.x ?? 0));
-    const minGap = NODE_W + 28;
-    let lastX = -Infinity;
-    for (const m of list) {
-      const dagreX = g.node(String(m.id))?.x ?? 0;
-      const x = Math.max(dagreX, lastX + minGap);
-      lastX = x;
-      positions.set(m.id, { x, y: rowY.get(lvl) ?? 0 });
-    }
-  }
-  return { positions, levels, rowY };
+  return { positions };
 }
 
 interface MissionNodeData extends Record<string, unknown> {
