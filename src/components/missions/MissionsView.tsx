@@ -78,31 +78,33 @@ export default function MissionsView() {
   }, [hideAbove]);
 
   /**
-   * Inferred-completed: if a mission whose displayLevel ≤ currentLevel is *not* in the
-   * visible-missions list and not explicitly marked complete, assume the player already
-   * finished it — and recursively assume all of its mission prerequisites are done too.
+   * Inferred-completed: only the *prerequisite chain* of every visible mission is
+   * presumed done — because to currently see a mission, you must have completed
+   * its prereqs. We do NOT mark every sub-level mission as done; story missions
+   * unlock through narrative, not just level, so plenty are below your level
+   * without being touched yet.
    */
   const effectiveCompletedIds = useMemo(() => {
     const completed = new Set(completedIds);
     if (visibleIds.size === 0 || allParsed.length === 0) return completed;
 
     const byId = new Map(allParsed.map((m) => [m.id, m]));
-    const markCompleted = (id: number, depth = 0) => {
-      if (completed.has(id) || depth > 64) return;
-      completed.add(id);
+    const markPrereqs = (id: number, depth = 0) => {
+      if (depth > 128) return;
       const m = byId.get(id);
       if (!m) return;
-      for (const pid of m.prereqMissionIds.all) markCompleted(pid, depth + 1);
-      for (const pid of m.prereqMissionIds.any) markCompleted(pid, depth + 1);
-      for (const pid of m.prereqMissionIds.active) markCompleted(pid, depth + 1);
+      for (const pid of [
+        ...m.prereqMissionIds.all,
+        ...m.prereqMissionIds.any,
+        ...m.prereqMissionIds.active,
+      ]) {
+        if (completed.has(pid)) continue;
+        completed.add(pid);
+        markPrereqs(pid, depth + 1);
+      }
     };
 
-    for (const m of allParsed) {
-      if (m.displayLevel > currentLevel) continue;
-      if (visibleIds.has(m.id)) continue;
-      if (completed.has(m.id)) continue;
-      markCompleted(m.id);
-    }
+    for (const id of visibleIds) markPrereqs(id);
     return completed;
   }, [allParsed, completedIds, visibleIds, currentLevel]);
 

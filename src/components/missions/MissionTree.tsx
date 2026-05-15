@@ -3,7 +3,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   ReactFlowProvider,
   type Node,
   type Edge,
@@ -50,35 +49,20 @@ function titleCase(input: string): string {
 
 function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 110, marginx: 50, marginy: 30 });
+  g.setGraph({ rankdir: "TB", nodesep: 40, ranksep: 80, marginx: 50, marginy: 30 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const m of missions) g.setNode(String(m.id), { width: NODE_W, height: NODE_H });
   for (const e of edges) g.setEdge(String(e.from), String(e.to));
   dagre.layout(g);
 
-  const levels = Array.from(new Set(missions.map((m) => m.displayLevel))).sort((a, b) => a - b);
-  const rowY = new Map(levels.map((lvl, i) => [lvl, i * ROW_H + 50]));
-
-  // Use dagre's x but force y per level row, and de-overlap nodes that land
-  // on the same row by spreading them along x.
+  // Use dagre's natural tree layout — it ranks nodes by dependency depth, so
+  // chains visibly cascade top-down instead of being squashed into level rows.
   const positions = new Map<number, { x: number; y: number }>();
-  const byLevel = new Map<number, ParsedMission[]>();
   for (const m of missions) {
-    if (!byLevel.has(m.displayLevel)) byLevel.set(m.displayLevel, []);
-    byLevel.get(m.displayLevel)!.push(m);
+    const node = g.node(String(m.id));
+    positions.set(m.id, { x: node?.x ?? 0, y: node?.y ?? 0 });
   }
-  for (const [lvl, list] of byLevel) {
-    list.sort((a, b) => (g.node(String(a.id))?.x ?? 0) - (g.node(String(b.id))?.x ?? 0));
-    const minGap = NODE_W + 28;
-    let lastX = -Infinity;
-    for (const m of list) {
-      const dagreX = g.node(String(m.id))?.x ?? 0;
-      const x = Math.max(dagreX, lastX + minGap);
-      lastX = x;
-      positions.set(m.id, { x, y: rowY.get(lvl) ?? 0 });
-    }
-  }
-  return { positions, levels, rowY };
+  return { positions };
 }
 
 interface MissionNodeData extends Record<string, unknown> {
@@ -195,8 +179,8 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
     return inChain;
   }, [pinnedId, forward, backward]);
 
-  const { rfNodes, rfEdges, levels, rowY } = useMemo(() => {
-    const { positions, levels, rowY } = layout(missions, edges);
+  const { rfNodes, rfEdges } = useMemo(() => {
+    const { positions } = layout(missions, edges);
     const rfNodes: Node[] = missions.map((m) => {
       const pos = positions.get(m.id) ?? { x: 0, y: 0 };
       const localized = t(m.title);
@@ -239,7 +223,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
       };
     });
 
-    return { rfNodes, rfEdges, levels, rowY };
+    return { rfNodes, rfEdges };
   }, [missions, edges, availableNow, highlightId, t, chain, pinnedId]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
@@ -267,42 +251,28 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
 
   return (
     <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-card overflow-hidden">
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 border-r bg-background/40 backdrop-blur-sm">
-        {levels.map((lvl) => (
-          <div
-            key={lvl}
-            className="absolute left-0 right-0 -translate-y-1/2 text-center text-[10px] font-medium text-muted-foreground"
-            style={{ top: (rowY.get(lvl) ?? 0) + NODE_H / 2 }}
-          >
-            Lv {lvl}
-          </div>
-        ))}
-      </div>
       {pinnedId != null && (
         <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-md border bg-background/90 px-2 py-1 text-[11px] text-muted-foreground shadow">
           Showing chain · click background to clear
         </div>
       )}
-      <div className="absolute inset-0 pl-12">
-        <ReactFlow
-          nodes={nodes}
-          edges={edgesState}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.4 }}
-          minZoom={0.3}
-          maxZoom={2}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background gap={24} size={1} />
-          <Controls />
-          <MiniMap pannable zoomable className="!bg-card" />
-        </ReactFlow>
-      </div>
+      <ReactFlow
+        nodes={nodes}
+        edges={edgesState}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        nodeTypes={nodeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.4 }}
+        minZoom={0.3}
+        maxZoom={2}
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background gap={24} size={1} />
+        <Controls showInteractive={false} />
+      </ReactFlow>
     </div>
   );
 }
