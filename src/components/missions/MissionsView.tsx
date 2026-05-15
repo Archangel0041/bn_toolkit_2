@@ -388,6 +388,7 @@ export default function MissionsView() {
             edges={visibleEdges}
             availableNow={availableNow}
             characters={characters}
+            npcs={npcs}
             unitsById={unitsById}
           />
 
