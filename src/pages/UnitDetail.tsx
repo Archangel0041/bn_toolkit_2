@@ -241,7 +241,7 @@ export default function UnitDetail() {
               ID: {unit.id} • {classDisplayName} • {sideLabel}
             </p>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
             {maxRank > 1 && (
               <Select value={selectedRank.toString()} onValueChange={(v) => setSelectedRank(parseInt(v))}>
                 <SelectTrigger className="w-[110px] sm:w-[120px]">
