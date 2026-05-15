@@ -196,12 +196,12 @@ export function filterRemaining(
   const { currentLevel, completedIds, hideAboveLevel } = filter;
   const remaining = missions.filter((m) => {
     if (completedIds.has(m.id)) return false;
-    if (hideAboveLevel && m.level > currentLevel) return false;
+    if (hideAboveLevel && m.displayLevel > currentLevel) return false;
     return true;
   });
   const availableNow = new Set<number>();
   for (const m of remaining) {
-    if (m.level > currentLevel) continue;
+    if (m.displayLevel > currentLevel) continue;
     const allOk = m.prereqMissionIds.all.every((id) => completedIds.has(id));
     const anyOk =
       m.prereqMissionIds.any.length === 0 ||
