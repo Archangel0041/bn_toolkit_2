@@ -252,33 +252,56 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
       return;
     }
 
-    // Try a near-side detour (just outside the source/target column) before
-    // going all the way out to the global lane.
+    // Compute the minimal sideways detour: find every node whose bounding rect
+    // overlaps the vertical band between source and target, then route just
+    // past the closest free side.
     const goesRight = toCenterX >= fromCenterX;
-    const detourCandidates = [
-      goesRight ? Math.max(from.x, to.x) + NODE_W + 24 : Math.min(from.x, to.x) - 24,
-      goesRight ? Math.max(from.x, to.x) + NODE_W + 48 : Math.min(from.x, to.x) - 48,
-    ];
-    for (const laneX of detourCandidates) {
-      const stub = downward ? 18 : -18;
+    const yLo = Math.min(start.y, end.y);
+    const yHi = Math.max(start.y, end.y);
+    const blockers = nodeRects.filter(
+      (r) => r.id !== e.from && r.id !== e.to && r.y2 > yLo && r.y1 < yHi,
+    );
+    const stub = downward ? 18 : -18;
+    const tryLane = (laneX: number) => {
       const ok =
         !segHitsAny(e.from, e.to, start.x, start.y, start.x, start.y + stub) &&
         !segHitsAny(e.from, e.to, start.x, start.y + stub, laneX, start.y + stub) &&
         !segHitsAny(e.from, e.to, laneX, start.y + stub, laneX, end.y - stub) &&
         !segHitsAny(e.from, e.to, laneX, end.y - stub, end.x, end.y - stub) &&
         !segHitsAny(e.from, e.to, end.x, end.y - stub, end.x, end.y);
-      if (ok) {
-        edgePoints.set(`${e.from}->${e.to}`, [
-          start,
-          { x: start.x, y: start.y + stub },
-          { x: laneX, y: start.y + stub },
-          { x: laneX, y: end.y - stub },
-          { x: end.x, y: end.y - stub },
-          end,
-        ]);
-        return;
-      }
+      if (!ok) return false;
+      edgePoints.set(`${e.from}->${e.to}`, [
+        start,
+        { x: start.x, y: start.y + stub },
+        { x: laneX, y: start.y + stub },
+        { x: laneX, y: end.y - stub },
+        { x: end.x, y: end.y - stub },
+        end,
+      ]);
+      return true;
+    };
+
+    // Candidate lanes: just outside the relevant blocker columns. Try the side
+    // closest to the target first.
+    const rightCandidates: number[] = [];
+    const leftCandidates: number[] = [];
+    const baseRight = Math.max(from.x + NODE_W, to.x + NODE_W);
+    const baseLeft = Math.min(from.x, to.x);
+    rightCandidates.push(baseRight + 18);
+    leftCandidates.push(baseLeft - 18);
+    for (const r of blockers) {
+      if (r.x2 + 18 > baseRight) rightCandidates.push(r.x2 + 18);
+      if (r.x1 - 18 < baseLeft) leftCandidates.push(r.x1 - 18);
     }
+    rightCandidates.sort((a, b) => a - b);
+    leftCandidates.sort((a, b) => b - a);
+
+    const ordered = goesRight ? [...rightCandidates, ...leftCandidates] : [...leftCandidates, ...rightCandidates];
+    let placed = false;
+    for (const laneX of ordered) {
+      if (tryLane(laneX)) { placed = true; break; }
+    }
+    if (placed) return;
 
     // Last resort: route via the global outer lane.
     const laneX = goesRight ? rightLane + (index % 4) * 18 : leftLane - (index % 4) * 18;
