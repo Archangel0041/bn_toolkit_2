@@ -32,6 +32,9 @@ export default function MissionsView() {
   const [completedText, setCompletedText] = useState<string>(
     () => localStorage.getItem(COMPLETED_KEY) ?? ""
   );
+  const [visibleText, setVisibleText] = useState<string>(
+    () => localStorage.getItem(VISIBLE_KEY) ?? ""
+  );
   const [hideAbove, setHideAbove] = useState<boolean>(
     () => localStorage.getItem(HIDE_ABOVE_KEY) === "1"
   );
