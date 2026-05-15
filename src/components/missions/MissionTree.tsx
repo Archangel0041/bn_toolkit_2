@@ -150,6 +150,35 @@ function MissionNode({ data }: { data: MissionNodeData }) {
 
 const nodeTypes = { mission: MissionNode };
 
+/** Edge that follows dagre's routed waypoints so lines don't cross through nodes. */
+function RoutedEdge({ id, data, style, markerEnd }: EdgeProps) {
+  const pts = (data as { points?: { x: number; y: number }[] } | undefined)?.points;
+  if (!pts || pts.length < 2) return null;
+  // Build a smooth path: straight segments with rounded corners.
+  const r = 10;
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const prev = pts[i - 1];
+    const cur = pts[i];
+    const next = pts[i + 1];
+    const dx1 = cur.x - prev.x;
+    const dy1 = cur.y - prev.y;
+    const len1 = Math.hypot(dx1, dy1) || 1;
+    const dx2 = next.x - cur.x;
+    const dy2 = next.y - cur.y;
+    const len2 = Math.hypot(dx2, dy2) || 1;
+    const off = Math.min(r, len1 / 2, len2 / 2);
+    const p1 = { x: cur.x - (dx1 / len1) * off, y: cur.y - (dy1 / len1) * off };
+    const p2 = { x: cur.x + (dx2 / len2) * off, y: cur.y + (dy2 / len2) * off };
+    d += ` L ${p1.x} ${p1.y} Q ${cur.x} ${cur.y} ${p2.x} ${p2.y}`;
+  }
+  const last = pts[pts.length - 1];
+  d += ` L ${last.x} ${last.y}`;
+  return <BaseEdge id={id} path={d} style={style} markerEnd={markerEnd} />;
+}
+
+const edgeTypes = { routed: RoutedEdge };
+
 export function MissionTree(props: MissionTreeProps) {
   return (
     <ReactFlowProvider>
