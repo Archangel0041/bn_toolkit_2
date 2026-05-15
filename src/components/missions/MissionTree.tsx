@@ -225,7 +225,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
   }, [pinnedId, forward, backward]);
 
   const { rfNodes, rfEdges } = useMemo(() => {
-    const { positions } = layout(missions, edges);
+    const { positions, edgePoints } = layout(missions, edges);
     const rfNodes: Node[] = missions.map((m) => {
       const pos = positions.get(m.id) ?? { x: 0, y: 0 };
       const localized = t(m.title);
@@ -258,16 +258,19 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
 
     const rfEdges: Edge[] = edges.map((e, i) => {
       const inChain = chain ? chain.has(e.from) && chain.has(e.to) : true;
+      const points = edgePoints.get(`${e.from}->${e.to}`);
       return {
         id: `e${i}`,
         source: String(e.from),
         target: String(e.to),
-        type: "smoothstep",
+        type: points ? "routed" : "smoothstep",
+        data: { points },
         style: {
           stroke: "hsl(var(--primary))",
           strokeWidth: inChain ? 2.5 : 2,
           strokeDasharray: EDGE_DASH[e.type],
           opacity: chain && !inChain ? 0.15 : 0.9,
+          fill: "none",
         },
         markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary))", width: 20, height: 20 },
       };
