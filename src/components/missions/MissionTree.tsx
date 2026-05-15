@@ -269,8 +269,6 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
       <ReactFlow
         nodes={nodes}
         edges={edgesState}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
@@ -278,6 +276,11 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
         fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.05 }}
         minZoom={0.05}
         maxZoom={2}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        edgesFocusable={false}
+        edgesReconnectable={false}
+        elementsSelectable
         proOptions={{ hideAttribution: true }}
       >
         <Background gap={24} size={1} />
