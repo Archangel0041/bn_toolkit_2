@@ -38,6 +38,7 @@ export default function MissionsView() {
   const { accountLevel } = useAccountLevel();
   const { t } = useLanguage();
   const [raw, setRaw] = useState<Record<string, any[]> | null>(null);
+  const [characters, setCharacters] = useState<Record<string, CharacterEntry>>({});
   const [error, setError] = useState<string | null>(null);
 
   const [mode, setMode] = useState<"all" | "remaining">("remaining");
