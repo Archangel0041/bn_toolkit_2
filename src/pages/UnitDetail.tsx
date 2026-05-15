@@ -125,19 +125,19 @@ function StatWithChange({ label, value, prevValue, iconSrc, suffix = "" }: StatW
   const isIncrease = hasChange && numValue > numPrevValue!;
   
   return (
-    <div className="flex justify-between items-center py-1">
-      <span className="text-muted-foreground flex items-center gap-2">
-        {iconSrc && <img src={iconSrc} alt="" className="h-5 w-5 object-contain" />}
-        {label}
+    <div className="flex justify-between items-center gap-1 py-1 text-xs sm:text-sm">
+      <span className="text-muted-foreground flex items-center gap-1 sm:gap-2 min-w-0">
+        {iconSrc && <img src={iconSrc} alt="" className="h-4 w-4 sm:h-5 sm:w-5 object-contain shrink-0" />}
+        <span className="truncate">{label}</span>
       </span>
       <span className={cn(
-        "flex items-center gap-1 font-medium",
+        "flex items-center gap-1 font-medium shrink-0",
         hasChange && isIncrease && "text-green-600 dark:text-green-400",
         hasChange && !isIncrease && "text-red-600 dark:text-red-400"
       )}>
         {value}{suffix}
         {hasChange && (
-          <span className="text-xs ml-1">
+          <span className="text-[10px] sm:text-xs ml-0.5 sm:ml-1">
             ({isIncrease ? "+" : ""}{(numValue - numPrevValue!).toFixed(numValue % 1 === 0 ? 0 : 1)})
           </span>
         )}
