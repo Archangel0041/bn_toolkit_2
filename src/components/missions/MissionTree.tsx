@@ -20,6 +20,7 @@ import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
+import type { DialogueLine } from "@/lib/dataLoader";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
@@ -42,6 +43,7 @@ interface MissionTreeProps {
   characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
   unitsById?: Map<number, UnitInfo>;
   npcs?: Record<string, NpcInfo>;
+  dialogues?: Record<string, DialogueLine[]>;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
@@ -407,6 +409,7 @@ function MissionTreeInner({
   characters,
   unitsById,
   npcs,
+  dialogues,
 }: MissionTreeProps) {
   const { t } = useLanguage();
   const localize = useLocalize();
@@ -563,6 +566,7 @@ function MissionTreeInner({
           characters={characters}
           unitsById={unitsById}
           npcs={npcs}
+          dialogues={dialogues}
           onClose={() => setPinnedId(null)}
         />
       )}
@@ -579,6 +583,7 @@ interface MissionDetailPanelProps {
   characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
   unitsById?: Map<number, UnitInfo>;
   npcs?: Record<string, NpcInfo>;
+  dialogues?: Record<string, DialogueLine[]>;
   onClose: () => void;
 }
 
@@ -591,6 +596,7 @@ function MissionDetailPanel({
   characters,
   unitsById,
   npcs,
+  dialogues,
   onClose,
 }: MissionDetailPanelProps) {
   const { t } = useLanguage();
@@ -687,9 +693,9 @@ function MissionDetailPanel({
           );
         })()}
 
-        <DialogSection title="Pre-mission Dialog" baseKey={mission.title} suffix="10startdialog" t={t} speakerIconUrl={giverIcon} speakerName={mission.giver ? titleCase(mission.giver) : undefined} />
-        <DialogSection title="Completion Dialog" baseKey={mission.title} suffix="70enddialog" t={t} speakerIconUrl={giverIcon} speakerName={mission.giver ? titleCase(mission.giver) : undefined} />
-        <DialogSection title="Reward Dialog" baseKey={mission.title} suffix="60reward" t={t} speakerIconUrl={giverIcon} speakerName={mission.giver ? titleCase(mission.giver) : undefined} />
+        <DialogSection title="Pre-mission Dialog" baseKey={mission.title} suffix="10startdialog" t={t} characters={characters} dialogues={dialogues} fallbackSpeakerIconUrl={giverIcon} fallbackSpeakerName={mission.giver ? titleCase(mission.giver) : undefined} />
+        <DialogSection title="Completion Dialog" baseKey={mission.title} suffix="70enddialog" t={t} characters={characters} dialogues={dialogues} fallbackSpeakerIconUrl={giverIcon} fallbackSpeakerName={mission.giver ? titleCase(mission.giver) : undefined} />
+        <DialogSection title="Reward Dialog" baseKey={mission.title} suffix="60reward" t={t} characters={characters} dialogues={dialogues} fallbackSpeakerIconUrl={giverIcon} fallbackSpeakerName={mission.giver ? titleCase(mission.giver) : undefined} />
 
         <section>
           <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -854,16 +860,60 @@ interface DialogSectionProps {
   suffix: string;
   t: (k: string) => string;
   defaultOpen?: boolean;
-  speakerIconUrl?: string;
-  speakerName?: string;
+  characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
+  dialogues?: Record<string, DialogueLine[]>;
+  fallbackSpeakerIconUrl?: string;
+  fallbackSpeakerName?: string;
 }
 
-function DialogSection({ title, baseKey, suffix, t, defaultOpen = false, speakerIconUrl, speakerName }: DialogSectionProps) {
+interface DialogLineRender {
+  body: string;
+  speaker?: string;
+  iconUrl?: string;
+}
+
+function DialogSection({
+  title,
+  baseKey,
+  suffix,
+  t,
+  defaultOpen = false,
+  characters,
+  dialogues,
+  fallbackSpeakerIconUrl,
+  fallbackSpeakerName,
+}: DialogSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   const base = baseKey ? baseKey.replace(/_title$/, "") : "";
-  const lines = useMemo(() => {
-    if (!base) return [] as string[];
-    const out: string[] = [];
+  const scriptId = base ? `mis_${base}_${suffix}` : "";
+
+  const lines = useMemo<DialogLineRender[]>(() => {
+    if (!base) return [];
+    const script = dialogues?.[scriptId];
+    const resolveIcon = (speaker?: string): string | undefined => {
+      if (!speaker) return undefined;
+      const ch = characters?.[speaker.toLowerCase()];
+      const key = ch?.small_icon ?? ch?.regular_icon;
+      return key ? getNpcIconUrl(key) : getNpcIconUrl(speaker);
+    };
+    if (script && script.length > 0) {
+      const out: DialogLineRender[] = [];
+      for (const entry of script) {
+        for (const txt of entry.text ?? []) {
+          if (!txt.body) continue;
+          const tr = t(txt.body);
+          if (!tr || tr === txt.body) continue;
+          out.push({
+            body: tr,
+            speaker: entry.speaker,
+            iconUrl: resolveIcon(entry.speaker),
+          });
+        }
+      }
+      return out;
+    }
+    // Fallback: probe text keys directly when script isn't available.
+    const out: DialogLineRender[] = [];
     for (let i = 0; i < 12; i++) {
       const k = `mis_${base}_${suffix}_${i}_body_0`;
       const tr = t(k);
@@ -871,10 +921,10 @@ function DialogSection({ title, baseKey, suffix, t, defaultOpen = false, speaker
         if (i === 0) continue;
         break;
       }
-      out.push(tr);
+      out.push({ body: tr, iconUrl: fallbackSpeakerIconUrl, speaker: fallbackSpeakerName });
     }
     return out;
-  }, [base, suffix, t]);
+  }, [base, scriptId, suffix, t, dialogues, characters, fallbackSpeakerIconUrl, fallbackSpeakerName]);
 
   if (lines.length === 0) return null;
 
@@ -892,17 +942,24 @@ function DialogSection({ title, baseKey, suffix, t, defaultOpen = false, speaker
         <div className="mt-1 space-y-1">
           {lines.map((line, i) => (
             <div key={i} className="flex items-start gap-1.5 rounded border bg-muted/30 px-2 py-1">
-              {speakerIconUrl ? (
+              {line.iconUrl ? (
                 <img
-                  src={speakerIconUrl}
+                  src={line.iconUrl}
                   alt=""
-                  title={speakerName}
+                  title={line.speaker}
                   className="h-6 w-6 shrink-0 rounded-full bg-background object-cover"
                   onError={(e) => ((e.currentTarget.style.display = "none"))}
                   draggable={false}
                 />
               ) : null}
-              <p className="flex-1 text-xs leading-snug text-foreground">{line}</p>
+              <div className="flex-1 min-w-0">
+                {line.speaker && (
+                  <div className="text-[9px] uppercase tracking-wide text-muted-foreground">
+                    {titleCase(line.speaker)}
+                  </div>
+                )}
+                <p className="text-xs leading-snug text-foreground">{line.body}</p>
+              </div>
             </div>
           ))}
         </div>

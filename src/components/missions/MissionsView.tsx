@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { loadMissions, loadCharacters, loadNpcs, type CharacterEntry, type NpcEntry } from "@/lib/dataLoader";
+import { loadMissions, loadCharacters, loadNpcs, loadDialogues, type CharacterEntry, type NpcEntry, type DialogueLine } from "@/lib/dataLoader";
 import {
   parseMissions,
   buildMissionEdges,
@@ -53,6 +53,7 @@ export default function MissionsView() {
   const [raw, setRaw] = useState<Record<string, any[]> | null>(null);
   const [characters, setCharacters] = useState<Record<string, CharacterEntry>>({});
   const [npcs, setNpcs] = useState<Record<string, NpcEntry>>({});
+  const [dialogues, setDialogues] = useState<Record<string, DialogueLine[]>>({});
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
@@ -87,6 +88,9 @@ export default function MissionsView() {
       .catch(() => {});
     loadNpcs()
       .then(setNpcs)
+      .catch(() => {});
+    loadDialogues()
+      .then(setDialogues)
       .catch(() => {});
   }, []);
 
@@ -389,6 +393,7 @@ export default function MissionsView() {
             availableNow={availableNow}
             characters={characters}
             npcs={npcs}
+            dialogues={dialogues}
             unitsById={unitsById}
           />
 
