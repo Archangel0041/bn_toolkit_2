@@ -19,6 +19,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 const COMPLETED_KEY = "missions:completed";
 const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
+const LEVEL_CAP_KEY = "missions:levelCap";
 const SETUP_KEY = "missions:setupComplete";
 
 const idsToText = (ids: number[]) =>
