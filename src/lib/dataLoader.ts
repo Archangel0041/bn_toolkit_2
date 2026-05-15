@@ -257,6 +257,20 @@ export async function loadMissions(): Promise<Record<string, any[]>> {
   return fetchFromBucket(CONFIG_BUCKET, "missions.json");
 }
 
+export interface LevelEntry {
+  attack_zones_count?: number;
+  awards?: { nanopods?: number; gold?: number; [k: string]: number | undefined };
+  dialog?: string;
+  encounter_limits?: Record<string, { max_encounter_limit?: number; min_encounter_limit?: number }>;
+  next_level_xp?: number;
+  population_limit?: number;
+  [k: string]: any;
+}
+
+export async function loadLevels(): Promise<Record<string, LevelEntry>> {
+  return fetchFromBucket(CONFIG_BUCKET, "levels.json");
+}
+
 export interface CharacterEntry {
   large_icon?: string;
   regular_icon?: string;

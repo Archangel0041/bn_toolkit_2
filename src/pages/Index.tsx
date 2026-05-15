@@ -6,7 +6,7 @@ import { CompareBar } from "@/components/units/CompareBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAllUnits, getAllTags, filterUnits } from "@/lib/units";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Users, Crosshair, Trophy, Map as MapIcon } from "lucide-react";
+import { Users, Crosshair, Trophy, Map as MapIcon, TrendingUp } from "lucide-react";
 import { UnitSide } from "@/data/gameEnums";
 import { filterUnitsByAdvancedCriteria } from "@/lib/unitAbilityFilters";
 
@@ -18,6 +18,7 @@ const BossStrikeLookup = lazy(() =>
   import("@/components/bossStrikes/BossStrikeLookup").then((m) => ({ default: m.BossStrikeLookup }))
 );
 const MissionsView = lazy(() => import("@/components/missions/MissionsView"));
+const LevelsView = lazy(() => import("@/components/levels/LevelsView"));
 
 function TabFallback() {
   return (
@@ -89,6 +90,10 @@ const Index = () => {
             <TabsTrigger value="missions" className="gap-2">
               <MapIcon className="h-4 w-4" />
               Missions
+            </TabsTrigger>
+            <TabsTrigger value="levels" className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Levels
             </TabsTrigger>
           </TabsList>
 
@@ -204,6 +209,14 @@ const Index = () => {
             {mainTab === "missions" && (
               <Suspense fallback={<TabFallback />}>
                 <MissionsView />
+              </Suspense>
+            )}
+          </TabsContent>
+
+          <TabsContent value="levels" className="space-y-6">
+            {mainTab === "levels" && (
+              <Suspense fallback={<TabFallback />}>
+                <LevelsView />
               </Suspense>
             )}
           </TabsContent>
