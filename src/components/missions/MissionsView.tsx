@@ -120,11 +120,14 @@ export default function MissionsView() {
   useEffect(() => {
     localStorage.setItem(LEVEL_CAP_KEY, String(levelCap));
   }, [levelCap]);
-
-  // If user clears their current missions, force them back into setup.
   useEffect(() => {
-    if (setupComplete && visibleIds.size === 0) setSetupComplete(false);
-  }, [setupComplete, visibleIds]);
+    localStorage.setItem(SHOW_UPCOMING_KEY, showUpcoming ? "1" : "0");
+  }, [showUpcoming]);
+
+  // If user clears their current missions and isn't in "upcoming" mode, force back to setup.
+  useEffect(() => {
+    if (setupComplete && visibleIds.size === 0 && !showUpcoming) setSetupComplete(false);
+  }, [setupComplete, visibleIds, showUpcoming]);
 
   /**
    * Inferred-completed: anything at/below current level that isn't a visible
