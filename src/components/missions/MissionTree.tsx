@@ -21,7 +21,7 @@ import dagre from "dagre";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getNpcIconUrl, getResourceIconUrl } from "@/lib/resourceImages";
+import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
 
 const NODE_W = 240;
