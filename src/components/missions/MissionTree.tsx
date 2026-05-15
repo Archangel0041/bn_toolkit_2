@@ -54,20 +54,29 @@ function titleCase(input: string): string {
 
 function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "TB", nodesep: 40, ranksep: 80, marginx: 50, marginy: 30 });
+  g.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 110, marginx: 50, marginy: 30 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const m of missions) g.setNode(String(m.id), { width: NODE_W, height: NODE_H });
   for (const e of edges) g.setEdge(String(e.from), String(e.to));
   dagre.layout(g);
 
-  // Use dagre's natural tree layout — it ranks nodes by dependency depth, so
-  // chains visibly cascade top-down instead of being squashed into level rows.
+  // Dagre positions are CENTER coords; React Flow expects top-left → offset by half size.
   const positions = new Map<number, { x: number; y: number }>();
   for (const m of missions) {
     const node = g.node(String(m.id));
-    positions.set(m.id, { x: node?.x ?? 0, y: node?.y ?? 0 });
+    positions.set(m.id, {
+      x: (node?.x ?? 0) - NODE_W / 2,
+      y: (node?.y ?? 0) - NODE_H / 2,
+    });
   }
-  return { positions };
+  // Edge waypoints (in dagre's center-coord space) — used by the custom edge to
+  // route around intermediate nodes instead of cutting straight through them.
+  const edgePoints = new Map<string, { x: number; y: number }[]>();
+  for (const e of edges) {
+    const ge = g.edge(String(e.from), String(e.to));
+    if (ge?.points) edgePoints.set(`${e.from}->${e.to}`, ge.points);
+  }
+  return { positions, edgePoints };
 }
 
 interface MissionNodeData extends Record<string, unknown> {
