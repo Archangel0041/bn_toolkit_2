@@ -20,9 +20,9 @@ import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
-import type { DialogueLine } from "@/lib/dataLoader";
+import type { DialogueLine, JobInfoEntry, EncounterEntry } from "@/lib/dataLoader";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl } from "@/lib/resourceImages";
+import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl, getJobIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
 
 const NODE_W = 240;
@@ -44,6 +44,8 @@ interface MissionTreeProps {
   unitsById?: Map<number, UnitInfo>;
   npcs?: Record<string, NpcInfo>;
   dialogues?: Record<string, DialogueLine[]>;
+  jobs?: Record<string, JobInfoEntry>;
+  encounters?: Record<string, EncounterEntry>;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
