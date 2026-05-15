@@ -168,11 +168,11 @@ export default function LevelsView() {
             id="lvl-cap"
             type="number"
             min={1}
-            max={200}
+            max={configMaxLevel}
             value={maxLevel}
             onChange={(e) => {
               const n = parseInt(e.target.value, 10);
-              if (!isNaN(n)) setMaxLevel(Math.max(1, Math.min(200, n)));
+              if (!isNaN(n)) setMaxLevel(Math.max(1, Math.min(configMaxLevel, n)));
             }}
           />
         </div>
