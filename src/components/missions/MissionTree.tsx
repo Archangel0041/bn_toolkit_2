@@ -685,28 +685,69 @@ function MissionDetailPanel({
                   ? o.type.replace(/_prereq_config$/, "").replace(/_/g, " ")
                   : "";
                 let detail = "";
+                let detailIconUrl: string | undefined;
                 if (o.unitId != null) {
                   const u = unitsById?.get(o.unitId);
                   const lname = u?.name ? localize(u.name, u.name) : `Unit #${o.unitId}`;
                   detail = `${o.count ?? 1}× ${lname}`;
+                  detailIconUrl = u?.icon ? getUnitImageUrl(u.icon) : undefined;
                 } else if (o.opponentId != null) {
-                  detail = `Opponent #${o.opponentId}`;
+                  const npc = npcs?.[String(o.opponentId)];
+                  const lname = npc?.name ? localize(npc.name, npc.name) : `Opponent #${o.opponentId}`;
+                  detail = `${o.count ?? 1}× ${lname}`;
+                  detailIconUrl = npc?.icon ? getNpcIconUrl(npc.icon) : undefined;
                 } else if (o.count != null) {
                   detail = `${o.count}×`;
                 }
+                const objIconUrl = o.icon ? getMissionIconUrl(o.icon) : undefined;
+                const speakerNpc = o.speakerNpcId != null ? npcs?.[String(o.speakerNpcId)] : undefined;
+                const speakerIconUrl = speakerNpc?.icon ? getNpcIconUrl(speakerNpc.icon) : undefined;
+                const speakerName = speakerNpc?.name ? localize(speakerNpc.name, speakerNpc.name) : undefined;
                 return (
                   <li key={i} className="rounded border bg-muted/30 px-2 py-1">
-                    <div className="font-medium">{title}</div>
-                    {desc && desc !== title && (
-                      <div className="text-[11px] text-muted-foreground">{desc}</div>
-                    )}
+                    <div className="flex items-start gap-1.5">
+                      {objIconUrl && (
+                        <img
+                          src={objIconUrl}
+                          alt=""
+                          className="h-5 w-5 shrink-0 rounded bg-background object-contain"
+                          onError={(e) => ((e.currentTarget.style.display = "none"))}
+                          draggable={false}
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium">{title}</div>
+                        {desc && desc !== title && (
+                          <div className="text-[11px] text-muted-foreground">{desc}</div>
+                        )}
+                      </div>
+                      {speakerIconUrl && (
+                        <img
+                          src={speakerIconUrl}
+                          alt=""
+                          title={speakerName}
+                          className="h-5 w-5 shrink-0 rounded-full bg-background object-cover"
+                          onError={(e) => ((e.currentTarget.style.display = "none"))}
+                          draggable={false}
+                        />
+                      )}
+                    </div>
                     {(typeLabel || detail) && (
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/80">
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/80">
                         {typeLabel && (
                           <span className="uppercase tracking-wide">{typeLabel}</span>
                         )}
                         {detail && (
-                          <span className="rounded bg-muted px-1 py-px font-medium tabular-nums text-foreground">
+                          <span className="inline-flex items-center gap-1 rounded bg-muted px-1 py-px font-medium tabular-nums text-foreground">
+                            {detailIconUrl && (
+                              <img
+                                src={detailIconUrl}
+                                alt=""
+                                className="h-3.5 w-3.5 object-contain"
+                                onError={(e) => ((e.currentTarget.style.display = "none"))}
+                                draggable={false}
+                              />
+                            )}
                             {detail}
                           </span>
                         )}
