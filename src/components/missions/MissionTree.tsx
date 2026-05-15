@@ -25,6 +25,8 @@ import type { DialogueLine, JobInfoEntry, EncounterEntry } from "@/lib/dataLoade
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl, getJobIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { EncounterGrid } from "@/components/encounters/EncounterGrid";
 
 const NODE_W = 240;
 const NODE_H = 96;
