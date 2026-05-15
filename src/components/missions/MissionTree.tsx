@@ -147,7 +147,7 @@ export function MissionTree(props: MissionTreeProps) {
   );
 }
 
-function MissionTreeInner({ missions, edges, availableNow, highlightId }: MissionTreeProps) {
+function MissionTreeInner({ missions, edges, availableNow, highlightId, characters }: MissionTreeProps) {
   const { t } = useLanguage();
   const [pinnedId, setPinnedId] = useState<number | null>(null);
 
