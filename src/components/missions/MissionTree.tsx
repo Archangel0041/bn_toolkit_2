@@ -226,15 +226,16 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
     const toRow = Math.round(to.y / ROW_GAP);
     const sameRow = fromRow === toRow;
     if (sameRow) {
-      const goesRight = toCenterX >= fromCenterX;
-      const laneY = from.y + NODE_H + 28 + (index % 3) * 12;
+      // Same-row: still attach to bottom (source) and top (target) of nodes,
+      // dipping below into a shared lane between rows.
+      const startPt = { x: fromCenterX, y: from.y + NODE_H };
+      const endPt = { x: toCenterX, y: to.y };
+      const laneY = from.y + NODE_H + 32 + (index % 3) * 10;
       edgePoints.set(`${e.from}->${e.to}`, [
-        { x: goesRight ? from.x + NODE_W : from.x, y: from.y + NODE_H / 2 },
-        { x: goesRight ? from.x + NODE_W + 28 : from.x - 28, y: from.y + NODE_H / 2 },
-        { x: goesRight ? from.x + NODE_W + 28 : from.x - 28, y: laneY },
-        { x: goesRight ? to.x - 28 : to.x + NODE_W + 28, y: laneY },
-        { x: goesRight ? to.x - 28 : to.x + NODE_W + 28, y: to.y + NODE_H / 2 },
-        { x: goesRight ? to.x : to.x + NODE_W, y: to.y + NODE_H / 2 },
+        startPt,
+        { x: startPt.x, y: laneY },
+        { x: endPt.x, y: laneY },
+        endPt,
       ]);
       return;
     }
