@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Filter, X, Target, Zap, Flame, Shield } from "lucide-react";
+import { Search, Filter, X, Target, Zap, Flame, Shield, Users } from "lucide-react";
 import { TargetCategories, TargetCategoryLabels } from "@/lib/unitAbilityFilters";
 import { DamageType, DamageTypeLabels, UnitTagLabels } from "@/data/gameEnums";
 
@@ -138,8 +138,11 @@ export const UnitFilters = forwardRef<HTMLDivElement, UnitFiltersProps>(function
         <div className="grid grid-cols-2 gap-2 sm:contents">
 
         <Select value={nanopodFilter} onValueChange={(v) => setNanopodFilter(v as typeof nanopodFilter)}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Unit type" />
+          <SelectTrigger className="gap-2 sm:w-[160px]">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <SelectValue placeholder="Unit type" />
+            </div>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Units</SelectItem>
