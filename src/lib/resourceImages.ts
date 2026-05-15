@@ -68,3 +68,9 @@ export function getNpcIconUrl(iconKey: string): string {
   const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(`${NPC_PATH}/${fileName}`);
   return data.publicUrl;
 }
+
+export function getJobIconUrl(iconKey: string): string {
+  const fileName = iconKey.endsWith('.png') ? iconKey : `${iconKey}.png`;
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(`${JOB_PATH}/${fileName}`);
+  return data.publicUrl;
+}
