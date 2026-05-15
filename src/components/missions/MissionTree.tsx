@@ -4,11 +4,13 @@ import {
   Background,
   Controls,
   MiniMap,
+  ReactFlowProvider,
   type Node,
   type Edge,
   MarkerType,
   useNodesState,
   useEdgesState,
+  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
@@ -101,7 +103,15 @@ function MissionNode({ data }: { data: MissionNodeData }) {
 
 const nodeTypes = { mission: MissionNode };
 
-export function MissionTree({ missions, edges, availableNow, highlightId }: MissionTreeProps) {
+export function MissionTree(props: MissionTreeProps) {
+  return (
+    <ReactFlowProvider>
+      <MissionTreeInner {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+function MissionTreeInner({ missions, edges, availableNow, highlightId }: MissionTreeProps) {
   const { t } = useLanguage();
 
   const { rfNodes, rfEdges, levels, rowY } = useMemo(() => {
@@ -148,8 +158,16 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(rfEdges);
+  const { fitView } = useReactFlow();
   useEffect(() => setNodes(rfNodes), [rfNodes, setNodes]);
   useEffect(() => setEdges(rfEdges), [rfEdges, setEdges]);
+  // Re-fit the viewport whenever the visible mission set changes (filters, search, mode).
+  useEffect(() => {
+    const id = requestAnimationFrame(() =>
+      fitView({ padding: 0.15, maxZoom: 1, minZoom: 0.5, duration: 300 })
+    );
+    return () => cancelAnimationFrame(id);
+  }, [rfNodes, fitView]);
 
   return (
     <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-card overflow-hidden">

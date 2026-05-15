@@ -7,12 +7,12 @@ import {
   type ParsedMission,
 } from "@/lib/missions";
 import { MissionTree } from "@/components/missions/MissionTree";
+import { MissionPicker } from "@/components/missions/MissionPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -20,6 +20,18 @@ const COMPLETED_KEY = "missions:completed";
 const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
 const SETUP_KEY = "missions:setupComplete";
+
+const idsToText = (ids: number[]) =>
+  [...new Set(ids)].sort((a, b) => a - b).join(", ");
+
+const parseIdText = (s: string): Set<number> => {
+  const out = new Set<number>();
+  for (const tok of s.split(/[\s,]+/)) {
+    const n = parseInt(tok, 10);
+    if (!isNaN(n)) out.add(n);
+  }
+  return out;
+};
 
 export default function MissionsView() {
   const { accountLevel } = useAccountLevel();
@@ -57,23 +69,8 @@ export default function MissionsView() {
 
   const allParsed = useMemo(() => (raw ? parseMissions(raw) : []), [raw]);
 
-  const completedIds = useMemo(() => {
-    const ids = new Set<number>();
-    for (const tok of completedText.split(/[\s,]+/)) {
-      const n = parseInt(tok, 10);
-      if (!isNaN(n)) ids.add(n);
-    }
-    return ids;
-  }, [completedText]);
-
-  const visibleIds = useMemo(() => {
-    const ids = new Set<number>();
-    for (const tok of visibleText.split(/[\s,]+/)) {
-      const n = parseInt(tok, 10);
-      if (!isNaN(n)) ids.add(n);
-    }
-    return ids;
-  }, [visibleText]);
+  const completedIds = useMemo(() => parseIdText(completedText), [completedText]);
+  const visibleIds = useMemo(() => parseIdText(visibleText), [visibleText]);
 
   useEffect(() => {
     localStorage.setItem(COMPLETED_KEY, completedText);
@@ -89,7 +86,6 @@ export default function MissionsView() {
    * Inferred-completed: if a mission whose displayLevel ≤ currentLevel is *not* in the
    * visible-missions list and not explicitly marked complete, assume the player already
    * finished it — and recursively assume all of its mission prerequisites are done too.
-   * Only kicks in when the user has provided at least one visible mission ID.
    */
   const effectiveCompletedIds = useMemo(() => {
     const completed = new Set(completedIds);
@@ -152,8 +148,7 @@ export default function MissionsView() {
     );
   }, [visibleMissions]);
 
-  // Setup gate: until the user fills in their current visible missions (or chooses
-  // to skip), don't render the giant graph at all.
+  // ---- Setup gate ----
   if (!setupComplete) {
     return (
       <div className="space-y-4">
@@ -188,34 +183,27 @@ export default function MissionsView() {
             />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="setup-visible" className="text-sm font-medium">
-              My current missions (IDs from your in-game mission list)
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-sm font-medium">
+              My current missions (search by name)
             </Label>
-            <Textarea
-              id="setup-visible"
-              className="mt-1 font-mono text-xs"
-              rows={4}
-              placeholder="e.g. 42, 87, 103 …"
-              value={visibleText}
-              onChange={(e) => setVisibleText(e.target.value)}
+            <MissionPicker
+              missions={allParsed}
+              selectedIds={visibleIds}
+              onChange={(ids) => setVisibleText(idsToText(ids))}
+              placeholder="Type a mission name…"
             />
-            <p className="text-xs text-muted-foreground">
-              Comma or space separated. {visibleIds.size} parsed.
-            </p>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="setup-completed" className="text-sm font-medium">
-              Optionally: explicitly completed mission IDs
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-sm font-medium">
+              Optionally: explicitly completed missions
             </Label>
-            <Textarea
-              id="setup-completed"
-              className="mt-1 font-mono text-xs"
-              rows={2}
-              placeholder="1, 2, 5 …"
-              value={completedText}
-              onChange={(e) => setCompletedText(e.target.value)}
+            <MissionPicker
+              missions={allParsed}
+              selectedIds={completedIds}
+              onChange={(ids) => setCompletedText(idsToText(ids))}
+              placeholder="Search a completed mission…"
             />
           </div>
 
@@ -296,19 +284,15 @@ export default function MissionsView() {
 
       {mode === "remaining" && (
         <div className="grid gap-3 rounded-lg border p-3 md:grid-cols-2">
-          <div>
-            <Label htmlFor="visible-ids" className="text-xs">
-              My current missions (visible in-game)
-            </Label>
-            <Textarea
-              id="visible-ids"
-              className="mt-1 font-mono text-xs"
-              rows={2}
-              placeholder="e.g. 42, 87, 103"
-              value={visibleText}
-              onChange={(e) => setVisibleText(e.target.value)}
+          <div className="space-y-1.5">
+            <Label className="text-xs">My current missions (search by name)</Label>
+            <MissionPicker
+              missions={allParsed}
+              selectedIds={visibleIds}
+              onChange={(ids) => setVisibleText(idsToText(ids))}
+              placeholder="Type a mission name…"
             />
-            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>{visibleIds.size} visible</span>
               {visibleIds.size > 0 && (
                 <>
@@ -318,43 +302,23 @@ export default function MissionsView() {
                   </span>
                 </>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-auto h-7"
-                onClick={() => setVisibleText("")}
-              >
-                Clear
-              </Button>
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="completed-ids" className="text-xs">
-              Explicitly completed mission IDs
-            </Label>
-            <Textarea
-              id="completed-ids"
-              className="mt-1 font-mono text-xs"
-              rows={2}
-              placeholder="1, 2, 5, 12 …"
-              value={completedText}
-              onChange={(e) => setCompletedText(e.target.value)}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Explicitly completed missions</Label>
+            <MissionPicker
+              missions={allParsed}
+              selectedIds={completedIds}
+              onChange={(ids) => setCompletedText(idsToText(ids))}
+              placeholder="Search a completed mission…"
             />
-            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>{completedIds.size} marked complete</span>
               <span>·</span>
               <span>{effectiveCompletedIds.size} total complete</span>
               <span>·</span>
               <span>{availableNow?.size ?? 0} available now</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-auto h-7"
-                onClick={() => setCompletedText("")}
-              >
-                Clear
-              </Button>
             </div>
           </div>
         </div>
