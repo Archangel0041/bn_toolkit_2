@@ -172,8 +172,8 @@ export function MissionTree({ missions, edges, availableNow, highlightId }: Miss
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-          minZoom={0.05}
+          fitViewOptions={{ padding: 0.15, maxZoom: 1, minZoom: 0.5 }}
+          minZoom={0.4}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
         >
