@@ -15,6 +15,12 @@ export interface MissionRewards {
   units: Record<string, number>;
 }
 
+export interface ParsedObjective {
+  title?: string;
+  description?: string;
+  type?: string;
+}
+
 export interface ParsedMission {
   id: number;
   title: string;
@@ -32,6 +38,7 @@ export interface ParsedMission {
   otherPrereqCount: number;
   otherPrereqTypes: string[];
   rewards: MissionRewards;
+  objectives: ParsedObjective[];
 }
 
 type RawComponent = Record<string, any>;
@@ -115,6 +122,14 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
     level = Math.max(level, walkObjectiveLevels(objectives));
     if (level === 0) level = 1;
 
+    const parsedObjectives: ParsedObjective[] = (objectives?.objectives ?? []).map(
+      (o: RawComponent) => ({
+        title: o.title ?? o.name ?? o.objective_name,
+        description: o.description ?? o.objective_description,
+        type: o._t,
+      })
+    );
+
     out.push({
       id: identity.id,
       title: identity.title,
@@ -126,6 +141,7 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
       otherPrereqCount,
       otherPrereqTypes,
       rewards,
+      objectives: parsedObjectives,
     });
   }
 

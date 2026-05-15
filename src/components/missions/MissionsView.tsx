@@ -384,6 +384,7 @@ export default function MissionsView() {
             edges={visibleEdges}
             availableNow={availableNow}
             characters={characters}
+            unitsById={unitsById}
           />
 
           <div className="rounded-lg border p-4 space-y-3">
