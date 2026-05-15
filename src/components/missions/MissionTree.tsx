@@ -566,6 +566,7 @@ function MissionTreeInner({
           characters={characters}
           unitsById={unitsById}
           npcs={npcs}
+          dialogues={dialogues}
           onClose={() => setPinnedId(null)}
         />
       )}
