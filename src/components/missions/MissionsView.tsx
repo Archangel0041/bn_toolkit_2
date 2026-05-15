@@ -324,9 +324,11 @@ export default function MissionsView() {
             <Button
               variant="outline"
               onClick={() => { setShowUpcoming(true); setSetupComplete(true); }}
-              disabled={!raw}
+              disabled={!raw || currentLevel + 1 > levelCap}
             >
-              Just show upcoming (lvl {currentLevel + 1}–{Math.min(levelCap, currentLevel + UPCOMING_LEVELS)})
+              {currentLevel + 1 > levelCap
+                ? "No upcoming missions"
+                : `Just show upcoming (lvl ${currentLevel + 1}–${Math.min(levelCap, currentLevel + UPCOMING_LEVELS)})`}
             </Button>
           </div>
         </div>
