@@ -221,7 +221,7 @@ export default function UnitDetail() {
     <div className="min-h-screen bg-background pb-20">
       <Header />
       <main className="container mx-auto px-4 py-6 space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link to={backPath}>
               <ArrowLeft className="h-4 w-4" />
@@ -231,39 +231,43 @@ export default function UnitDetail() {
             <img
               src={getUnitImageUrl(unit.identity.icon) || ""}
               alt={t(unit.identity.name)}
-              className="w-16 h-16 object-contain rounded-lg border bg-muted"
+              className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-lg border bg-muted"
               onError={(e) => (e.currentTarget.style.display = 'none')}
             />
           )}
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold">{t(unit.identity.name)}</h1>
-            <p className="text-muted-foreground">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold truncate">{t(unit.identity.name)}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">
               ID: {unit.id} • {classDisplayName} • {sideLabel}
             </p>
           </div>
-          {maxRank > 1 && (
-            <Select value={selectedRank.toString()} onValueChange={(v) => setSelectedRank(parseInt(v))}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: maxRank }, (_, i) => i + 1).map((rank) => (
-                  <SelectItem key={rank} value={rank.toString()}>
-                    Rank {rank}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button
-            variant={inCompare ? "default" : "outline"}
-            onClick={handleCompareClick}
-            disabled={!inCompare && !canAddToCompare}
-            className="gap-2"
-          >
-            {inCompare ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-            {inCompare ? "In Compare" : "Add to Compare"}
-          </Button>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            {maxRank > 1 && (
+              <Select value={selectedRank.toString()} onValueChange={(v) => setSelectedRank(parseInt(v))}>
+                <SelectTrigger className="w-[110px] sm:w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: maxRank }, (_, i) => i + 1).map((rank) => (
+                    <SelectItem key={rank} value={rank.toString()}>
+                      Rank {rank}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              variant={inCompare ? "default" : "outline"}
+              onClick={handleCompareClick}
+              disabled={!inCompare && !canAddToCompare}
+              className="gap-2"
+              size="sm"
+            >
+              {inCompare ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              <span className="hidden sm:inline">{inCompare ? "In Compare" : "Add to Compare"}</span>
+              <span className="sm:hidden">{inCompare ? "Added" : "Compare"}</span>
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
