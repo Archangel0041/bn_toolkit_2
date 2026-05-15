@@ -315,26 +315,20 @@ export default function MissionsView() {
               <Label htmlFor="setup-level" className="text-sm font-medium">
                 Current player level
               </Label>
-              <Input
+              <LevelInput
                 id="setup-level"
-                type="number"
-                min={1}
-                max={200}
                 value={currentLevel}
-                onChange={(e) => setCurrentLevel(parseInt(e.target.value || "1", 10))}
+                onChange={setCurrentLevel}
               />
             </div>
             <div className="flex flex-col gap-1">
               <Label htmlFor="setup-cap" className="text-sm font-medium">
                 Level cap
               </Label>
-              <Input
+              <LevelInput
                 id="setup-cap"
-                type="number"
-                min={1}
-                max={200}
                 value={levelCap}
-                onChange={(e) => setLevelCap(parseInt(e.target.value || "1", 10))}
+                onChange={setLevelCap}
               />
             </div>
           </div>
