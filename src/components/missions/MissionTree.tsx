@@ -530,7 +530,7 @@ function MissionTreeInner({
   const pinned = pinnedId != null ? byId.get(pinnedId) : null;
 
   return (
-    <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-card overflow-hidden">
+    <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-muted/40 overflow-hidden mission-tree-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edgesState}
