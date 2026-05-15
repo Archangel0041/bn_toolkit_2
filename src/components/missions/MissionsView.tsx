@@ -81,6 +81,9 @@ export default function MissionsView() {
   useEffect(() => {
     localStorage.setItem(HIDE_ABOVE_KEY, hideAbove ? "1" : "0");
   }, [hideAbove]);
+  useEffect(() => {
+    localStorage.setItem(LEVEL_CAP_KEY, String(levelCap));
+  }, [levelCap]);
 
   /**
    * Inferred-completed logic:
