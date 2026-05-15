@@ -43,6 +43,7 @@ interface MissionTreeProps {
   characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
   unitsById?: Map<number, UnitInfo>;
   npcs?: Record<string, NpcInfo>;
+  dialogues?: Record<string, DialogueLine[]>;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
