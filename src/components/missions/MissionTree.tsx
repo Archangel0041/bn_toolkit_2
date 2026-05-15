@@ -169,8 +169,9 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
     cursorY += (bandMaxDepth + 1) * SUB_ROW_GAP + BAND_GAP;
   }
 
-  const leftLane = Math.min(...allPositions.map((p) => p.x), 0) - COL_GAP;
-  const rightLane = Math.max(...allPositions.map((p) => p.x + NODE_W), NODE_W) + COL_GAP;
+  const allPos = [...positions.values()];
+  const leftLane = Math.min(...allPos.map((p) => p.x), 0) - COL_GAP;
+  const rightLane = Math.max(...allPos.map((p) => p.x + NODE_W), NODE_W) + COL_GAP;
   const edgePoints = new Map<string, { x: number; y: number }[]>();
   edges.forEach((e, index) => {
     const from = positions.get(e.from);
