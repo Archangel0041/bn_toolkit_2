@@ -315,6 +315,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.05 }}
         minZoom={0.05}
