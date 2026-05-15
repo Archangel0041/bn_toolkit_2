@@ -214,6 +214,33 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
     }
     return false;
   };
+  const segIntersectsRect = (
+    ax: number, ay: number, bx: number, by: number,
+    r: { x1: number; y1: number; x2: number; y2: number },
+  ) => {
+    let t0 = 0;
+    let t1 = 1;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const clip = (p: number, q: number) => {
+      if (p === 0) return q >= 0;
+      const t = q / p;
+      if (p < 0) {
+        if (t > t1) return false;
+        if (t > t0) t0 = t;
+      } else {
+        if (t < t0) return false;
+        if (t < t1) t1 = t;
+      }
+      return true;
+    };
+    return clip(-dx, ax - r.x1) && clip(dx, r.x2 - ax) && clip(-dy, ay - r.y1) && clip(dy, r.y2 - ay);
+  };
+  const straightHitsAny = (
+    fromId: number,
+    toId: number,
+    ax: number, ay: number, bx: number, by: number,
+  ) => nodeRects.some((r) => r.id !== fromId && r.id !== toId && segIntersectsRect(ax, ay, bx, by, r));
   const elbowClear = (
     fromId: number, toId: number,
     sx: number, sy: number, ex: number, ey: number, midY: number,
@@ -229,27 +256,29 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
     if (!from || !to) return;
     const fromCenterX = from.x + NODE_W / 2;
     const toCenterX = to.x + NODE_W / 2;
-    const fromRow = Math.round(from.y / ROW_GAP);
-    const toRow = Math.round(to.y / ROW_GAP);
-    const sameRow = fromRow === toRow;
+    const downward = to.y >= from.y;
+    const start = { x: fromCenterX, y: downward ? from.y + NODE_H : from.y };
+    const end = { x: toCenterX, y: downward ? to.y : to.y + NODE_H };
+
+    if (!straightHitsAny(e.from, e.to, start.x, start.y, end.x, end.y)) {
+      edgePoints.set(`${e.from}->${e.to}`, [start, end]);
+      return;
+    }
+
+    const sameRow = Math.abs(from.y - to.y) < 1;
     if (sameRow) {
       // Same-row: still attach to bottom (source) and top (target) of nodes,
       // dipping below into a shared lane between rows.
-      const startPt = { x: fromCenterX, y: from.y + NODE_H };
-      const endPt = { x: toCenterX, y: to.y };
       const laneY = from.y + NODE_H + 32 + (index % 3) * 10;
       edgePoints.set(`${e.from}->${e.to}`, [
-        startPt,
-        { x: startPt.x, y: laneY },
-        { x: endPt.x, y: laneY },
-        endPt,
+        start,
+        { x: start.x, y: laneY },
+        { x: end.x, y: laneY },
+        end,
       ]);
       return;
     }
 
-    const downward = to.y > from.y;
-    const start = { x: fromCenterX, y: downward ? from.y + NODE_H : from.y };
-    const end = { x: toCenterX, y: downward ? to.y : to.y + NODE_H };
     const midY = (start.y + end.y) / 2;
 
     // Try the simple 3-segment elbow first; only fall back to a side lane if
