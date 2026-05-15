@@ -444,33 +444,68 @@ export default function MissionsView() {
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                     {Object.entries(rewardTotals.resources)
                       .sort(([a], [b]) => (a === "xp" ? -1 : b === "xp" ? 1 : a.localeCompare(b)))
-                      .map(([k, v]) => (
-                        <div
-                          key={k}
-                          className="flex items-center justify-between rounded border bg-muted/40 px-2 py-1.5"
-                        >
-                          <span className="text-xs capitalize text-muted-foreground">
-                            {k.replace(/_/g, " ")}
-                          </span>
-                          <span className="text-sm font-semibold tabular-nums">
-                            {v.toLocaleString()}
-                          </span>
-                        </div>
-                      ))}
+                      .map(([k, v]) => {
+                        const locKeys = [`resource_${k}_name`, `bn_resource_${k}`, `resource_${k}`];
+                        let label = titleCase(k);
+                        for (const lk of locKeys) {
+                          const tr = t(lk);
+                          if (tr && tr !== lk) { label = tr; break; }
+                        }
+                        return (
+                          <div
+                            key={k}
+                            className="flex items-center gap-2 rounded border bg-muted/40 px-2 py-1.5"
+                          >
+                            <img
+                              src={getResourceIconUrl(k)}
+                              alt=""
+                              className="h-6 w-6 shrink-0 object-contain"
+                              onError={(e) => ((e.currentTarget.style.visibility = "hidden"))}
+                              draggable={false}
+                            />
+                            <span className="flex-1 truncate text-xs text-muted-foreground" title={label}>
+                              {label}
+                            </span>
+                            <span className="text-sm font-semibold tabular-nums">
+                              {v.toLocaleString()}
+                            </span>
+                          </div>
+                        );
+                      })}
                   </div>
                 )}
                 {Object.keys(rewardTotals.units).length > 0 && (
                   <div>
                     <div className="mb-1 text-xs font-medium text-muted-foreground">Units</div>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(rewardTotals.units).map(([id, qty]) => (
-                        <div
-                          key={id}
-                          className="rounded border bg-muted/40 px-2 py-1 text-xs tabular-nums"
-                        >
-                          #{id} × {qty}
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                      {Object.entries(rewardTotals.units).map(([id, qty]) => {
+                        const u = unitsById.get(Number(id));
+                        const localized = u?.name ? t(u.name) : "";
+                        const label = localized && localized !== u?.name ? localized : (u?.name ?? `Unit #${id}`);
+                        const iconUrl = u?.icon ? getUnitImageUrl(u.icon) : null;
+                        return (
+                          <div
+                            key={id}
+                            className="flex items-center gap-2 rounded border bg-muted/40 px-2 py-1.5"
+                          >
+                            {iconUrl ? (
+                              <img
+                                src={iconUrl}
+                                alt=""
+                                className="h-8 w-8 shrink-0 rounded bg-background object-contain"
+                                onError={(e) => ((e.currentTarget.style.visibility = "hidden"))}
+                                draggable={false}
+                              />
+                            ) : (
+                              <div className="h-8 w-8 shrink-0 rounded bg-background" />
+                            )}
+                            <span className="flex-1 truncate text-xs" title={label}>
+                              {label}
+                            </span>
+                            <span className="text-sm font-semibold tabular-nums">×{qty}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
