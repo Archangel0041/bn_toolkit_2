@@ -85,6 +85,9 @@ export default function MissionsView() {
     loadCharacters()
       .then(setCharacters)
       .catch(() => {});
+    loadNpcs()
+      .then(setNpcs)
+      .catch(() => {});
   }, []);
 
   const allParsed = useMemo(() => (raw ? parseMissions(raw) : []), [raw]);
