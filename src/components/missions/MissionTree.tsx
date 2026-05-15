@@ -18,7 +18,7 @@ import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getMissionIconUrl } from "@/lib/resourceImages";
+import { getNpcIconUrl } from "@/lib/resourceImages";
 
 const NODE_W = 240;
 const NODE_H = 76;
@@ -204,7 +204,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
           if (!m.giver) return undefined;
           const ch = characters?.[m.giver.toLowerCase()];
           const key = ch?.small_icon ?? ch?.regular_icon;
-          return key ? getMissionIconUrl(key) : getMissionIconUrl(m.giver);
+          return key ? getNpcIconUrl(key) : getNpcIconUrl(m.giver);
         })(),
       };
       return {
