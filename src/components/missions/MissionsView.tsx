@@ -113,7 +113,7 @@ export default function MissionsView() {
     if (mode === "remaining") {
       const r = filterRemaining(allParsed, {
         currentLevel,
-        completedIds,
+        completedIds: effectiveCompletedIds,
         hideAboveLevel: hideAbove,
       });
       missions = r.remaining;
