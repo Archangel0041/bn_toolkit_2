@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { Header } from "@/components/Header";
 import { UnitFilters } from "@/components/units/UnitFilters";
 import { UnitGrid } from "@/components/units/UnitGrid";
@@ -6,11 +6,26 @@ import { CompareBar } from "@/components/units/CompareBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAllUnits, getAllTags, filterUnits } from "@/lib/units";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { EncounterLookup } from "@/components/encounters/EncounterLookup";
-import { BossStrikeLookup } from "@/components/bossStrikes/BossStrikeLookup";
-import { Users, Crosshair, Trophy } from "lucide-react";
+import { Users, Crosshair, Trophy, Map as MapIcon } from "lucide-react";
 import { UnitSide } from "@/data/gameEnums";
 import { filterUnitsByAdvancedCriteria } from "@/lib/unitAbilityFilters";
+
+// Lazy-load secondary tab contents so the initial page load only pulls in the units view.
+const EncounterLookup = lazy(() =>
+  import("@/components/encounters/EncounterLookup").then((m) => ({ default: m.EncounterLookup }))
+);
+const BossStrikeLookup = lazy(() =>
+  import("@/components/bossStrikes/BossStrikeLookup").then((m) => ({ default: m.BossStrikeLookup }))
+);
+const MissionsView = lazy(() => import("@/components/missions/MissionsView"));
+
+function TabFallback() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
+}
 
 const Index = () => {
   const { t } = useLanguage();
@@ -29,26 +44,20 @@ const Index = () => {
   const allTags = useMemo(() => getAllTags(), []);
 
   const filteredUnits = useMemo(() => {
-    // Basic filters
     let units = filterUnits(allUnits, searchQuery, selectedTags, null, t);
-    
-    // Nanopod filter
     if (nanopodFilter === "nanopod") {
       units = units.filter(u => u.requirements?.cost?.nanopods && u.requirements.cost.nanopods > 0);
     } else if (nanopodFilter === "non-nanopod") {
       units = units.filter(u => !u.requirements?.cost?.nanopods || u.requirements.cost.nanopods === 0);
     }
-    
-    // Advanced ability-based filters
     units = filterUnitsByAdvancedCriteria(units, {
       targetCategories,
       damageTypes,
       hasStatusEffects: hasStatusEffects || undefined,
       vulnerableTo,
     });
-    
     return units;
-  }, [searchQuery, selectedTags, nanopodFilter, targetCategories, damageTypes, hasStatusEffects, vulnerableTo, t]);
+  }, [allUnits, searchQuery, selectedTags, nanopodFilter, targetCategories, damageTypes, hasStatusEffects, vulnerableTo, t]);
 
   const unitsBySide = useMemo(() => ({
     player: filteredUnits.filter(u => u.identity.side === UnitSide.Player),
@@ -64,7 +73,7 @@ const Index = () => {
       <Header />
       <main className="container mx-auto px-4 py-6 space-y-6">
         <Tabs value={mainTab} onValueChange={setMainTab}>
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 flex-wrap h-auto">
             <TabsTrigger value="units" className="gap-2">
               <Users className="h-4 w-4" />
               Units
@@ -76,6 +85,10 @@ const Index = () => {
             <TabsTrigger value="boss-strikes" className="gap-2">
               <Trophy className="h-4 w-4" />
               Boss Strikes
+            </TabsTrigger>
+            <TabsTrigger value="missions" className="gap-2">
+              <MapIcon className="h-4 w-4" />
+              Missions
             </TabsTrigger>
           </TabsList>
 
@@ -160,23 +173,39 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="encounters" className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Encounter Viewer</h1>
-              <p className="text-muted-foreground">
-                Search and visualize battle encounters with their unit grids.
-              </p>
-            </div>
-            <EncounterLookup />
+            {mainTab === "encounters" && (
+              <Suspense fallback={<TabFallback />}>
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">Encounter Viewer</h1>
+                  <p className="text-muted-foreground">
+                    Search and visualize battle encounters with their unit grids.
+                  </p>
+                </div>
+                <EncounterLookup />
+              </Suspense>
+            )}
           </TabsContent>
 
           <TabsContent value="boss-strikes" className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Boss Strike Events</h1>
-              <p className="text-muted-foreground">
-                View boss strike tiers, rewards, encounters, and guild weight scaling.
-              </p>
-            </div>
-            <BossStrikeLookup />
+            {mainTab === "boss-strikes" && (
+              <Suspense fallback={<TabFallback />}>
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">Boss Strike Events</h1>
+                  <p className="text-muted-foreground">
+                    View boss strike tiers, rewards, encounters, and guild weight scaling.
+                  </p>
+                </div>
+                <BossStrikeLookup />
+              </Suspense>
+            )}
+          </TabsContent>
+
+          <TabsContent value="missions" className="space-y-6">
+            {mainTab === "missions" && (
+              <Suspense fallback={<TabFallback />}>
+                <MissionsView />
+              </Suspense>
+            )}
           </TabsContent>
         </Tabs>
       </main>
