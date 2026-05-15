@@ -4,6 +4,8 @@ import {
   Background,
   Controls,
   ReactFlowProvider,
+  Handle,
+  Position,
   type Node,
   type Edge,
   type NodeMouseHandler,
@@ -83,12 +85,14 @@ function MissionNode({ data }: { data: MissionNodeData }) {
   return (
     <div
       className={[
-        "h-full w-full rounded-md border px-2 py-1.5 text-left shadow-sm transition-all bg-card text-card-foreground",
+        "relative h-full w-full rounded-md border px-2 py-1.5 text-left shadow-sm transition-all bg-card text-card-foreground",
         data.isAvailable ? "border-primary ring-1 ring-primary/40" : "border-border",
         data.isHighlight ? "ring-2 ring-accent" : "",
         data.isDimmed ? "opacity-30" : "",
       ].join(" ")}
     >
+      <Handle type="target" position={Position.Top} style={{ background: "hsl(var(--primary))", width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: "hsl(var(--primary))", width: 8, height: 8 }} />
       <div className="flex items-start gap-2">
         {data.iconUrl && !imgFailed ? (
           <img
