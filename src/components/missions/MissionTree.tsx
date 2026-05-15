@@ -83,22 +83,92 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
     byLevel.get(level)!.push(m);
   }
   const sortedLevels = [...byLevel.keys()].sort((a, b) => a - b);
-  for (const [row, level] of sortedLevels.entries()) {
-    const rowMissions = [...(byLevel.get(level) ?? [])].sort((a, b) => {
-      const ax = g.node(String(a.id))?.x ?? 0;
-      const bx = g.node(String(b.id))?.x ?? 0;
-      return ax === bx ? a.id - b.id : ax - bx;
-    });
-    const rowWidth = Math.max(0, (rowMissions.length - 1) * (NODE_W + COL_GAP));
-    rowMissions.forEach((m, col) => {
-      positions.set(m.id, {
-        x: col * (NODE_W + COL_GAP) - rowWidth / 2,
-        y: row * ROW_GAP,
+
+  // Build per-level intra-band layout:
+  //  - chains = weakly-connected components using only edges where BOTH endpoints share this level.
+  //  - within a chain, sub-row = longest-path depth from a chain source (vertical stacking of related missions).
+  //  - chains sit side-by-side (different columns) within the band.
+  let cursorY = 0;
+  for (const level of sortedLevels) {
+    const bandMissions = byLevel.get(level) ?? [];
+    const bandIds = new Set(bandMissions.map((m) => m.id));
+    const intraEdges = edges.filter((e) => bandIds.has(e.from) && bandIds.has(e.to));
+
+    // Union-find for chain components
+    const parent = new Map<number, number>();
+    for (const m of bandMissions) parent.set(m.id, m.id);
+    const find = (x: number): number => {
+      let r = x;
+      while (parent.get(r)! !== r) r = parent.get(r)!;
+      while (parent.get(x)! !== r) {
+        const next = parent.get(x)!;
+        parent.set(x, r);
+        x = next;
+      }
+      return r;
+    };
+    const union = (a: number, b: number) => {
+      const ra = find(a);
+      const rb = find(b);
+      if (ra !== rb) parent.set(ra, rb);
+    };
+    for (const e of intraEdges) union(e.from, e.to);
+
+    // Group ids by component root
+    const components = new Map<number, number[]>();
+    for (const m of bandMissions) {
+      const r = find(m.id);
+      if (!components.has(r)) components.set(r, []);
+      components.get(r)!.push(m.id);
+    }
+
+    // Depth (sub-row) per mission within its chain via longest path.
+    // Build adjacency among intra-band ids.
+    const inEdges = new Map<number, number[]>();
+    for (const id of bandIds) inEdges.set(id, []);
+    for (const e of intraEdges) inEdges.get(e.to)!.push(e.from);
+    const depthMemo = new Map<number, number>();
+    const depthOf = (id: number, stack: Set<number>): number => {
+      if (depthMemo.has(id)) return depthMemo.get(id)!;
+      if (stack.has(id)) return 0; // cycle guard
+      stack.add(id);
+      let d = 0;
+      for (const p of inEdges.get(id) ?? []) d = Math.max(d, depthOf(p, stack) + 1);
+      stack.delete(id);
+      depthMemo.set(id, d);
+      return d;
+    };
+    for (const id of bandIds) depthOf(id, new Set());
+
+    // Order components left-to-right by dagre x of their leftmost member.
+    const compList = [...components.values()].map((ids) => {
+      const minX = Math.min(...ids.map((id) => g.node(String(id))?.x ?? 0));
+      const maxDepth = Math.max(...ids.map((id) => depthMemo.get(id) ?? 0));
+      // Per-component column ordering: stable by id when depths tie.
+      const sorted = [...ids].sort((a, b) => {
+        const da = depthMemo.get(a) ?? 0;
+        const db = depthMemo.get(b) ?? 0;
+        if (da !== db) return da - db;
+        return (g.node(String(a))?.x ?? 0) - (g.node(String(b))?.x ?? 0) || a - b;
       });
+      return { ids: sorted, minX, maxDepth };
     });
+    compList.sort((a, b) => a.minX - b.minX);
+
+    const bandMaxDepth = compList.reduce((m, c) => Math.max(m, c.maxDepth), 0);
+    const numCols = compList.length;
+    const totalWidth = Math.max(0, (numCols - 1) * (NODE_W + COL_GAP));
+    compList.forEach((comp, colIdx) => {
+      const x = colIdx * (NODE_W + COL_GAP) - totalWidth / 2;
+      for (const id of comp.ids) {
+        const depth = depthMemo.get(id) ?? 0;
+        positions.set(id, { x, y: cursorY + depth * SUB_ROW_GAP });
+      }
+    });
+
+    cursorY += (bandMaxDepth + 1) * SUB_ROW_GAP + BAND_GAP;
   }
 
-  const allPositions = [...positions.values()];
   const leftLane = Math.min(...allPositions.map((p) => p.x), 0) - COL_GAP;
   const rightLane = Math.max(...allPositions.map((p) => p.x + NODE_W), NODE_W) + COL_GAP;
   const edgePoints = new Map<string, { x: number; y: number }[]>();
