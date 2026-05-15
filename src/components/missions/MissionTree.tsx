@@ -693,9 +693,9 @@ function MissionDetailPanel({
           );
         })()}
 
-        <DialogSection title="Pre-mission Dialog" baseKey={mission.title} suffix="10startdialog" t={t} speakerIconUrl={giverIcon} speakerName={mission.giver ? titleCase(mission.giver) : undefined} />
-        <DialogSection title="Completion Dialog" baseKey={mission.title} suffix="70enddialog" t={t} speakerIconUrl={giverIcon} speakerName={mission.giver ? titleCase(mission.giver) : undefined} />
-        <DialogSection title="Reward Dialog" baseKey={mission.title} suffix="60reward" t={t} speakerIconUrl={giverIcon} speakerName={mission.giver ? titleCase(mission.giver) : undefined} />
+        <DialogSection title="Pre-mission Dialog" baseKey={mission.title} suffix="10startdialog" t={t} characters={characters} dialogues={dialogues} fallbackSpeakerIconUrl={giverIcon} fallbackSpeakerName={mission.giver ? titleCase(mission.giver) : undefined} />
+        <DialogSection title="Completion Dialog" baseKey={mission.title} suffix="70enddialog" t={t} characters={characters} dialogues={dialogues} fallbackSpeakerIconUrl={giverIcon} fallbackSpeakerName={mission.giver ? titleCase(mission.giver) : undefined} />
+        <DialogSection title="Reward Dialog" baseKey={mission.title} suffix="60reward" t={t} characters={characters} dialogues={dialogues} fallbackSpeakerIconUrl={giverIcon} fallbackSpeakerName={mission.giver ? titleCase(mission.giver) : undefined} />
 
         <section>
           <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
