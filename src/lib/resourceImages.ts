@@ -7,6 +7,7 @@ const MENU_BG_PATH = "icons/boss_strikes";
 const ENCOUNTER_PATH = "icons/encounters";
 const MISSION_PATH = "icons/missions";
 const NPC_PATH = "icons/npcs";
+const JOB_PATH = "icons/jobs";
 
 export function getResourceIconUrl(resourceKey: string): string {
   const fileName = `resource_${resourceKey}.png`;
@@ -65,5 +66,11 @@ export function getMissionIconUrl(iconKey: string): string {
 export function getNpcIconUrl(iconKey: string): string {
   const fileName = iconKey.endsWith('.png') ? iconKey : `${iconKey}.png`;
   const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(`${NPC_PATH}/${fileName}`);
+  return data.publicUrl;
+}
+
+export function getJobIconUrl(iconKey: string): string {
+  const fileName = iconKey.endsWith('.png') ? iconKey : `${iconKey}.png`;
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(`${JOB_PATH}/${fileName}`);
   return data.publicUrl;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { loadMissions, loadCharacters, loadNpcs, loadDialogues, type CharacterEntry, type NpcEntry, type DialogueLine } from "@/lib/dataLoader";
+import { loadMissions, loadCharacters, loadNpcs, loadDialogues, loadJobInfo, loadEncounters, type CharacterEntry, type NpcEntry, type DialogueLine, type JobInfoEntry, type EncounterEntry } from "@/lib/dataLoader";
 import {
   parseMissions,
   buildMissionEdges,
@@ -54,6 +54,8 @@ export default function MissionsView() {
   const [characters, setCharacters] = useState<Record<string, CharacterEntry>>({});
   const [npcs, setNpcs] = useState<Record<string, NpcEntry>>({});
   const [dialogues, setDialogues] = useState<Record<string, DialogueLine[]>>({});
+  const [jobs, setJobs] = useState<Record<string, JobInfoEntry>>({});
+  const [encounters, setEncounters] = useState<Record<string, EncounterEntry>>({});
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
@@ -91,6 +93,12 @@ export default function MissionsView() {
       .catch(() => {});
     loadDialogues()
       .then(setDialogues)
+      .catch(() => {});
+    loadJobInfo()
+      .then(setJobs)
+      .catch(() => {});
+    loadEncounters()
+      .then((d) => setEncounters(d?.armies ?? {}))
       .catch(() => {});
   }, []);
 
@@ -395,6 +403,8 @@ export default function MissionsView() {
             npcs={npcs}
             dialogues={dialogues}
             unitsById={unitsById}
+            jobs={jobs}
+            encounters={encounters}
           />
 
           <div className="rounded-lg border p-4 space-y-3">

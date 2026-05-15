@@ -20,9 +20,9 @@ import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
-import type { DialogueLine } from "@/lib/dataLoader";
+import type { DialogueLine, JobInfoEntry, EncounterEntry } from "@/lib/dataLoader";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl } from "@/lib/resourceImages";
+import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl, getJobIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
 
 const NODE_W = 240;
@@ -44,6 +44,8 @@ interface MissionTreeProps {
   unitsById?: Map<number, UnitInfo>;
   npcs?: Record<string, NpcInfo>;
   dialogues?: Record<string, DialogueLine[]>;
+  jobs?: Record<string, JobInfoEntry>;
+  encounters?: Record<string, EncounterEntry>;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
@@ -410,6 +412,8 @@ function MissionTreeInner({
   unitsById,
   npcs,
   dialogues,
+  jobs,
+  encounters,
 }: MissionTreeProps) {
   const { t } = useLanguage();
   const localize = useLocalize();
@@ -567,6 +571,8 @@ function MissionTreeInner({
           unitsById={unitsById}
           npcs={npcs}
           dialogues={dialogues}
+          jobs={jobs}
+          encounters={encounters}
           onClose={() => setPinnedId(null)}
         />
       )}
@@ -584,6 +590,8 @@ interface MissionDetailPanelProps {
   unitsById?: Map<number, UnitInfo>;
   npcs?: Record<string, NpcInfo>;
   dialogues?: Record<string, DialogueLine[]>;
+  jobs?: Record<string, JobInfoEntry>;
+  encounters?: Record<string, EncounterEntry>;
   onClose: () => void;
 }
 
@@ -597,6 +605,8 @@ function MissionDetailPanel({
   unitsById,
   npcs,
   dialogues,
+  jobs,
+  encounters,
   onClose,
 }: MissionDetailPanelProps) {
   const { t } = useLanguage();
@@ -718,6 +728,11 @@ function MissionDetailPanel({
                   const lname = u?.name ? localize(u.name, u.name) : `Unit #${o.unitId}`;
                   detail = `${o.count ?? 1}× ${lname}`;
                   detailIconUrl = u?.icon ? getUnitImageUrl(u.icon) : undefined;
+                } else if (o.jobId != null) {
+                  const job = jobs?.[String(o.jobId)];
+                  const lname = job?.name ? localize(job.name, job.name) : `Job #${o.jobId}`;
+                  detail = `${o.count ?? 1}× ${lname}`;
+                  detailIconUrl = job?.icon ? getJobIconUrl(job.icon) : undefined;
                 } else if (o.opponentId != null) {
                   const npc = npcs?.[String(o.opponentId)];
                   const lname = npc?.name ? localize(npc.name, npc.name) : `Opponent #${o.opponentId}`;
@@ -730,6 +745,25 @@ function MissionDetailPanel({
                 const speakerNpc = o.speakerNpcId != null ? npcs?.[String(o.speakerNpcId)] : undefined;
                 const speakerIconUrl = speakerNpc?.icon ? getNpcIconUrl(speakerNpc.icon) : undefined;
                 const speakerName = speakerNpc?.name ? localize(speakerNpc.name, speakerNpc.name) : undefined;
+
+                // Collect encounter info: for finish_battle (single) or defeat_encounter_set (many).
+                const encIds: number[] = o.encounterIds && o.encounterIds.length > 0
+                  ? o.encounterIds
+                  : o.encounterId != null ? [o.encounterId] : [];
+                const encList = encIds
+                  .map((eid) => ({ id: eid, enc: encounters?.[String(eid)] }))
+                  .filter((x) => x.enc);
+                // Union of enemy units across listed encounters.
+                const enemyUnitMap = new Map<number, { count: number }>();
+                for (const { enc } of encList) {
+                  for (const u of enc?.units ?? []) {
+                    const cur = enemyUnitMap.get(u.unit_id);
+                    if (cur) cur.count += 1;
+                    else enemyUnitMap.set(u.unit_id, { count: 1 });
+                  }
+                }
+                const enemyUnits = [...enemyUnitMap.entries()].slice(0, 24);
+
                 return (
                   <li key={i} className="rounded border bg-muted/30 px-2 py-1">
                     <div className="flex items-start gap-1.5">
@@ -777,6 +811,49 @@ function MissionDetailPanel({
                             )}
                             {detail}
                           </span>
+                        )}
+                      </div>
+                    )}
+
+                    {encList.length > 0 && (
+                      <div className="mt-1.5 space-y-1">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+                          {encList.length === 1
+                            ? "Encounter"
+                            : `${o.count ?? encList.length} of ${encList.length} encounters`}
+                          {(() => {
+                            const lvls = encList.map((e) => e.enc?.level).filter((l): l is number => typeof l === "number");
+                            if (!lvls.length) return null;
+                            const min = Math.min(...lvls); const max = Math.max(...lvls);
+                            return <span className="ml-1 normal-case tracking-normal">· Lv {min === max ? min : `${min}–${max}`}</span>;
+                          })()}
+                        </div>
+                        {enemyUnits.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {enemyUnits.map(([uid, { count }]) => {
+                              const u = unitsById?.get(uid);
+                              const uname = u?.name ? localize(u.name, u.name) : `Unit #${uid}`;
+                              const url = u?.icon ? getUnitImageUrl(u.icon) : undefined;
+                              return (
+                                <span
+                                  key={uid}
+                                  title={`${uname}${count > 1 ? ` ×${count} appearances` : ""}`}
+                                  className="inline-flex items-center gap-1 rounded border bg-background px-1 py-px text-[10px]"
+                                >
+                                  {url && (
+                                    <img
+                                      src={url}
+                                      alt=""
+                                      className="h-3.5 w-3.5 object-contain"
+                                      onError={(e) => ((e.currentTarget.style.display = "none"))}
+                                      draggable={false}
+                                    />
+                                  )}
+                                  <span className="max-w-[110px] truncate">{uname}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
                     )}

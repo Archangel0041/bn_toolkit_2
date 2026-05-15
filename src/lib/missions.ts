@@ -24,6 +24,10 @@ export interface ParsedObjective {
   opponentId?: number;
   icon?: string;
   speakerNpcId?: number;
+  jobId?: number;
+  encounterId?: number;
+  encounterIds?: number[];
+  npcCompositionId?: number;
   prereqRaw?: Record<string, unknown>;
 }
 
@@ -134,20 +138,33 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
         const identity = comps.find((c) => c?._t === "objective_identity_config");
         const completion = comps.find((c) => c?._t === "objective_completion_config");
         const prereq = completion?.prereq as RawComponent | undefined;
+        const opponentId =
+          typeof prereq?.opponent_id === "number"
+            ? prereq.opponent_id
+            : typeof prereq?.npc_id === "number"
+              ? prereq.npc_id
+              : typeof identity?.npc_id === "number"
+                ? identity.npc_id
+                : undefined;
+        const encounterIds = Array.isArray(prereq?.encounter_ids)
+          ? (prereq!.encounter_ids as unknown[]).filter((x) => typeof x === "number") as number[]
+          : undefined;
         return {
           title: identity?.objective_text ?? o.title ?? o.name ?? o.objective_name,
           description: o.description ?? o.objective_description,
           type: prereq?._t ?? o._t,
           count: typeof prereq?.count === "number" ? prereq.count : undefined,
           unitId: typeof prereq?.unit_id === "number" ? prereq.unit_id : undefined,
-          opponentId:
-            typeof prereq?.opponent_id === "number"
-              ? prereq.opponent_id
-              : typeof identity?.npc_id === "number"
-                ? identity.npc_id
-                : undefined,
+          opponentId,
           icon: typeof identity?.icon === "string" ? identity.icon : undefined,
           speakerNpcId: typeof identity?.npc_id === "number" ? identity.npc_id : undefined,
+          jobId: typeof prereq?.job_id === "number" ? prereq.job_id : undefined,
+          encounterId: typeof prereq?.encounter_id === "number" ? prereq.encounter_id : undefined,
+          encounterIds,
+          npcCompositionId:
+            prereq?._t === "attack_npc_building_prereq_config" && typeof prereq?.composition_id === "number"
+              ? prereq.composition_id
+              : undefined,
           prereqRaw: prereq,
         };
       }
