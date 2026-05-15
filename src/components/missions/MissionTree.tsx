@@ -27,6 +27,8 @@ import { getUnitImageUrl } from "@/lib/unitImages";
 const NODE_W = 240;
 const NODE_H = 96;
 const ROW_GAP = 190;
+const SUB_ROW_GAP = 140;
+const BAND_GAP = 60;
 const COL_GAP = 90;
 
 interface UnitInfo { name?: string; icon?: string }
