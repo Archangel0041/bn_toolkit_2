@@ -340,7 +340,9 @@ export default function MissionsView() {
         <div>
           <h1 className="text-3xl font-bold mb-1">Mission Tree</h1>
           <p className="text-muted-foreground text-sm">
-            Showing remaining missions up to level {effectiveCap}.{" "}
+            {upcomingMode
+              ? `Showing upcoming missions (level ${upcomingMin}–${upcomingMax}).`
+              : `Showing remaining missions up to level ${effectiveCap}.`}{" "}
             {raw ? `${allParsed.length} missions loaded.` : "Loading…"}
           </p>
         </div>
