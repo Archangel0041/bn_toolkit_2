@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -7,6 +7,7 @@ import {
   ReactFlowProvider,
   type Node,
   type Edge,
+  type NodeMouseHandler,
   MarkerType,
   useNodesState,
   useEdgesState,
@@ -16,10 +17,11 @@ import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getMissionIconUrl } from "@/lib/resourceImages";
 
-const NODE_W = 220;
-const NODE_H = 64;
-const ROW_H = 130;
+const NODE_W = 240;
+const NODE_H = 76;
+const ROW_H = 170;
 
 interface MissionTreeProps {
   missions: ParsedMission[];
@@ -36,21 +38,45 @@ const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
   "not-started": "1 4",
 };
 
+/** Convert "big_game_hunter" / "MORGAN" -> "Big Game Hunter" / "Morgan". */
+function titleCase(input: string): string {
+  return input
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w))
+    .join(" ");
+}
+
 function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "TB", nodesep: 30, ranksep: 60, marginx: 40 });
+  g.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 110, marginx: 50, marginy: 30 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const m of missions) g.setNode(String(m.id), { width: NODE_W, height: NODE_H });
   for (const e of edges) g.setEdge(String(e.from), String(e.to));
   dagre.layout(g);
 
   const levels = Array.from(new Set(missions.map((m) => m.displayLevel))).sort((a, b) => a - b);
-  const rowY = new Map(levels.map((lvl, i) => [lvl, i * ROW_H + 40]));
+  const rowY = new Map(levels.map((lvl, i) => [lvl, i * ROW_H + 50]));
 
+  // Use dagre's x but force y per level row, and de-overlap nodes that land
+  // on the same row by spreading them along x.
   const positions = new Map<number, { x: number; y: number }>();
+  const byLevel = new Map<number, ParsedMission[]>();
   for (const m of missions) {
-    const node = g.node(String(m.id));
-    positions.set(m.id, { x: node?.x ?? 0, y: rowY.get(m.displayLevel) ?? 0 });
+    if (!byLevel.has(m.displayLevel)) byLevel.set(m.displayLevel, []);
+    byLevel.get(m.displayLevel)!.push(m);
+  }
+  for (const [lvl, list] of byLevel) {
+    list.sort((a, b) => (g.node(String(a.id))?.x ?? 0) - (g.node(String(b.id))?.x ?? 0));
+    const minGap = NODE_W + 28;
+    let lastX = -Infinity;
+    for (const m of list) {
+      const dagreX = g.node(String(m.id))?.x ?? 0;
+      const x = Math.max(dagreX, lastX + minGap);
+      lastX = x;
+      positions.set(m.id, { x, y: rowY.get(lvl) ?? 0 });
+    }
   }
   return { positions, levels, rowY };
 }
@@ -63,40 +89,61 @@ interface MissionNodeData extends Record<string, unknown> {
   otherTypes: string[];
   isAvailable?: boolean;
   isHighlight?: boolean;
+  isDimmed?: boolean;
   missionId: number;
+  iconUrl?: string;
 }
 
 function MissionNode({ data }: { data: MissionNodeData }) {
+  const [imgFailed, setImgFailed] = useState(false);
   return (
     <div
       className={[
-        "h-full w-full rounded-md border px-2 py-1.5 text-left shadow-sm transition-colors bg-card text-card-foreground",
+        "h-full w-full rounded-md border px-2 py-1.5 text-left shadow-sm transition-all bg-card text-card-foreground",
         data.isAvailable ? "border-primary ring-1 ring-primary/40" : "border-border",
         data.isHighlight ? "ring-2 ring-accent" : "",
+        data.isDimmed ? "opacity-30" : "",
       ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-1">
-        <div className="truncate text-[11px] font-semibold leading-tight" title={data.title}>
-          {data.title}
+      <div className="flex items-start gap-2">
+        {data.iconUrl && !imgFailed ? (
+          <img
+            src={data.iconUrl}
+            alt=""
+            className="h-9 w-9 shrink-0 rounded bg-muted object-cover"
+            onError={() => setImgFailed(true)}
+            draggable={false}
+          />
+        ) : (
+          <div className="h-9 w-9 shrink-0 rounded bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+            {(data.giver ?? "?").slice(0, 2).toUpperCase()}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-1">
+            <div className="truncate text-[11px] font-semibold leading-tight" title={data.title}>
+              {data.title}
+            </div>
+            <span className="shrink-0 rounded bg-muted px-1 text-[9px] font-medium text-muted-foreground">
+              Lv{data.level}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-1">
+            <span className="truncate text-[10px] text-muted-foreground" title={data.giver}>
+              {data.giver ?? "—"}
+            </span>
+            <span className="shrink-0 text-[9px] text-muted-foreground/70">#{data.missionId}</span>
+          </div>
+          {data.otherCount > 0 && (
+            <div
+              className="mt-0.5 truncate text-[9px] text-amber-600 dark:text-amber-400"
+              title={data.otherTypes.join(", ")}
+            >
+              +{data.otherCount} other req
+            </div>
+          )}
         </div>
-        <span className="shrink-0 rounded bg-muted px-1 text-[9px] font-medium text-muted-foreground">
-          Lv{data.level}
-        </span>
       </div>
-      <div className="mt-1 flex items-center justify-between gap-1">
-        <span className="truncate text-[9px] text-muted-foreground" title={data.giver}>
-          {data.giver ?? "—"}
-        </span>
-        <span className="shrink-0 text-[9px] text-muted-foreground/70">#{data.missionId}</span>
-      </div>
-      {data.otherCount > 0 && (
-        <div
-          className="mt-0.5 truncate text-[9px] text-amber-600 dark:text-amber-400"
-          title={data.otherTypes.join(", ")}
-        >
-          +{data.otherCount} other req
-        </div>
-      )}
     </div>
   );
 }
@@ -113,6 +160,40 @@ export function MissionTree(props: MissionTreeProps) {
 
 function MissionTreeInner({ missions, edges, availableNow, highlightId }: MissionTreeProps) {
   const { t } = useLanguage();
+  const [pinnedId, setPinnedId] = useState<number | null>(null);
+
+  // Build forward & backward adjacency for chain highlighting
+  const { forward, backward } = useMemo(() => {
+    const f = new Map<number, Set<number>>();
+    const b = new Map<number, Set<number>>();
+    for (const e of edges) {
+      if (!f.has(e.from)) f.set(e.from, new Set());
+      f.get(e.from)!.add(e.to);
+      if (!b.has(e.to)) b.set(e.to, new Set());
+      b.get(e.to)!.add(e.from);
+    }
+    return { forward: f, backward: b };
+  }, [edges]);
+
+  const chain = useMemo(() => {
+    if (pinnedId == null) return null;
+    const inChain = new Set<number>([pinnedId]);
+    const walk = (id: number, adj: Map<number, Set<number>>) => {
+      const stack = [id];
+      while (stack.length) {
+        const cur = stack.pop()!;
+        for (const next of adj.get(cur) ?? []) {
+          if (!inChain.has(next)) {
+            inChain.add(next);
+            stack.push(next);
+          }
+        }
+      }
+    };
+    walk(pinnedId, forward);
+    walk(pinnedId, backward);
+    return inChain;
+  }, [pinnedId, forward, backward]);
 
   const { rfNodes, rfEdges, levels, rowY } = useMemo(() => {
     const { positions, levels, rowY } = layout(missions, edges);
@@ -123,12 +204,14 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
       const data: MissionNodeData = {
         title,
         level: m.displayLevel,
-        giver: m.giver,
+        giver: m.giver ? titleCase(m.giver) : undefined,
         otherCount: m.otherPrereqCount,
         otherTypes: m.otherPrereqTypes,
         isAvailable: availableNow?.has(m.id),
-        isHighlight: highlightId === m.id,
+        isHighlight: highlightId === m.id || pinnedId === m.id,
+        isDimmed: chain ? !chain.has(m.id) : false,
         missionId: m.id,
+        iconUrl: m.giver ? getMissionIconUrl(m.giver) : undefined,
       };
       return {
         id: String(m.id),
@@ -139,35 +222,48 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
       };
     });
 
-    const rfEdges: Edge[] = edges.map((e, i) => ({
-      id: `e${i}`,
-      source: String(e.from),
-      target: String(e.to),
-      type: "smoothstep",
-      style: {
-        stroke: "hsl(var(--primary))",
-        strokeWidth: 2,
-        strokeDasharray: EDGE_DASH[e.type],
-        opacity: 0.85,
-      },
-      markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary))", width: 18, height: 18 },
-    }));
+    const rfEdges: Edge[] = edges.map((e, i) => {
+      const inChain = chain ? chain.has(e.from) && chain.has(e.to) : true;
+      return {
+        id: `e${i}`,
+        source: String(e.from),
+        target: String(e.to),
+        type: "smoothstep",
+        style: {
+          stroke: "hsl(var(--primary))",
+          strokeWidth: inChain ? 2.5 : 2,
+          strokeDasharray: EDGE_DASH[e.type],
+          opacity: chain && !inChain ? 0.15 : 0.9,
+        },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary))", width: 20, height: 20 },
+      };
+    });
 
     return { rfNodes, rfEdges, levels, rowY };
-  }, [missions, edges, availableNow, highlightId, t]);
+  }, [missions, edges, availableNow, highlightId, t, chain, pinnedId]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(rfEdges);
   const { fitView } = useReactFlow();
   useEffect(() => setNodes(rfNodes), [rfNodes, setNodes]);
   useEffect(() => setEdges(rfEdges), [rfEdges, setEdges]);
+
   // Re-fit the viewport whenever the visible mission set changes (filters, search, mode).
+  // Use a small timeout so React Flow has committed the new node positions first.
   useEffect(() => {
-    const id = requestAnimationFrame(() =>
-      fitView({ padding: 0.15, maxZoom: 1, minZoom: 0.5, duration: 300 })
-    );
-    return () => cancelAnimationFrame(id);
+    if (rfNodes.length === 0) return;
+    const handle = setTimeout(() => {
+      fitView({ padding: 0.18, maxZoom: 1, minZoom: 0.4, duration: 350 });
+    }, 60);
+    return () => clearTimeout(handle);
   }, [rfNodes, fitView]);
+
+  const onNodeClick = useCallback<NodeMouseHandler>((_evt, node) => {
+    const id = parseInt(node.id, 10);
+    setPinnedId((cur) => (cur === id ? null : id));
+  }, []);
+
+  const onPaneClick = useCallback(() => setPinnedId(null), []);
 
   return (
     <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-card overflow-hidden">
@@ -182,16 +278,23 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId }: Missio
           </div>
         ))}
       </div>
+      {pinnedId != null && (
+        <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-md border bg-background/90 px-2 py-1 text-[11px] text-muted-foreground shadow">
+          Showing chain · click background to clear
+        </div>
+      )}
       <div className="absolute inset-0 pl-12">
         <ReactFlow
           nodes={nodes}
           edges={edgesState}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.15, maxZoom: 1, minZoom: 0.5 }}
-          minZoom={0.4}
+          fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.4 }}
+          minZoom={0.3}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
         >
