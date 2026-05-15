@@ -30,7 +30,6 @@ import { EncounterGrid } from "@/components/encounters/EncounterGrid";
 
 const NODE_W = 240;
 const NODE_H = 96;
-const ROW_GAP = 190;
 const SUB_ROW_GAP = 140;
 const BAND_GAP = 60;
 const COL_GAP = 90;
@@ -181,7 +180,7 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
         const depth = comp.ids.indexOf(id);
         positions.set(id, { x, y: baseY + depth * SUB_ROW_GAP });
       }
-      columnCursors.set(columnKey, baseY + (comp.maxDepth + 1) * SUB_ROW_GAP + BAND_GAP);
+      columnCursors.set(columnKey, baseY + comp.ids.length * SUB_ROW_GAP + BAND_GAP);
     });
   });
 
