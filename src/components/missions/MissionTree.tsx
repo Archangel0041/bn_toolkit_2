@@ -583,6 +583,7 @@ interface MissionDetailPanelProps {
   characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
   unitsById?: Map<number, UnitInfo>;
   npcs?: Record<string, NpcInfo>;
+  dialogues?: Record<string, DialogueLine[]>;
   onClose: () => void;
 }
 
@@ -595,6 +596,7 @@ function MissionDetailPanel({
   characters,
   unitsById,
   npcs,
+  dialogues,
   onClose,
 }: MissionDetailPanelProps) {
   const { t } = useLanguage();
