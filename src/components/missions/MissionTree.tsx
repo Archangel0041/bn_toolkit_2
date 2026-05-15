@@ -6,8 +6,10 @@ import {
   ReactFlowProvider,
   Handle,
   Position,
+  BaseEdge,
   type Node,
   type Edge,
+  type EdgeProps,
   type NodeMouseHandler,
   MarkerType,
   useNodesState,
@@ -52,20 +54,29 @@ function titleCase(input: string): string {
 
 function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "TB", nodesep: 40, ranksep: 80, marginx: 50, marginy: 30 });
+  g.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 110, marginx: 50, marginy: 30 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const m of missions) g.setNode(String(m.id), { width: NODE_W, height: NODE_H });
   for (const e of edges) g.setEdge(String(e.from), String(e.to));
   dagre.layout(g);
 
-  // Use dagre's natural tree layout — it ranks nodes by dependency depth, so
-  // chains visibly cascade top-down instead of being squashed into level rows.
+  // Dagre positions are CENTER coords; React Flow expects top-left → offset by half size.
   const positions = new Map<number, { x: number; y: number }>();
   for (const m of missions) {
     const node = g.node(String(m.id));
-    positions.set(m.id, { x: node?.x ?? 0, y: node?.y ?? 0 });
+    positions.set(m.id, {
+      x: (node?.x ?? 0) - NODE_W / 2,
+      y: (node?.y ?? 0) - NODE_H / 2,
+    });
   }
-  return { positions };
+  // Edge waypoints (in dagre's center-coord space) — used by the custom edge to
+  // route around intermediate nodes instead of cutting straight through them.
+  const edgePoints = new Map<string, { x: number; y: number }[]>();
+  for (const e of edges) {
+    const ge = g.edge(String(e.from), String(e.to));
+    if (ge?.points) edgePoints.set(`${e.from}->${e.to}`, ge.points);
+  }
+  return { positions, edgePoints };
 }
 
 interface MissionNodeData extends Record<string, unknown> {
@@ -139,6 +150,35 @@ function MissionNode({ data }: { data: MissionNodeData }) {
 
 const nodeTypes = { mission: MissionNode };
 
+/** Edge that follows dagre's routed waypoints so lines don't cross through nodes. */
+function RoutedEdge({ id, data, style, markerEnd }: EdgeProps) {
+  const pts = (data as { points?: { x: number; y: number }[] } | undefined)?.points;
+  if (!pts || pts.length < 2) return null;
+  // Build a smooth path: straight segments with rounded corners.
+  const r = 10;
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const prev = pts[i - 1];
+    const cur = pts[i];
+    const next = pts[i + 1];
+    const dx1 = cur.x - prev.x;
+    const dy1 = cur.y - prev.y;
+    const len1 = Math.hypot(dx1, dy1) || 1;
+    const dx2 = next.x - cur.x;
+    const dy2 = next.y - cur.y;
+    const len2 = Math.hypot(dx2, dy2) || 1;
+    const off = Math.min(r, len1 / 2, len2 / 2);
+    const p1 = { x: cur.x - (dx1 / len1) * off, y: cur.y - (dy1 / len1) * off };
+    const p2 = { x: cur.x + (dx2 / len2) * off, y: cur.y + (dy2 / len2) * off };
+    d += ` L ${p1.x} ${p1.y} Q ${cur.x} ${cur.y} ${p2.x} ${p2.y}`;
+  }
+  const last = pts[pts.length - 1];
+  d += ` L ${last.x} ${last.y}`;
+  return <BaseEdge id={id} path={d} style={style} markerEnd={markerEnd} />;
+}
+
+const edgeTypes = { routed: RoutedEdge };
+
 export function MissionTree(props: MissionTreeProps) {
   return (
     <ReactFlowProvider>
@@ -185,7 +225,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
   }, [pinnedId, forward, backward]);
 
   const { rfNodes, rfEdges } = useMemo(() => {
-    const { positions } = layout(missions, edges);
+    const { positions, edgePoints } = layout(missions, edges);
     const rfNodes: Node[] = missions.map((m) => {
       const pos = positions.get(m.id) ?? { x: 0, y: 0 };
       const localized = t(m.title);
@@ -218,16 +258,19 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
 
     const rfEdges: Edge[] = edges.map((e, i) => {
       const inChain = chain ? chain.has(e.from) && chain.has(e.to) : true;
+      const points = edgePoints.get(`${e.from}->${e.to}`);
       return {
         id: `e${i}`,
         source: String(e.from),
         target: String(e.to),
-        type: "smoothstep",
+        type: points ? "routed" : "smoothstep",
+        data: { points },
         style: {
           stroke: "hsl(var(--primary))",
           strokeWidth: inChain ? 2.5 : 2,
           strokeDasharray: EDGE_DASH[e.type],
           opacity: chain && !inChain ? 0.15 : 0.9,
+          fill: "none",
         },
         markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--primary))", width: 20, height: 20 },
       };
@@ -272,6 +315,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.05 }}
         minZoom={0.05}
