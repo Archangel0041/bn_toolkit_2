@@ -1,0 +1,179 @@
+/**
+ * Mission parsing helpers for the Mission Tree feature.
+ * v1: extract identity, required level, and prerequisite mission IDs.
+ */
+
+export type MissionPrereqEdgeType =
+  | "complete-all"
+  | "complete-any"
+  | "active"
+  | "inactive"
+  | "not-started";
+
+export interface ParsedMission {
+  id: number;
+  title: string;
+  description?: string;
+  giver?: string;
+  /** Highest player_level requirement found in start_rules + objective completion rules. */
+  level: number;
+  prereqMissionIds: {
+    all: number[]; // complete_all_missions_prereq_config
+    any: number[]; // complete_any_mission_prereq_config
+    active: number[]; // active_missions_prereq_config
+    inactive: number[]; // inactive_missions_prereq_config
+    notStarted: number[]; // not_started_missions_prereq_config
+  };
+  /** Count of non-mission, non-level prereq rules (structures, jobs, tags, etc.) for v1 badge. */
+  otherPrereqCount: number;
+  otherPrereqTypes: string[];
+}
+
+type RawComponent = Record<string, any>;
+
+function collectLevelFromRule(rule: RawComponent): number {
+  if (rule?._t === "player_level_prereq_config" && typeof rule.min_level === "number") {
+    return rule.min_level;
+  }
+  return 0;
+}
+
+function walkObjectiveLevels(objectivesConfig: RawComponent | undefined): number {
+  if (!objectivesConfig) return 0;
+  let max = 0;
+  for (const obj of objectivesConfig.objectives ?? []) {
+    for (const comp of obj.objective_components ?? []) {
+      if (comp._t === "objective_completion_config" && comp.prereq) {
+        max = Math.max(max, collectLevelFromRule(comp.prereq));
+      }
+    }
+  }
+  return max;
+}
+
+const MISSION_PREREQ_KEYS: Record<string, keyof ParsedMission["prereqMissionIds"]> = {
+  complete_all_missions_prereq_config: "all",
+  complete_any_mission_prereq_config: "any",
+  active_missions_prereq_config: "active",
+  inactive_missions_prereq_config: "inactive",
+  not_started_missions_prereq_config: "notStarted",
+};
+
+export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMission[] {
+  const out: ParsedMission[] = [];
+  for (const [, components] of Object.entries(raw)) {
+    const identity = components.find((c) => c._t === "mission_identity_config");
+    if (!identity) continue;
+
+    const existence = components.find((c) => c._t === "mission_existence_config");
+    const objectives = components.find((c) => c._t === "mission_objectives_config");
+
+    let level = 0;
+    const prereqMissionIds = {
+      all: [] as number[],
+      any: [] as number[],
+      active: [] as number[],
+      inactive: [] as number[],
+      notStarted: [] as number[],
+    };
+    let otherPrereqCount = 0;
+    const otherPrereqTypes: string[] = [];
+
+    const allRules: RawComponent[] = [
+      ...(existence?.start_rules ?? []),
+      ...(existence?.persistence_rules ?? []),
+    ];
+
+    for (const rule of allRules) {
+      const t = rule?._t;
+      if (!t) continue;
+      if (t === "player_level_prereq_config") {
+        level = Math.max(level, rule.min_level ?? 0);
+      } else if (t in MISSION_PREREQ_KEYS) {
+        const bucket = MISSION_PREREQ_KEYS[t];
+        for (const id of rule.mission_ids ?? []) {
+          if (typeof id === "number") prereqMissionIds[bucket].push(id);
+        }
+      } else {
+        otherPrereqCount++;
+        if (!otherPrereqTypes.includes(t)) otherPrereqTypes.push(t);
+      }
+    }
+
+    level = Math.max(level, walkObjectiveLevels(objectives));
+    if (level === 0) level = 1;
+
+    out.push({
+      id: identity.id,
+      title: identity.title,
+      description: identity.description,
+      giver: identity.giver,
+      level,
+      prereqMissionIds,
+      otherPrereqCount,
+      otherPrereqTypes,
+    });
+  }
+  return out.sort((a, b) => a.level - b.level || a.id - b.id);
+}
+
+export function buildMissionIndex(missions: ParsedMission[]): Map<number, ParsedMission> {
+  return new Map(missions.map((m) => [m.id, m]));
+}
+
+export interface MissionEdge {
+  from: number; // prerequisite mission id
+  to: number; // dependent mission id
+  type: MissionPrereqEdgeType;
+}
+
+export function buildMissionEdges(missions: ParsedMission[]): MissionEdge[] {
+  const ids = new Set(missions.map((m) => m.id));
+  const edges: MissionEdge[] = [];
+  const push = (from: number, to: number, type: MissionPrereqEdgeType) => {
+    if (ids.has(from) && ids.has(to)) edges.push({ from, to, type });
+  };
+  for (const m of missions) {
+    for (const id of m.prereqMissionIds.all) push(id, m.id, "complete-all");
+    for (const id of m.prereqMissionIds.any) push(id, m.id, "complete-any");
+    for (const id of m.prereqMissionIds.active) push(id, m.id, "active");
+    for (const id of m.prereqMissionIds.inactive) push(id, m.id, "inactive");
+    for (const id of m.prereqMissionIds.notStarted) push(id, m.id, "not-started");
+  }
+  return edges;
+}
+
+export interface RemainingFilter {
+  currentLevel: number;
+  completedIds: Set<number>;
+  hideAboveLevel?: boolean;
+}
+
+/**
+ * Returns the subset of missions still relevant given completed IDs + level.
+ * "Available now" = all `complete-all` prereqs are completed AND
+ *   (no `complete-any` rule, or at least one of its IDs is completed).
+ * `inactive`/`not-started` prereqs are treated as satisfied if those IDs are completed
+ * (best-effort approximation without live game state).
+ */
+export function filterRemaining(
+  missions: ParsedMission[],
+  filter: RemainingFilter
+): { remaining: ParsedMission[]; availableNow: Set<number> } {
+  const { currentLevel, completedIds, hideAboveLevel } = filter;
+  const remaining = missions.filter((m) => {
+    if (completedIds.has(m.id)) return false;
+    if (hideAboveLevel && m.level > currentLevel) return false;
+    return true;
+  });
+  const availableNow = new Set<number>();
+  for (const m of remaining) {
+    if (m.level > currentLevel) continue;
+    const allOk = m.prereqMissionIds.all.every((id) => completedIds.has(id));
+    const anyOk =
+      m.prereqMissionIds.any.length === 0 ||
+      m.prereqMissionIds.any.some((id) => completedIds.has(id));
+    if (allOk && anyOk) availableNow.add(m.id);
+  }
+  return { remaining, availableNow };
+}
