@@ -687,9 +687,9 @@ function MissionDetailPanel({
           );
         })()}
 
-        <DialogSection title="Pre-mission Dialog" baseKey={mission.title} suffix="10startdialog" t={t} />
-        <DialogSection title="Completion Dialog" baseKey={mission.title} suffix="70enddialog" t={t} />
-        <DialogSection title="Reward Dialog" baseKey={mission.title} suffix="60reward" t={t} />
+        <DialogSection title="Pre-mission Dialog" baseKey={mission.title} suffix="10startdialog" t={t} speakerIconUrl={giverIcon} speakerName={mission.giver ? titleCase(mission.giver) : undefined} />
+        <DialogSection title="Completion Dialog" baseKey={mission.title} suffix="70enddialog" t={t} speakerIconUrl={giverIcon} speakerName={mission.giver ? titleCase(mission.giver) : undefined} />
+        <DialogSection title="Reward Dialog" baseKey={mission.title} suffix="60reward" t={t} speakerIconUrl={giverIcon} speakerName={mission.giver ? titleCase(mission.giver) : undefined} />
 
         <section>
           <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -854,11 +854,12 @@ interface DialogSectionProps {
   suffix: string;
   t: (k: string) => string;
   defaultOpen?: boolean;
+  speakerIconUrl?: string;
+  speakerName?: string;
 }
 
-function DialogSection({ title, baseKey, suffix, t, defaultOpen = false }: DialogSectionProps) {
+function DialogSection({ title, baseKey, suffix, t, defaultOpen = false, speakerIconUrl, speakerName }: DialogSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
-  // baseKey looks like "<base>_title". Strip "_title" to get the base prefix.
   const base = baseKey ? baseKey.replace(/_title$/, "") : "";
   const lines = useMemo(() => {
     if (!base) return [] as string[];
@@ -867,12 +868,11 @@ function DialogSection({ title, baseKey, suffix, t, defaultOpen = false }: Dialo
       const k = `mis_${base}_${suffix}_${i}_body_0`;
       const tr = t(k);
       if (!tr || tr === k) {
-        if (i === 0) continue; // try next
+        if (i === 0) continue;
         break;
       }
       out.push(tr);
     }
-    // Edge case: only check first 6 even if found gaps
     return out;
   }, [base, suffix, t]);
 
@@ -891,9 +891,19 @@ function DialogSection({ title, baseKey, suffix, t, defaultOpen = false }: Dialo
       {open && (
         <div className="mt-1 space-y-1">
           {lines.map((line, i) => (
-            <p key={i} className="rounded border bg-muted/30 px-2 py-1 text-xs leading-snug text-foreground">
-              {line}
-            </p>
+            <div key={i} className="flex items-start gap-1.5 rounded border bg-muted/30 px-2 py-1">
+              {speakerIconUrl ? (
+                <img
+                  src={speakerIconUrl}
+                  alt=""
+                  title={speakerName}
+                  className="h-6 w-6 shrink-0 rounded-full bg-background object-cover"
+                  onError={(e) => ((e.currentTarget.style.display = "none"))}
+                  draggable={false}
+                />
+              ) : null}
+              <p className="flex-1 text-xs leading-snug text-foreground">{line}</p>
+            </div>
           ))}
         </div>
       )}
