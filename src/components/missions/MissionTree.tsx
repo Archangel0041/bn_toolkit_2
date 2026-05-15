@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -18,13 +18,16 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
+import { X } from "lucide-react";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getNpcIconUrl } from "@/lib/resourceImages";
+import { getNpcIconUrl, getResourceIconUrl } from "@/lib/resourceImages";
+import { getUnitImageUrl } from "@/lib/unitImages";
 
 const NODE_W = 240;
-const NODE_H = 76;
-const ROW_H = 170;
+const NODE_H = 96;
+
+interface UnitInfo { name?: string; icon?: string }
 
 interface MissionTreeProps {
   missions: ParsedMission[];
@@ -32,6 +35,7 @@ interface MissionTreeProps {
   availableNow?: Set<number>;
   highlightId?: number;
   characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
+  unitsById?: Map<number, UnitInfo>;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
@@ -42,7 +46,14 @@ const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
   "not-started": "1 4",
 };
 
-/** Convert "big_game_hunter" / "MORGAN" -> "Big Game Hunter" / "Morgan". */
+const EDGE_LABEL: Record<MissionPrereqEdgeType, string> = {
+  "complete-all": "Complete (required)",
+  "complete-any": "Complete (any of)",
+  active: "Must be active",
+  inactive: "Must be inactive",
+  "not-started": "Must not be started",
+};
+
 function titleCase(input: string): string {
   return input
     .replace(/[_-]+/g, " ")
@@ -60,7 +71,6 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
   for (const e of edges) g.setEdge(String(e.from), String(e.to));
   dagre.layout(g);
 
-  // Dagre positions are CENTER coords; React Flow expects top-left → offset by half size.
   const positions = new Map<number, { x: number; y: number }>();
   for (const m of missions) {
     const node = g.node(String(m.id));
@@ -69,14 +79,18 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
       y: (node?.y ?? 0) - NODE_H / 2,
     });
   }
-  // Edge waypoints (in dagre's center-coord space) — used by the custom edge to
-  // route around intermediate nodes instead of cutting straight through them.
   const edgePoints = new Map<string, { x: number; y: number }[]>();
   for (const e of edges) {
     const ge = g.edge(String(e.from), String(e.to));
     if (ge?.points) edgePoints.set(`${e.from}->${e.to}`, ge.points);
   }
   return { positions, edgePoints };
+}
+
+interface RewardChip {
+  iconUrl?: string;
+  label: string;
+  amount: number;
 }
 
 interface MissionNodeData extends Record<string, unknown> {
@@ -90,6 +104,7 @@ interface MissionNodeData extends Record<string, unknown> {
   isDimmed?: boolean;
   missionId: number;
   iconUrl?: string;
+  rewardChips: RewardChip[];
 }
 
 function MissionNode({ data }: { data: MissionNodeData }) {
@@ -144,17 +159,37 @@ function MissionNode({ data }: { data: MissionNodeData }) {
           )}
         </div>
       </div>
+      {data.rewardChips.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {data.rewardChips.map((r, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-0.5 rounded bg-muted/60 px-1 py-px text-[9px] font-medium tabular-nums text-foreground"
+              title={`${r.label}: ${r.amount.toLocaleString()}`}
+            >
+              {r.iconUrl ? (
+                <img
+                  src={r.iconUrl}
+                  alt=""
+                  className="h-3 w-3 shrink-0 object-contain"
+                  onError={(e) => ((e.currentTarget.style.visibility = "hidden"))}
+                  draggable={false}
+                />
+              ) : null}
+              {r.amount.toLocaleString()}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 const nodeTypes = { mission: MissionNode };
 
-/** Edge that follows dagre's routed waypoints so lines don't cross through nodes. */
 function RoutedEdge({ id, data, style, markerEnd }: EdgeProps) {
   const pts = (data as { points?: { x: number; y: number }[] } | undefined)?.points;
   if (!pts || pts.length < 2) return null;
-  // Build a smooth path: straight segments with rounded corners.
   const r = 10;
   let d = `M ${pts[0].x} ${pts[0].y}`;
   for (let i = 1; i < pts.length - 1; i++) {
@@ -187,21 +222,75 @@ export function MissionTree(props: MissionTreeProps) {
   );
 }
 
-function MissionTreeInner({ missions, edges, availableNow, highlightId, characters }: MissionTreeProps) {
+/** Translate, falling back to title-cased raw key. */
+function useLocalize() {
   const { t } = useLanguage();
+  return useCallback(
+    (key?: string, fallback?: string) => {
+      if (!key) return fallback ?? "";
+      const tr = t(key);
+      return tr && tr !== key ? tr : fallback ?? titleCase(key);
+    },
+    [t]
+  );
+}
+
+function resourceLabel(t: (k: string) => string, k: string): string {
+  for (const lk of [`resource_${k}_name`, `bn_resource_${k}`, `resource_${k}`]) {
+    const tr = t(lk);
+    if (tr && tr !== lk) return tr;
+  }
+  return titleCase(k);
+}
+
+function buildRewardChips(
+  m: ParsedMission,
+  t: (k: string) => string,
+  unitsById?: Map<number, UnitInfo>
+): RewardChip[] {
+  const chips: RewardChip[] = [];
+  // XP first, then other resources, then units. Cap to keep node compact.
+  const resourceEntries = Object.entries(m.rewards.resources).sort(([a], [b]) =>
+    a === "xp" ? -1 : b === "xp" ? 1 : a.localeCompare(b)
+  );
+  for (const [k, v] of resourceEntries) {
+    chips.push({ iconUrl: getResourceIconUrl(k), label: resourceLabel(t, k), amount: Number(v) || 0 });
+  }
+  for (const [id, qty] of Object.entries(m.rewards.units)) {
+    const u = unitsById?.get(Number(id));
+    const localized = u?.name ? t(u.name) : "";
+    const label = localized && localized !== u?.name ? localized : u?.name ?? `Unit #${id}`;
+    chips.push({ iconUrl: u?.icon ? getUnitImageUrl(u.icon) : undefined, label, amount: Number(qty) || 0 });
+  }
+  return chips;
+}
+
+function MissionTreeInner({
+  missions,
+  edges,
+  availableNow,
+  highlightId,
+  characters,
+  unitsById,
+}: MissionTreeProps) {
+  const { t } = useLanguage();
+  const localize = useLocalize();
   const [pinnedId, setPinnedId] = useState<number | null>(null);
 
-  // Build forward & backward adjacency for chain highlighting
-  const { forward, backward } = useMemo(() => {
+  const byId = useMemo(() => new Map(missions.map((m) => [m.id, m])), [missions]);
+
+  const { forward, backward, edgeTypeMap } = useMemo(() => {
     const f = new Map<number, Set<number>>();
     const b = new Map<number, Set<number>>();
+    const types = new Map<string, MissionPrereqEdgeType>();
     for (const e of edges) {
       if (!f.has(e.from)) f.set(e.from, new Set());
       f.get(e.from)!.add(e.to);
       if (!b.has(e.to)) b.set(e.to, new Set());
       b.get(e.to)!.add(e.from);
+      types.set(`${e.from}->${e.to}`, e.type);
     }
-    return { forward: f, backward: b };
+    return { forward: f, backward: b, edgeTypeMap: types };
   }, [edges]);
 
   const chain = useMemo(() => {
@@ -228,8 +317,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
     const { positions, edgePoints } = layout(missions, edges);
     const rfNodes: Node[] = missions.map((m) => {
       const pos = positions.get(m.id) ?? { x: 0, y: 0 };
-      const localized = t(m.title);
-      const title = localized && localized !== m.title ? localized : m.title;
+      const title = localize(m.title, m.title);
       const data: MissionNodeData = {
         title,
         level: m.displayLevel,
@@ -246,6 +334,7 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
           const key = ch?.small_icon ?? ch?.regular_icon;
           return key ? getNpcIconUrl(key) : getNpcIconUrl(m.giver);
         })(),
+        rewardChips: buildRewardChips(m, t, unitsById),
       };
       return {
         id: String(m.id),
@@ -277,18 +366,19 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
     });
 
     return { rfNodes, rfEdges };
-  }, [missions, edges, availableNow, highlightId, t, chain, pinnedId, characters]);
+  }, [missions, edges, availableNow, highlightId, t, localize, chain, pinnedId, characters, unitsById]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
-  const [edgesState, setEdges, onEdgesChange] = useEdgesState(rfEdges);
+  const [nodes, setNodes] = useNodesState(rfNodes);
+  const [edgesState, setEdges] = useEdgesState(rfEdges);
   const { fitView } = useReactFlow();
   useEffect(() => setNodes(rfNodes), [rfNodes, setNodes]);
   useEffect(() => setEdges(rfEdges), [rfEdges, setEdges]);
 
-  // Re-fit the viewport whenever the visible mission set changes (filters, search, mode).
-  // Use a small timeout so React Flow has committed the new node positions first.
+  // Only fit on first non-empty layout. After that, leave the user's zoom/pan alone.
+  const didInitialFit = useRef(false);
   useEffect(() => {
-    if (rfNodes.length === 0) return;
+    if (didInitialFit.current || rfNodes.length === 0) return;
+    didInitialFit.current = true;
     const handle = setTimeout(() => {
       fitView({ padding: 0.18, maxZoom: 1, minZoom: 0.05, duration: 350 });
     }, 60);
@@ -302,13 +392,10 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
 
   const onPaneClick = useCallback(() => setPinnedId(null), []);
 
+  const pinned = pinnedId != null ? byId.get(pinnedId) : null;
+
   return (
     <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-card overflow-hidden">
-      {pinnedId != null && (
-        <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-md border bg-background/90 px-2 py-1 text-[11px] text-muted-foreground shadow">
-          Showing chain · click background to clear
-        </div>
-      )}
       <ReactFlow
         nodes={nodes}
         edges={edgesState}
@@ -330,6 +417,203 @@ function MissionTreeInner({ missions, edges, availableNow, highlightId, characte
         <Background gap={24} size={1} />
         <Controls showInteractive={false} />
       </ReactFlow>
+
+      {pinned && (
+        <MissionDetailPanel
+          mission={pinned}
+          byId={byId}
+          forward={forward}
+          backward={backward}
+          edgeTypeMap={edgeTypeMap}
+          characters={characters}
+          unitsById={unitsById}
+          onClose={() => setPinnedId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+interface MissionDetailPanelProps {
+  mission: ParsedMission;
+  byId: Map<number, ParsedMission>;
+  forward: Map<number, Set<number>>;
+  backward: Map<number, Set<number>>;
+  edgeTypeMap: Map<string, MissionPrereqEdgeType>;
+  characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
+  unitsById?: Map<number, UnitInfo>;
+  onClose: () => void;
+}
+
+function MissionDetailPanel({
+  mission,
+  byId,
+  forward,
+  backward,
+  edgeTypeMap,
+  characters,
+  unitsById,
+  onClose,
+}: MissionDetailPanelProps) {
+  const { t } = useLanguage();
+  const localize = useLocalize();
+
+  const giverIcon = (() => {
+    if (!mission.giver) return undefined;
+    const ch = characters?.[mission.giver.toLowerCase()];
+    const key = ch?.small_icon ?? ch?.regular_icon;
+    return key ? getNpcIconUrl(key) : getNpcIconUrl(mission.giver);
+  })();
+
+  const prereqIds = [...(backward.get(mission.id) ?? [])];
+  const followIds = [...(forward.get(mission.id) ?? [])];
+  const chips = buildRewardChips(mission, t, unitsById);
+
+  const renderRelatedRow = (otherId: number, edgeKey: string) => {
+    const m = byId.get(otherId);
+    const type = edgeTypeMap.get(edgeKey);
+    const title = m ? localize(m.title, m.title) : `Mission #${otherId}`;
+    return (
+      <li key={edgeKey} className="flex items-center justify-between gap-2 text-xs">
+        <span className="truncate" title={title}>
+          {title}
+          {m ? <span className="ml-1 text-[10px] text-muted-foreground">Lv{m.displayLevel}</span> : null}
+        </span>
+        {type && (
+          <span className="shrink-0 rounded bg-muted px-1.5 py-px text-[9px] uppercase tracking-wide text-muted-foreground">
+            {EDGE_LABEL[type]}
+          </span>
+        )}
+      </li>
+    );
+  };
+
+  return (
+    <div className="absolute right-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] w-[340px] max-w-[calc(100%-1.5rem)] flex-col rounded-lg border bg-background/95 shadow-lg backdrop-blur">
+      <div className="flex items-start gap-2 border-b p-3">
+        {giverIcon && (
+          <img
+            src={giverIcon}
+            alt=""
+            className="h-10 w-10 shrink-0 rounded bg-muted object-cover"
+            onError={(e) => ((e.currentTarget.style.visibility = "hidden"))}
+            draggable={false}
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold leading-tight">
+            {localize(mission.title, mission.title)}
+          </div>
+          <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+            <span>Lv{mission.displayLevel}</span>
+            <span>·</span>
+            <span>#{mission.id}</span>
+            {mission.giver && <><span>·</span><span>{titleCase(mission.giver)}</span></>}
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+        {mission.description && (
+          <p className="text-xs text-muted-foreground">
+            {localize(mission.description, mission.description)}
+          </p>
+        )}
+
+        <section>
+          <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Objectives ({mission.objectives.length})
+          </h4>
+          {mission.objectives.length === 0 ? (
+            <p className="text-xs text-muted-foreground/70">No objective metadata.</p>
+          ) : (
+            <ol className="space-y-1 text-xs">
+              {mission.objectives.map((o, i) => {
+                const title = o.title ? localize(o.title, o.title) : `Objective ${i + 1}`;
+                const desc = o.description ? localize(o.description, o.description) : "";
+                return (
+                  <li key={i} className="rounded border bg-muted/30 px-2 py-1">
+                    <div className="font-medium">{title}</div>
+                    {desc && desc !== title && (
+                      <div className="text-[11px] text-muted-foreground">{desc}</div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </section>
+
+        <section>
+          <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Prerequisites ({prereqIds.length})
+          </h4>
+          {prereqIds.length === 0 ? (
+            <p className="text-xs text-muted-foreground/70">None.</p>
+          ) : (
+            <ul className="space-y-1">
+              {prereqIds.map((pid) => renderRelatedRow(pid, `${pid}->${mission.id}`))}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Follow-ups ({followIds.length})
+          </h4>
+          {followIds.length === 0 ? (
+            <p className="text-xs text-muted-foreground/70">None.</p>
+          ) : (
+            <ul className="space-y-1">
+              {followIds.map((fid) => renderRelatedRow(fid, `${mission.id}->${fid}`))}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Rewards
+          </h4>
+          {chips.length === 0 ? (
+            <p className="text-xs text-muted-foreground/70">None.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-1.5">
+              {chips.map((r, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-1.5 rounded border bg-muted/40 px-1.5 py-1"
+                  title={r.label}
+                >
+                  {r.iconUrl ? (
+                    <img
+                      src={r.iconUrl}
+                      alt=""
+                      className="h-5 w-5 shrink-0 object-contain"
+                      onError={(e) => ((e.currentTarget.style.visibility = "hidden"))}
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="h-5 w-5 shrink-0 rounded bg-background" />
+                  )}
+                  <span className="flex-1 truncate text-[11px]" title={r.label}>
+                    {r.label}
+                  </span>
+                  <span className="text-[11px] font-semibold tabular-nums">
+                    {r.amount.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
