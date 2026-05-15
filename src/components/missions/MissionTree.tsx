@@ -578,6 +578,7 @@ interface MissionDetailPanelProps {
   edgeTypeMap: Map<string, MissionPrereqEdgeType>;
   characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
   unitsById?: Map<number, UnitInfo>;
+  npcs?: Record<string, NpcInfo>;
   onClose: () => void;
 }
 
@@ -589,6 +590,7 @@ function MissionDetailPanel({
   edgeTypeMap,
   characters,
   unitsById,
+  npcs,
   onClose,
 }: MissionDetailPanelProps) {
   const { t } = useLanguage();
