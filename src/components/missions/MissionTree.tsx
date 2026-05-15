@@ -184,7 +184,6 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
       columnCursors.set(columnKey, baseY + (comp.maxDepth + 1) * SUB_ROW_GAP + BAND_GAP);
     });
   });
-  }
 
   const allPos = [...positions.values()];
   const leftLane = Math.min(...allPos.map((p) => p.x), 0) - COL_GAP;
