@@ -89,6 +89,9 @@ export default function MissionsView() {
     loadNpcs()
       .then(setNpcs)
       .catch(() => {});
+    loadDialogues()
+      .then(setDialogues)
+      .catch(() => {});
   }, []);
 
   const allParsed = useMemo(() => (raw ? parseMissions(raw) : []), [raw]);
