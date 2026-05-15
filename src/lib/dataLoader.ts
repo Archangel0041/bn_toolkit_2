@@ -249,6 +249,10 @@ export async function loadStatusEffectFamilies(): Promise<any> {
   return fetchFromBucket(CONFIG_BUCKET, "status_effect_families.json");
 }
 
+export async function loadAnimationFileMap(): Promise<Record<string, { file: string }>> {
+  return fetchFromBucket(CONFIG_BUCKET, "animation_file_map.json");
+}
+
 // Localization loaders - use BigInt parser to preserve large numeric IDs
 export async function loadGameTextSharedData(): Promise<any> {
   return fetchFromBucket(LOCALIZATIONS_BUCKET, "tables/GameText Shared Data.json", true, true);
