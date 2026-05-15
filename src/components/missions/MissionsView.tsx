@@ -188,6 +188,9 @@ export default function MissionsView() {
   // Effective cap: when "Cap at current level" is on, only show up to current
   // level. Otherwise show up to user-defined level cap.
   const effectiveCap = hideAbove ? currentLevel : levelCap;
+  const upcomingMode = visibleIds.size === 0 && showUpcoming;
+  const upcomingMin = currentLevel + 1;
+  const upcomingMax = Math.min(levelCap, currentLevel + UPCOMING_LEVELS);
 
   const { visibleMissions, availableNow } = useMemo(() => {
     const r = filterRemaining(allParsed, {
@@ -195,7 +198,14 @@ export default function MissionsView() {
       completedIds: effectiveCompletedIds,
       hideAboveLevel: false,
     });
-    let missions = r.remaining.filter((m) => m.displayLevel <= effectiveCap);
+    let missions: ParsedMission[];
+    if (upcomingMode) {
+      missions = allParsed.filter(
+        (m) => m.displayLevel >= upcomingMin && m.displayLevel <= upcomingMax
+      );
+    } else {
+      missions = r.remaining.filter((m) => m.displayLevel <= effectiveCap);
+    }
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -210,7 +220,7 @@ export default function MissionsView() {
       });
     }
     return { visibleMissions: missions, availableNow: r.availableNow };
-  }, [allParsed, currentLevel, effectiveCap, effectiveCompletedIds, search, t]);
+  }, [allParsed, currentLevel, effectiveCap, effectiveCompletedIds, search, t, upcomingMode, upcomingMin, upcomingMax]);
 
   const rewardTotals = useMemo(() => {
     const resources: Record<string, number> = {};
