@@ -166,21 +166,35 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
     levelLayouts.push({ comps: compList });
   }
 
-  const columnCursors = new Map<number, number>();
   const colStep = NODE_W + COL_GAP;
   const nominalLevelStep = SUB_ROW_GAP + BAND_GAP;
+  // Track every placed node's footprint so future columns (which may not align
+  // by index across levels) cannot overlap an existing one horizontally.
+  const placedRects: { x1: number; x2: number; y2: number }[] = [];
   levelLayouts.forEach(({ comps }, levelIdx) => {
     const numCols = comps.length;
     const nominalY = levelIdx * nominalLevelStep;
     comps.forEach((comp, colIdx) => {
       const columnKey = colIdx - (numCols - 1) / 2;
       const x = columnKey * colStep;
-      const baseY = Math.max(columnCursors.get(columnKey) ?? 0, nominalY);
-      for (const id of comp.ids) {
-        const depth = comp.ids.indexOf(id);
-        positions.set(id, { x, y: baseY + depth * SUB_ROW_GAP });
+      const x1 = x;
+      const x2 = x + NODE_W;
+      // Find the lowest bottom of any previously placed node whose x-range
+      // overlaps this column. Push our base below it (plus BAND_GAP).
+      let blockerBottom = 0;
+      for (const r of placedRects) {
+        if (r.x2 > x1 && r.x1 < x2) blockerBottom = Math.max(blockerBottom, r.y2);
       }
-      columnCursors.set(columnKey, baseY + comp.ids.length * SUB_ROW_GAP + BAND_GAP);
+      const baseY = Math.max(
+        nominalY,
+        blockerBottom > 0 ? blockerBottom + BAND_GAP : 0,
+      );
+      for (let i = 0; i < comp.ids.length; i++) {
+        const id = comp.ids[i];
+        const y = baseY + i * SUB_ROW_GAP;
+        positions.set(id, { x, y });
+        placedRects.push({ x1, x2, y2: y + NODE_H });
+      }
     });
   });
 
