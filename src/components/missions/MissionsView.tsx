@@ -94,6 +94,12 @@ export default function MissionsView() {
     loadDialogues()
       .then(setDialogues)
       .catch(() => {});
+    loadJobInfo()
+      .then(setJobs)
+      .catch(() => {});
+    loadEncounters()
+      .then((d) => setEncounters(d?.armies ?? {}))
+      .catch(() => {});
   }, []);
 
   const allParsed = useMemo(() => (raw ? parseMissions(raw) : []), [raw]);
