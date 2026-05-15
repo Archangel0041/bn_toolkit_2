@@ -123,11 +123,16 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
     if (level === 0) level = 1;
 
     const parsedObjectives: ParsedObjective[] = (objectives?.objectives ?? []).map(
-      (o: RawComponent) => ({
-        title: o.title ?? o.name ?? o.objective_name,
-        description: o.description ?? o.objective_description,
-        type: o._t,
-      })
+      (o: RawComponent) => {
+        const comps: RawComponent[] = o.objective_components ?? [];
+        const identity = comps.find((c) => c?._t === "objective_identity_config");
+        const completion = comps.find((c) => c?._t === "objective_completion_config");
+        return {
+          title: identity?.objective_text ?? o.title ?? o.name ?? o.objective_name,
+          description: o.description ?? o.objective_description,
+          type: completion?.prereq?._t ?? o._t,
+        };
+      }
     );
 
     out.push({

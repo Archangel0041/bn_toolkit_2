@@ -18,7 +18,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
-import { X } from "lucide-react";
+import { ChevronDown, ChevronRight, X } from "lucide-react";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getNpcIconUrl, getResourceIconUrl } from "@/lib/resourceImages";
@@ -586,6 +586,11 @@ function MissionDetailPanel({
           </p>
         )}
 
+        <DialogSection title="Pre-mission Dialog" baseKey={mission.title} suffix="10startdialog" t={t} />
+        <DialogSection title="Hint" baseKey={mission.title} suffix="20hint" t={t} defaultOpen />
+        <DialogSection title="Completion Dialog" baseKey={mission.title} suffix="70enddialog" t={t} />
+        <DialogSection title="Reward Dialog" baseKey={mission.title} suffix="60reward" t={t} />
+
         <section>
           <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Objectives ({mission.objectives.length})
@@ -602,6 +607,11 @@ function MissionDetailPanel({
                     <div className="font-medium">{title}</div>
                     {desc && desc !== title && (
                       <div className="text-[11px] text-muted-foreground">{desc}</div>
+                    )}
+                    {o.type && (
+                      <div className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                        {o.type.replace(/_prereq_config$/, "").replace(/_/g, " ")}
+                      </div>
                     )}
                   </li>
                 );
@@ -674,5 +684,58 @@ function MissionDetailPanel({
         </section>
       </div>
     </div>
+  );
+}
+
+interface DialogSectionProps {
+  title: string;
+  baseKey?: string;
+  suffix: string;
+  t: (k: string) => string;
+  defaultOpen?: boolean;
+}
+
+function DialogSection({ title, baseKey, suffix, t, defaultOpen = false }: DialogSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  // baseKey looks like "<base>_title". Strip "_title" to get the base prefix.
+  const base = baseKey ? baseKey.replace(/_title$/, "") : "";
+  const lines = useMemo(() => {
+    if (!base) return [] as string[];
+    const out: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      const k = `mis_${base}_${suffix}_${i}_body_0`;
+      const tr = t(k);
+      if (!tr || tr === k) {
+        if (i === 0) continue; // try next
+        break;
+      }
+      out.push(tr);
+    }
+    // Edge case: only check first 6 even if found gaps
+    return out;
+  }, [base, suffix, t]);
+
+  if (lines.length === 0) return null;
+
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+      >
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        <span>{title} ({lines.length})</span>
+      </button>
+      {open && (
+        <div className="mt-1 space-y-1">
+          {lines.map((line, i) => (
+            <p key={i} className="rounded border bg-muted/30 px-2 py-1 text-xs leading-snug text-foreground">
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
