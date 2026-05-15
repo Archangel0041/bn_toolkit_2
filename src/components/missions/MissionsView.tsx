@@ -37,6 +37,10 @@ const parseIdText = (s: string): Set<number> => {
   return out;
 };
 
+const titleCase = (s: string) =>
+  s.replace(/[_-]+/g, " ").trim().split(/\s+/)
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)).join(" ");
+
 export default function MissionsView() {
   const { accountLevel } = useAccountLevel();
   const { t } = useLanguage();
