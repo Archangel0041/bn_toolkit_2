@@ -135,7 +135,7 @@ export default function MissionsView() {
       });
     }
     return { visibleMissions: missions, availableNow };
-  }, [allParsed, mode, currentLevel, completedIds, hideAbove, search, t]);
+  }, [allParsed, mode, currentLevel, effectiveCompletedIds, hideAbove, search, t]);
 
   const visibleEdges = useMemo(() => {
     const ids = new Set(visibleMissions.map((m) => m.id));
