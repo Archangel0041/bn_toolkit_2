@@ -24,6 +24,10 @@ export interface ParsedObjective {
   opponentId?: number;
   icon?: string;
   speakerNpcId?: number;
+  jobId?: number;
+  encounterId?: number;
+  encounterIds?: number[];
+  npcCompositionId?: number;
   prereqRaw?: Record<string, unknown>;
 }
 
