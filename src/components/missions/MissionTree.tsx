@@ -209,7 +209,8 @@ function layout(missions: ParsedMission[], edges: MissionEdge[]) {
     const start = { x: fromCenterX, y: downward ? from.y + NODE_H : from.y };
     const end = { x: toCenterX, y: downward ? to.y : to.y + NODE_H };
     const skippedRows = Math.abs(toRow - fromRow) > 1;
-    if (skippedRows) {
+    const sameColumn = Math.abs(fromCenterX - toCenterX) < 1;
+    if (skippedRows && !sameColumn) {
       const laneX = toCenterX >= fromCenterX ? rightLane + (index % 4) * 18 : leftLane - (index % 4) * 18;
       edgePoints.set(`${e.from}->${e.to}`, [
         start,
