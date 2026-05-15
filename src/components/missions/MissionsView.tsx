@@ -78,19 +78,23 @@ export default function MissionsView() {
   }, [hideAbove]);
 
   /**
-   * Inferred-completed: only the *prerequisite chain* of every visible mission is
-   * presumed done — because to currently see a mission, you must have completed
-   * its prereqs. We do NOT mark every sub-level mission as done; story missions
-   * unlock through narrative, not just level, so plenty are below your level
-   * without being touched yet.
+   * Inferred-completed logic:
+   *   A mission is presumed COMPLETE if it is at/below current level AND it is
+   *   neither one of the user's currently-visible missions nor a downstream
+   *   dependent of one. Rationale: if a visible mission doesn't require it,
+   *   the user has already moved past it.
+   *   We also always mark the prereq chain of visible missions complete (those
+   *   may be above current level if propagation pushed them up).
    */
   const effectiveCompletedIds = useMemo(() => {
     const completed = new Set(completedIds);
-    if (visibleIds.size === 0 || allParsed.length === 0) return completed;
-
+    if (allParsed.length === 0) return completed;
     const byId = new Map(allParsed.map((m) => [m.id, m]));
-    const markPrereqs = (id: number, depth = 0) => {
-      if (depth > 128) return;
+
+    // 1. Walk prereq chain of each visible mission -> mark complete.
+    const markPrereqs = (id: number, seen = new Set<number>()) => {
+      if (seen.has(id)) return;
+      seen.add(id);
       const m = byId.get(id);
       if (!m) return;
       for (const pid of [
@@ -98,13 +102,43 @@ export default function MissionsView() {
         ...m.prereqMissionIds.any,
         ...m.prereqMissionIds.active,
       ]) {
-        if (completed.has(pid)) continue;
         completed.add(pid);
-        markPrereqs(pid, depth + 1);
+        markPrereqs(pid, seen);
       }
     };
-
     for (const id of visibleIds) markPrereqs(id);
+
+    if (visibleIds.size === 0) return completed;
+
+    // 2. Compute downstream set of visible missions (missions that depend on
+    //    them, transitively) — these are NOT completed.
+    const dependents = new Map<number, Set<number>>();
+    for (const m of allParsed) {
+      for (const pid of [...m.prereqMissionIds.all, ...m.prereqMissionIds.any]) {
+        if (!dependents.has(pid)) dependents.set(pid, new Set());
+        dependents.get(pid)!.add(m.id);
+      }
+    }
+    const downstream = new Set<number>();
+    const stack = [...visibleIds];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      for (const next of dependents.get(cur) ?? []) {
+        if (!downstream.has(next)) {
+          downstream.add(next);
+          stack.push(next);
+        }
+      }
+    }
+
+    // 3. Anything at/below current level that isn't visible and isn't
+    //    downstream of a visible mission is presumed complete.
+    for (const m of allParsed) {
+      if (m.displayLevel > currentLevel) continue;
+      if (visibleIds.has(m.id)) continue;
+      if (downstream.has(m.id)) continue;
+      completed.add(m.id);
+    }
     return completed;
   }, [allParsed, completedIds, visibleIds, currentLevel]);
 
