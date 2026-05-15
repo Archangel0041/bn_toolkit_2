@@ -470,7 +470,7 @@ function MissionTreeInner({
     const f = new Map<number, Set<number>>();
     const b = new Map<number, Set<number>>();
     const types = new Map<string, MissionPrereqEdgeType>();
-    for (const e of edges) {
+    for (const e of reducedEdges) {
       if (!f.has(e.from)) f.set(e.from, new Set());
       f.get(e.from)!.add(e.to);
       if (!b.has(e.to)) b.set(e.to, new Set());
@@ -478,7 +478,7 @@ function MissionTreeInner({
       types.set(`${e.from}->${e.to}`, e.type);
     }
     return { forward: f, backward: b, edgeTypeMap: types };
-  }, [edges]);
+  }, [reducedEdges]);
 
   const chain = useMemo(() => {
     if (pinnedId == null) return null;
