@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { decode } from "@msgpack/msgpack";
 import { supabase } from "@/integrations/supabase/client";
+import { loadAnimationFileMap } from "@/lib/dataLoader";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
