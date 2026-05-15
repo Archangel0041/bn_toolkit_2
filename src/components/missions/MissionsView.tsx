@@ -52,6 +52,7 @@ export default function MissionsView() {
 
   const [raw, setRaw] = useState<Record<string, any[]> | null>(null);
   const [characters, setCharacters] = useState<Record<string, CharacterEntry>>({});
+  const [npcs, setNpcs] = useState<Record<string, NpcEntry>>({});
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
