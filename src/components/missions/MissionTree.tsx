@@ -532,7 +532,7 @@ function MissionTreeInner({
       };
     });
 
-    const rfEdges: Edge[] = edges.map((e, i) => {
+    const rfEdges: Edge[] = reducedEdges.map((e, i) => {
       const inChain = chain ? chain.has(e.from) && chain.has(e.to) : true;
       const points = edgePoints.get(`${e.from}->${e.to}`);
       return {
