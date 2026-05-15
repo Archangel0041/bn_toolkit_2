@@ -562,6 +562,7 @@ function MissionTreeInner({
           edgeTypeMap={edgeTypeMap}
           characters={characters}
           unitsById={unitsById}
+          npcs={npcs}
           onClose={() => setPinnedId(null)}
         />
       )}
