@@ -409,6 +409,7 @@ function MissionTreeInner({
   characters,
   unitsById,
   npcs,
+  dialogues,
 }: MissionTreeProps) {
   const { t } = useLanguage();
   const localize = useLocalize();
