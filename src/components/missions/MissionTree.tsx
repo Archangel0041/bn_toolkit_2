@@ -18,7 +18,8 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
-import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { ChevronDown, ChevronRight, X, Swords } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
 import type { DialogueLine, JobInfoEntry, EncounterEntry } from "@/lib/dataLoader";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -818,43 +819,31 @@ function MissionDetailPanel({
                     {encList.length > 0 && (
                       <div className="mt-1.5 space-y-1">
                         <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
-                          {encList.length === 1
-                            ? "Encounter"
-                            : `${o.count ?? encList.length} of ${encList.length} encounters`}
-                          {(() => {
-                            const lvls = encList.map((e) => e.enc?.level).filter((l): l is number => typeof l === "number");
-                            if (!lvls.length) return null;
-                            const min = Math.min(...lvls); const max = Math.max(...lvls);
-                            return <span className="ml-1 normal-case tracking-normal">· Lv {min === max ? min : `${min}–${max}`}</span>;
-                          })()}
+                          {encList.length === 1 ? "Encounter" : `${encList.length} encounters`}
+                          {o.count != null && encList.length > 1 && (
+                            <span className="ml-1 normal-case tracking-normal">· need {o.count}</span>
+                          )}
                         </div>
-                        {enemyUnits.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {enemyUnits.map(([uid, { count }]) => {
-                              const u = unitsById?.get(uid);
-                              const uname = u?.name ? localize(u.name, u.name) : `Unit #${uid}`;
-                              const url = u?.icon ? getUnitImageUrl(u.icon) : undefined;
-                              return (
-                                <span
-                                  key={uid}
-                                  title={`${uname}${count > 1 ? ` ×${count} appearances` : ""}`}
-                                  className="inline-flex items-center gap-1 rounded border bg-background px-1 py-px text-[10px]"
-                                >
-                                  {url && (
-                                    <img
-                                      src={url}
-                                      alt=""
-                                      className="h-3.5 w-3.5 object-contain"
-                                      onError={(e) => ((e.currentTarget.style.display = "none"))}
-                                      draggable={false}
-                                    />
-                                  )}
-                                  <span className="max-w-[110px] truncate">{uname}</span>
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
+                        <div className="flex flex-wrap gap-1">
+                          {encList.map(({ id, enc }) => {
+                            const ename = enc?.name ? localize(enc.name, enc.name) : `Encounter #${id}`;
+                            const lvl = typeof enc?.level === "number" ? enc.level : undefined;
+                            return (
+                              <Link
+                                key={id}
+                                to={`/battle/${id}`}
+                                title={`Open battle: ${ename}${lvl != null ? ` (Lv ${lvl})` : ""}`}
+                                className="inline-flex items-center gap-1 rounded border bg-background px-1.5 py-0.5 text-[10px] hover:bg-accent hover:text-accent-foreground transition-colors"
+                              >
+                                <Swords className="h-3 w-3" />
+                                <span className="max-w-[140px] truncate">{ename}</span>
+                                {lvl != null && (
+                                  <span className="text-muted-foreground">Lv{lvl}</span>
+                                )}
+                              </Link>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </li>
