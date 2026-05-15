@@ -19,6 +19,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 const COMPLETED_KEY = "missions:completed";
 const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
+const LEVEL_CAP_KEY = "missions:levelCap";
 const SETUP_KEY = "missions:setupComplete";
 
 const idsToText = (ids: number[]) =>
@@ -51,6 +52,10 @@ export default function MissionsView() {
   const [hideAbove, setHideAbove] = useState<boolean>(
     () => localStorage.getItem(HIDE_ABOVE_KEY) === "1"
   );
+  const [levelCap, setLevelCap] = useState<number>(() => {
+    const saved = parseInt(localStorage.getItem(LEVEL_CAP_KEY) ?? "", 10);
+    return isNaN(saved) ? accountLevel : saved;
+  });
   // Always start gated on tab mount — user must explicitly click "Show mission tree".
   const [setupComplete, setSetupComplete] = useState<boolean>(false);
 
@@ -76,6 +81,9 @@ export default function MissionsView() {
   useEffect(() => {
     localStorage.setItem(HIDE_ABOVE_KEY, hideAbove ? "1" : "0");
   }, [hideAbove]);
+  useEffect(() => {
+    localStorage.setItem(LEVEL_CAP_KEY, String(levelCap));
+  }, [levelCap]);
 
   /**
    * Inferred-completed logic:
@@ -145,16 +153,17 @@ export default function MissionsView() {
   const { visibleMissions, availableNow } = useMemo(() => {
     let missions: ParsedMission[];
     let availableNow: Set<number> | undefined;
+    const cap = Math.max(currentLevel, levelCap);
     if (mode === "remaining") {
       const r = filterRemaining(allParsed, {
         currentLevel,
         completedIds: effectiveCompletedIds,
-        hideAboveLevel: hideAbove,
+        hideAboveLevel: false,
       });
-      missions = r.remaining;
+      missions = hideAbove ? r.remaining.filter((m) => m.displayLevel <= cap) : r.remaining;
       availableNow = r.availableNow;
     } else {
-      missions = hideAbove ? allParsed.filter((m) => m.displayLevel <= currentLevel) : allParsed;
+      missions = hideAbove ? allParsed.filter((m) => m.displayLevel <= cap) : allParsed;
     }
 
     if (search.trim()) {
@@ -170,7 +179,21 @@ export default function MissionsView() {
       });
     }
     return { visibleMissions: missions, availableNow };
-  }, [allParsed, mode, currentLevel, effectiveCompletedIds, hideAbove, search, t]);
+  }, [allParsed, mode, currentLevel, levelCap, effectiveCompletedIds, hideAbove, search, t]);
+
+  const rewardTotals = useMemo(() => {
+    const resources: Record<string, number> = {};
+    const units: Record<string, number> = {};
+    for (const m of visibleMissions) {
+      for (const [k, v] of Object.entries(m.rewards.resources)) {
+        resources[k] = (resources[k] ?? 0) + (Number(v) || 0);
+      }
+      for (const [k, v] of Object.entries(m.rewards.units)) {
+        units[k] = (units[k] ?? 0) + (Number(v) || 0);
+      }
+    }
+    return { resources, units };
+  }, [visibleMissions]);
 
   const visibleEdges = useMemo(() => {
     const ids = new Set(visibleMissions.map((m) => m.id));
@@ -273,7 +296,7 @@ export default function MissionsView() {
         </Button>
       </div>
 
-      <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
+      <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[auto_1fr_auto_auto_auto] sm:items-end">
         <div className="flex flex-col gap-1">
           <Label className="text-xs">Mode</Label>
           <Tabs value={mode} onValueChange={(v) => setMode(v as "all" | "remaining")}>
@@ -307,9 +330,22 @@ export default function MissionsView() {
           />
         </div>
 
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="level-cap" className="text-xs">Level cap</Label>
+          <Input
+            id="level-cap"
+            type="number"
+            className="w-24"
+            min={1}
+            max={200}
+            value={levelCap}
+            onChange={(e) => setLevelCap(parseInt(e.target.value || "1", 10))}
+          />
+        </div>
+
         <div className="flex items-center gap-2">
           <Switch id="hide-above" checked={hideAbove} onCheckedChange={setHideAbove} />
-          <Label htmlFor="hide-above" className="text-xs">Hide above my level</Label>
+          <Label htmlFor="hide-above" className="text-xs">Cap at level cap</Label>
         </div>
       </div>
 
@@ -371,6 +407,56 @@ export default function MissionsView() {
             edges={visibleEdges}
             availableNow={availableNow}
           />
+
+          <div className="rounded-lg border p-4 space-y-3">
+            <div>
+              <h2 className="text-lg font-semibold">Total rewards in tree</h2>
+              <p className="text-xs text-muted-foreground">
+                Summed across the {visibleMissions.length} missions currently shown.
+              </p>
+            </div>
+            {Object.keys(rewardTotals.resources).length === 0 &&
+            Object.keys(rewardTotals.units).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No rewards on these missions.</p>
+            ) : (
+              <>
+                {Object.keys(rewardTotals.resources).length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    {Object.entries(rewardTotals.resources)
+                      .sort(([a], [b]) => (a === "xp" ? -1 : b === "xp" ? 1 : a.localeCompare(b)))
+                      .map(([k, v]) => (
+                        <div
+                          key={k}
+                          className="flex items-center justify-between rounded border bg-muted/40 px-2 py-1.5"
+                        >
+                          <span className="text-xs capitalize text-muted-foreground">
+                            {k.replace(/_/g, " ")}
+                          </span>
+                          <span className="text-sm font-semibold tabular-nums">
+                            {v.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+                {Object.keys(rewardTotals.units).length > 0 && (
+                  <div>
+                    <div className="mb-1 text-xs font-medium text-muted-foreground">Units</div>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(rewardTotals.units).map(([id, qty]) => (
+                        <div
+                          key={id}
+                          className="rounded border bg-muted/40 px-2 py-1 text-xs tabular-nums"
+                        >
+                          #{id} × {qty}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </>
       )}
     </div>

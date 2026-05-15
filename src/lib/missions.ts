@@ -10,25 +10,28 @@ export type MissionPrereqEdgeType =
   | "inactive"
   | "not-started";
 
+export interface MissionRewards {
+  resources: Record<string, number>;
+  units: Record<string, number>;
+}
+
 export interface ParsedMission {
   id: number;
   title: string;
   description?: string;
   giver?: string;
-  /** Highest player_level requirement found directly on this mission. */
   level: number;
-  /** Effective level after propagating prerequisite mission levels (max of self + all required prereqs). */
   displayLevel: number;
   prereqMissionIds: {
-    all: number[]; // complete_all_missions_prereq_config
-    any: number[]; // complete_any_mission_prereq_config
-    active: number[]; // active_missions_prereq_config
-    inactive: number[]; // inactive_missions_prereq_config
-    notStarted: number[]; // not_started_missions_prereq_config
+    all: number[];
+    any: number[];
+    active: number[];
+    inactive: number[];
+    notStarted: number[];
   };
-  /** Count of non-mission, non-level prereq rules (structures, jobs, tags, etc.) for v1 badge. */
   otherPrereqCount: number;
   otherPrereqTypes: string[];
+  rewards: MissionRewards;
 }
 
 type RawComponent = Record<string, any>;
@@ -69,6 +72,13 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
 
     const existence = components.find((c) => c._t === "mission_existence_config");
     const objectives = components.find((c) => c._t === "mission_objectives_config");
+    const rewardsCfg = components.find((c) => c._t === "mission_rewards_config");
+    const rewards: MissionRewards = {
+      resources: { ...(rewardsCfg?.resources ?? {}) },
+      units: Object.fromEntries(
+        Object.entries(rewardsCfg?.units ?? {}).map(([k, v]) => [k, Number(v)])
+      ),
+    };
 
     let level = 0;
     const prereqMissionIds = {
@@ -115,6 +125,7 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
       prereqMissionIds,
       otherPrereqCount,
       otherPrereqTypes,
+      rewards,
     });
   }
 
