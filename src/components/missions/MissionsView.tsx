@@ -393,6 +393,7 @@ export default function MissionsView() {
             availableNow={availableNow}
             characters={characters}
             npcs={npcs}
+            dialogues={dialogues}
             unitsById={unitsById}
           />
 
