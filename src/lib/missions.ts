@@ -72,6 +72,13 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
 
     const existence = components.find((c) => c._t === "mission_existence_config");
     const objectives = components.find((c) => c._t === "mission_objectives_config");
+    const rewardsCfg = components.find((c) => c._t === "mission_rewards_config");
+    const rewards: MissionRewards = {
+      resources: { ...(rewardsCfg?.resources ?? {}) },
+      units: Object.fromEntries(
+        Object.entries(rewardsCfg?.units ?? {}).map(([k, v]) => [k, Number(v)])
+      ),
+    };
 
     let level = 0;
     const prereqMissionIds = {
