@@ -20,7 +20,6 @@ import NotFound from "./pages/NotFound";
 
 // Lazy-load custom formation page
 const CustomFormation = lazy(() => import("./pages/CustomFormation"));
-const Missions = lazy(() => import("./pages/Missions"));
 // const TimelinePreview = lazy(() => import("./pages/TimelinePreview"));
 
 // Lazy-load simulator pages - only for authenticated users
@@ -108,14 +107,6 @@ function AppContent() {
                   } 
                 />
                 
-                <Route
-                  path="/missions"
-                  element={
-                    <Suspense fallback={<SimulatorLoader />}>
-                      <Missions />
-                    </Suspense>
-                  }
-                />
 
                 {/* <Route path="/timeline-preview" element={<Suspense fallback={<SimulatorLoader />}><TimelinePreview /></Suspense>} /> */}
                 <Route path="*" element={<NotFound />} />
