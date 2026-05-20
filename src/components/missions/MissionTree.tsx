@@ -1020,23 +1020,47 @@ function MissionDetailPanel({
                           {encList.map(({ id, enc }) => {
                             const ename = enc?.name ? localize(enc.name, enc.name) : `Encounter #${id}`;
                             const lvl = typeof enc?.level === "number" ? enc.level : undefined;
-                            return (
-                              <HoverCard key={id} openDelay={150} closeDelay={100}>
-                                <HoverCardTrigger asChild>
-                                  <a
-                                    href={`/battle/${id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    title={`Open battle: ${ename}${lvl != null ? ` (Lv ${lvl})` : ""}`}
-                                    className="inline-flex items-center gap-1 rounded border bg-background px-1.5 py-0.5 text-[10px] hover:bg-accent hover:text-accent-foreground transition-colors"
-                                  >
+                            const trigger = canSeeProtected ? (
+                              <Suspense
+                                fallback={
+                                  <span className="inline-flex items-center gap-1 rounded border bg-background px-1.5 py-0.5 text-[10px]">
                                     <Swords className="h-3 w-3" />
                                     <span className="max-w-[140px] truncate">{ename}</span>
                                     {lvl != null && (
                                       <span className="text-muted-foreground">Lv{lvl}</span>
                                     )}
-                                  </a>
-                                </HoverCardTrigger>
+                                  </span>
+                                }
+                              >
+                                <ProtectedBattleLinkLazy
+                                  id={id}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={`Open battle: ${ename}${lvl != null ? ` (Lv ${lvl})` : ""}`}
+                                  className="inline-flex items-center gap-1 rounded border bg-background px-1.5 py-0.5 text-[10px] hover:bg-accent hover:text-accent-foreground transition-colors"
+                                >
+                                  <Swords className="h-3 w-3" />
+                                  <span className="max-w-[140px] truncate">{ename}</span>
+                                  {lvl != null && (
+                                    <span className="text-muted-foreground">Lv{lvl}</span>
+                                  )}
+                                </ProtectedBattleLinkLazy>
+                              </Suspense>
+                            ) : (
+                              <span
+                                title={`${ename}${lvl != null ? ` (Lv ${lvl})` : ""}`}
+                                className="inline-flex items-center gap-1 rounded border bg-background px-1.5 py-0.5 text-[10px]"
+                              >
+                                <Swords className="h-3 w-3" />
+                                <span className="max-w-[140px] truncate">{ename}</span>
+                                {lvl != null && (
+                                  <span className="text-muted-foreground">Lv{lvl}</span>
+                                )}
+                              </span>
+                            );
+                            return (
+                              <HoverCard key={id} openDelay={150} closeDelay={100}>
+                                <HoverCardTrigger asChild>{trigger}</HoverCardTrigger>
                                 <HoverCardContent className="w-auto p-2" side="top">
                                   <div className="mb-1 text-xs font-semibold">
                                     {ename}
