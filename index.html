@@ -41,25 +41,6 @@
 
   <body>
     <div id="root"></div>
-    <script>
-      // Inline auth-aware redirect: if a Supabase session exists in
-      // localStorage and the user is loading the public landing page,
-      // send them straight to /valkyries. Lives in index.html (not the
-      // bundle) so the route hint isn't shipped inside app JS.
-      (function () {
-        try {
-          if (window.location.pathname !== "/") return;
-          var key = "sb-ybegrvsvhfdlqsxqzbji-auth-token";
-          var raw = window.localStorage.getItem(key);
-          if (!raw) return;
-          var parsed = JSON.parse(raw);
-          var exp = parsed && (parsed.expires_at || (parsed.currentSession && parsed.currentSession.expires_at));
-          if (exp && exp * 1000 > Date.now()) {
-            window.location.replace("/valkyries");
-          }
-        } catch (e) {}
-      })();
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
