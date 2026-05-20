@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LanguageSelector } from "./LanguageSelector";
 import { ThemeToggle } from "./ThemeToggle";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { LogOut, RefreshCw, Settings as SettingsIcon, Menu } from "lucide-react";
 import logoPurrface from "@/assets/logo-vogels-lab.jpg";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +36,14 @@ export function Header() {
   const [syncing, setSyncing] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { toast } = useToast();
+  const location = useLocation();
+  const firstSeg = "/" + location.pathname.split("/")[1];
+  const logoTo =
+    firstSeg === "/valkyries" ||
+    firstSeg === "/encounters" ||
+    firstSeg === "/boss-strikes"
+      ? "/valkyries"
+      : "/";
 
   const handleSync = async () => {
     setSyncing(true);
@@ -133,7 +141,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl min-w-0">
+        <Link to={logoTo} className="flex items-center gap-2 font-bold text-xl min-w-0">
           <img src={logoPurrface} alt="" className="h-8 w-8 shrink-0 rounded-md object-cover" />
           <span className="truncate">Vogels Laboratory</span>
         </Link>

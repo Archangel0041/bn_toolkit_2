@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Users, Map as MapIcon, TrendingUp } from "lucide-react";
+import { Users, Map as MapIcon, TrendingUp, Crosshair, Trophy } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Select,
@@ -10,20 +10,34 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { to: "/units", label: "Units", icon: Users },
   { to: "/missions", label: "Missions", icon: MapIcon },
   { to: "/levels", label: "Levels", icon: TrendingUp },
+];
+
+const PROTECTED_NAV_ITEMS = [
+  { to: "/encounters", label: "Encounters", icon: Crosshair },
+  { to: "/boss-strikes", label: "Boss Strikes", icon: Trophy },
 ];
 
 export function MainNav() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const firstSeg = "/" + location.pathname.split("/")[1];
+  const onProtectedTab =
+    firstSeg === "/encounters" || firstSeg === "/boss-strikes";
+
+  // Hide tabs entirely on the /valkyries hub page
+  if (firstSeg === "/valkyries") return null;
+
+  const NAV_ITEMS = onProtectedTab
+    ? [...BASE_NAV_ITEMS, ...PROTECTED_NAV_ITEMS]
+    : BASE_NAV_ITEMS;
+
   const current =
-    NAV_ITEMS.find(
-      (item) => item.to === "/" + location.pathname.split("/")[1],
-    )?.to ?? "/units";
+    NAV_ITEMS.find((item) => item.to === firstSeg)?.to ?? "/units";
 
   return (
     <>
