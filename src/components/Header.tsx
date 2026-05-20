@@ -2,6 +2,14 @@ import { useState } from "react";
 import { LanguageSelector } from "./LanguageSelector";
 import { ThemeToggle } from "./ThemeToggle";
 import { Link, useLocation } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { isLovableEnvironment } from "@/components/ProtectedRoute";
+
+// Lazy so its "/valkyries" literal isn't shipped in the main bundle.
+const ProtectedHomeLinkLazy = lazy(async () => {
+  const mod = await import("@/protected/ProtectedNavSlot");
+  return { default: mod.ProtectedHomeLink };
+});
 import { LogOut, RefreshCw, Settings as SettingsIcon, Menu } from "lucide-react";
 import logoPurrface from "@/assets/logo-vogels-lab.jpg";
 import { useAuth } from "@/contexts/AuthContext";
