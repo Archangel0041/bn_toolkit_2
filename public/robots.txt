@@ -1,6 +1,6 @@
 User-agent: *
 Allow: /$
-Allow: /units
-Allow: /missions
-Allow: /levels
+Allow: /units/
+Allow: /missions/
+Allow: /levels/
 Disallow: /
