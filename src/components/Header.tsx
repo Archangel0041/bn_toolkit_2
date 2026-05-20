@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LanguageSelector } from "./LanguageSelector";
 import { ThemeToggle } from "./ThemeToggle";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { LogOut, RefreshCw, Settings as SettingsIcon, Menu } from "lucide-react";
 import logoPurrface from "@/assets/logo-vogels-lab.jpg";
 import { useAuth } from "@/contexts/AuthContext";
