@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { isLovableEnvironment } from "@/components/ProtectedRoute";
+
+// Lazy so the "/battle/" literal stays out of the main bundle.
+const ProtectedBattleLinkLazy = lazy(async () => {
+  const mod = await import("@/protected/ProtectedNavSlot");
+  return { default: mod.ProtectedBattleLink };
+});
 import {
   ReactFlow,
   Background,
