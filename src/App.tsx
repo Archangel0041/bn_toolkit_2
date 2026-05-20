@@ -13,6 +13,7 @@ import { GameDataProvider, useGameData } from "@/contexts/GameDataContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import Layout from "@/components/Layout";
+import Landing from "./pages/Landing";
 import Units from "./pages/Units";
 import UnitDetail from "./pages/UnitDetail";
 import Compare from "./pages/Compare";
@@ -60,8 +61,8 @@ function AppContent() {
         <div className="text-center space-y-4">
           <h2 className="text-xl font-semibold text-destructive">Failed to load game data</h2>
           <p className="text-muted-foreground">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
           >
             Retry
@@ -80,8 +81,12 @@ function AppContent() {
             <Sonner />
             <BrowserRouter>
               <Routes>
+                {/* Landing page — no tab nav */}
+                <Route path="/" element={<Landing />} />
+
+                {/* Tool pages — wrapped in Layout with tabs */}
                 <Route element={<Layout />}>
-                  <Route path="/" element={<Units />} />
+                  <Route path="/units" element={<Units />} />
                   <Route
                     path="/encounters"
                     element={
@@ -115,38 +120,38 @@ function AppContent() {
                     }
                   />
                 </Route>
+
                 <Route path="/unit/:id" element={<UnitDetail />} />
                 <Route path="/compare/:id1/:id2" element={<Compare />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route 
-                  path="/battle/:encounterId" 
+                <Route
+                  path="/battle/:encounterId"
                   element={
                     <ProtectedRoute>
                       <Suspense fallback={<SimulatorLoader />}>
                         <BattleSimulator />
                       </Suspense>
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/live-battle/:encounterId" 
+                <Route
+                  path="/live-battle/:encounterId"
                   element={
                     <ProtectedRoute>
                       <Suspense fallback={<SimulatorLoader />}>
                         <LiveBattleSimulator />
                       </Suspense>
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/custom-formation" 
+                <Route
+                  path="/custom-formation"
                   element={
                     <Suspense fallback={<SimulatorLoader />}>
                       <CustomFormation />
                     </Suspense>
-                  } 
+                  }
                 />
-                
 
                 {/* <Route path="/timeline-preview" element={<Suspense fallback={<SimulatorLoader />}><TimelinePreview /></Suspense>} /> */}
                 <Route path="*" element={<NotFound />} />
