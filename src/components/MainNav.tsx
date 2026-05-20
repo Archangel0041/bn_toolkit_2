@@ -34,11 +34,7 @@ export function MainNav() {
   const { user, hasAccess } = useAuth();
   const canSeeProtected = isLovableEnvironment() || (!!user && hasAccess);
 
-  // Hide tabs entirely on the /valkyries hub page. The string is intentionally
-  // kept here (a public route literal already exists via Landing), but the
-  // protected route paths themselves are NOT referenced in this file.
   const firstSeg = "/" + location.pathname.split("/")[1];
-  if (firstSeg === "/valkyries") return null;
 
   const current =
     NAV_ITEMS.find((item) => item.to === firstSeg)?.to ?? "/units";
