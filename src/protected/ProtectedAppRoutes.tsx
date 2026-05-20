@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 import Layout from "@/components/Layout";
+import { Header } from "@/components/Header";
+import { CompareBar } from "@/components/units/CompareBar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/NotFound";
 
@@ -21,13 +23,28 @@ function PageLoader() {
   );
 }
 
+// Layout variant for the protected hub page — no tab nav.
+function HubLayout() {
+  return (
+    <div className="min-h-screen bg-background pb-20">
+      <Header />
+      <main>
+        <Outlet />
+      </main>
+      <CompareBar />
+    </div>
+  );
+}
+
 export default function ProtectedAppRoutes() {
   return (
     <ProtectedRoute>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route element={<Layout />}>
+          <Route element={<HubLayout />}>
             <Route path="/valkyries" element={<Valkyries />} />
+          </Route>
+          <Route element={<Layout />}>
             <Route path="/encounters" element={<Encounters />} />
             <Route path="/boss-strikes" element={<BossStrikes />} />
           </Route>
