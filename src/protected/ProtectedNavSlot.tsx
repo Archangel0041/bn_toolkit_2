@@ -1,8 +1,10 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, Link, type LinkProps } from "react-router-dom";
 import { Crosshair, Trophy } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { SelectItem } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+const PROTECTED_HUB = "/valkyries";
 
 // Route literals live inside this lazy chunk only — never in the main bundle.
 const PROTECTED_NAV_ITEMS = [
