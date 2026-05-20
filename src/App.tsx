@@ -81,11 +81,8 @@ function AppContent() {
             <Sonner />
             <BrowserRouter>
               <Routes>
-                {/* Landing page — no tab nav */}
-                <Route path="/" element={<Landing />} />
-
-                {/* Tool pages — wrapped in Layout with tabs */}
                 <Route element={<Layout />}>
+                  <Route path="/" element={<Landing />} />
                   <Route path="/units" element={<Units />} />
                   <Route
                     path="/encounters"
