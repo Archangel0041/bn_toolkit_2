@@ -1,8 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import {
   Users,
-  Crosshair,
-  Trophy,
   Map as MapIcon,
   TrendingUp,
   ChevronRight,
@@ -17,20 +15,6 @@ const SECTIONS = [
     icon: Users,
     to: "/units",
     color: "bg-primary/10 text-primary",
-  },
-  {
-    title: "Encounters",
-    description: "Search and visualize battle encounters with unit grids.",
-    icon: Crosshair,
-    to: "/encounters",
-    color: "bg-destructive/10 text-destructive",
-  },
-  {
-    title: "Boss Strikes",
-    description: "View boss strike tiers, rewards, and guild scaling.",
-    icon: Trophy,
-    to: "/boss-strikes",
-    color: "bg-yellow-500/10 text-yellow-600",
   },
   {
     title: "Missions",
