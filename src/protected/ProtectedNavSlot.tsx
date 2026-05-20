@@ -81,15 +81,15 @@ export function ProtectedHomeLink(
  * (e.g. MissionTree) so the "/battle/" literal stays out of the main bundle.
  */
 export function ProtectedBattleLink({
-  id,
+  encounterId,
   children,
   ...rest
 }: Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
-  id: string | number;
+  encounterId: string | number;
   children: React.ReactNode;
 }) {
   return (
-    <a href={`/battle/${id}`} {...rest}>
+    <a href={`/battle/${encounterId}`} {...rest}>
       {children}
     </a>
   );
