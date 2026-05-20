@@ -18,4 +18,15 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Opaque chunk/asset filenames so the main bundle doesn't reveal
+        // source-module names (e.g. "ProtectedAppRoutes-<hash>.js").
+        chunkFileNames: "assets/c-[hash].js",
+        entryFileNames: "assets/e-[hash].js",
+        assetFileNames: "assets/a-[hash][extname]",
+      },
+    },
+  },
 }));
