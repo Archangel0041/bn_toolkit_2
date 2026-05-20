@@ -36,6 +36,14 @@ export function Header() {
   const [syncing, setSyncing] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { toast } = useToast();
+  const location = useLocation();
+  const firstSeg = "/" + location.pathname.split("/")[1];
+  const logoTo =
+    firstSeg === "/valkyries" ||
+    firstSeg === "/encounters" ||
+    firstSeg === "/boss-strikes"
+      ? "/valkyries"
+      : "/";
 
   const handleSync = async () => {
     setSyncing(true);
