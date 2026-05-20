@@ -1,30 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { Crosshair, Trophy, Users, Map as MapIcon, TrendingUp, ChevronRight } from "lucide-react";
+import { Crosshair, Trophy, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import logoPurrface from "@/assets/logo-vogels-lab.jpg";
 
 const SECTIONS = [
-  {
-    title: "Units",
-    description: "Browse and inspect unit stats, abilities, and tags.",
-    icon: Users,
-    to: "/units",
-    color: "bg-blue-500/10 text-blue-600",
-  },
-  {
-    title: "Missions",
-    description: "Explore mission stages and enemy formations.",
-    icon: MapIcon,
-    to: "/missions",
-    color: "bg-emerald-500/10 text-emerald-600",
-  },
-  {
-    title: "Levels",
-    description: "View leveling costs and unit experience curves.",
-    icon: TrendingUp,
-    to: "/levels",
-    color: "bg-violet-500/10 text-violet-600",
-  },
   {
     title: "Encounters",
     description: "Simulate encounters and explore battle outcomes.",
