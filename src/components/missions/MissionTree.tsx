@@ -1035,7 +1035,7 @@ function MissionDetailPanel({
                                 }
                               >
                                 <ProtectedBattleLinkLazy
-                                  id={id}
+                                  encounterId={id}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   title={`Open battle: ${ename}${lvl != null ? ` (Lv ${lvl})` : ""}`}
