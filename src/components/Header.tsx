@@ -5,7 +5,7 @@ import { Link, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { isLovableEnvironment } from "@/components/ProtectedRoute";
 
-// Lazy so its "/valkyries" literal isn't shipped in the main bundle.
+// Lazy so the protected hub path literal isn't shipped in the main bundle.
 const ProtectedHomeLinkLazy = lazy(async () => {
   const mod = await import("@/protected/ProtectedNavSlot");
   return { default: mod.ProtectedHomeLink };
