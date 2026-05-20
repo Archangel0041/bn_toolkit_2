@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Units", icon: Users },
+  { to: "/units", label: "Units", icon: Users },
   { to: "/encounters", label: "Encounters", icon: Crosshair },
   { to: "/boss-strikes", label: "Boss Strikes", icon: Trophy },
   { to: "/missions", label: "Missions", icon: MapIcon },
@@ -24,8 +24,8 @@ export function MainNav() {
 
   const current =
     NAV_ITEMS.find(
-      (item) => item.to === (location.pathname === "/" ? "/" : "/" + location.pathname.split("/")[1]),
-    )?.to ?? "/";
+      (item) => item.to === "/" + location.pathname.split("/")[1],
+    )?.to ?? "/units";
 
   return (
     <>
@@ -62,7 +62,6 @@ export function MainNav() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === "/"}
               className={cn(
                 "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all hover:text-foreground",
               )}
