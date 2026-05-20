@@ -65,3 +65,13 @@ export default function ProtectedNavSlot({ onlyOnProtectedTab = true }: Props) {
     </>
   );
 }
+
+/**
+ * Link wrapper for the protected hub. Used by the Header logo so the
+ * "/valkyries" literal lives only in this lazy chunk.
+ */
+export function ProtectedHomeLink(
+  props: Omit<LinkProps, "to"> & { children: React.ReactNode },
+) {
+  return <Link to={PROTECTED_HUB} {...props} />;
+}
