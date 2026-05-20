@@ -75,3 +75,22 @@ export function ProtectedHomeLink(
 ) {
   return <Link to={PROTECTED_HUB} {...props} />;
 }
+
+/**
+ * Anchor wrapper for the protected battle simulator. Used by public chunks
+ * (e.g. MissionTree) so the "/battle/" literal stays out of the main bundle.
+ */
+export function ProtectedBattleLink({
+  id,
+  children,
+  ...rest
+}: Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
+  id: string | number;
+  children: React.ReactNode;
+}) {
+  return (
+    <a href={`/battle/${id}`} {...rest}>
+      {children}
+    </a>
+  );
+}
