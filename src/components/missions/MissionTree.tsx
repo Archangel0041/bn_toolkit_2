@@ -804,6 +804,8 @@ function MissionDetailPanel({
 }: MissionDetailPanelProps) {
   const { t } = useLanguage();
   const localize = useLocalize();
+  const { user, hasAccess } = useAuth();
+  const canSeeProtected = isLovableEnvironment() || (!!user && hasAccess);
 
   const giverIcon = (() => {
     if (!mission.giver) return undefined;
