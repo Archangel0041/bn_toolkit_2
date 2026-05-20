@@ -1,6 +1,9 @@
+import { lazy, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Users, Map as MapIcon, TrendingUp, Crosshair, Trophy } from "lucide-react";
+import { Users, Map as MapIcon, TrendingUp } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
+import { isLovableEnvironment } from "@/components/ProtectedRoute";
 import {
   Select,
   SelectContent,
@@ -10,31 +13,32 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-const BASE_NAV_ITEMS = [
+// Lazy-loaded so its literal route paths don't ship in the main bundle.
+const ProtectedNavSlot = lazy(
+  () => import("@/protected/ProtectedNavSlot"),
+);
+const ProtectedNavSelectItemsLazy = lazy(async () => {
+  const mod = await import("@/protected/ProtectedNavSlot");
+  return { default: mod.ProtectedNavSelectItems };
+});
+
+const NAV_ITEMS = [
   { to: "/units", label: "Units", icon: Users },
   { to: "/missions", label: "Missions", icon: MapIcon },
   { to: "/levels", label: "Levels", icon: TrendingUp },
 ];
 
-const PROTECTED_NAV_ITEMS = [
-  { to: "/encounters", label: "Encounters", icon: Crosshair },
-  { to: "/boss-strikes", label: "Boss Strikes", icon: Trophy },
-];
-
 export function MainNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, hasAccess } = useAuth();
+  const canSeeProtected = isLovableEnvironment() || (!!user && hasAccess);
 
+  // Hide tabs entirely on the /valkyries hub page. The string is intentionally
+  // kept here (a public route literal already exists via Landing), but the
+  // protected route paths themselves are NOT referenced in this file.
   const firstSeg = "/" + location.pathname.split("/")[1];
-  const onProtectedTab =
-    firstSeg === "/encounters" || firstSeg === "/boss-strikes";
-
-  // Hide tabs entirely on the /valkyries hub page
   if (firstSeg === "/valkyries") return null;
-
-  const NAV_ITEMS = onProtectedTab
-    ? [...BASE_NAV_ITEMS, ...PROTECTED_NAV_ITEMS]
-    : BASE_NAV_ITEMS;
 
   const current =
     NAV_ITEMS.find((item) => item.to === firstSeg)?.to ?? "/units";
@@ -59,6 +63,11 @@ export function MainNav() {
                 </SelectItem>
               );
             })}
+            {canSeeProtected && (
+              <Suspense fallback={null}>
+                <ProtectedNavSelectItemsLazy />
+              </Suspense>
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -84,6 +93,11 @@ export function MainNav() {
             </NavLink>
           );
         })}
+        {canSeeProtected && (
+          <Suspense fallback={null}>
+            <ProtectedNavSlot />
+          </Suspense>
+        )}
       </nav>
     </>
   );
