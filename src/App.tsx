@@ -14,6 +14,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import Layout from "@/components/Layout";
 import Landing from "./pages/Landing";
+import Valkyries from "./pages/Valkyries";
 import Units from "./pages/Units";
 import UnitDetail from "./pages/UnitDetail";
 import Compare from "./pages/Compare";
@@ -83,6 +84,14 @@ function AppContent() {
               <Routes>
                 <Route element={<Layout />}>
                   <Route path="/" element={<Landing />} />
+                  <Route
+                    path="/valkyries"
+                    element={
+                      <ProtectedRoute>
+                        <Valkyries />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="/units" element={<Units />} />
                   <Route
                     path="/encounters"
