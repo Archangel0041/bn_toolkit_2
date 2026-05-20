@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useAuth } from "@/contexts/AuthContext";
 import { isLovableEnvironment } from "@/components/ProtectedRoute";
 
-// Lazy so the "/battle/" literal stays out of the main bundle.
+// Lazy so the protected battle path literal stays out of the main bundle.
 const ProtectedBattleLinkLazy = lazy(async () => {
   const mod = await import("@/protected/ProtectedNavSlot");
   return { default: mod.ProtectedBattleLink };
