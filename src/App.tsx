@@ -12,15 +12,21 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { GameDataProvider, useGameData } from "@/contexts/GameDataContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import Index from "./pages/Index";
+import Layout from "@/components/Layout";
+import Units from "./pages/Units";
 import UnitDetail from "./pages/UnitDetail";
 import Compare from "./pages/Compare";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+// Lazy-load tab pages
+const Encounters = lazy(() => import("./pages/Encounters"));
+const BossStrikes = lazy(() => import("./pages/BossStrikes"));
+const Missions = lazy(() => import("./pages/Missions"));
+const Levels = lazy(() => import("./pages/Levels"));
+
 // Lazy-load custom formation page
 const CustomFormation = lazy(() => import("./pages/CustomFormation"));
-// const TimelinePreview = lazy(() => import("./pages/TimelinePreview"));
 
 // Lazy-load simulator pages - only for authenticated users
 const BattleSimulator = lazy(() => import("./pages/BattleSimulator"));
