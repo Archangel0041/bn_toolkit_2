@@ -8,39 +8,87 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CompareProvider } from "@/contexts/CompareContext";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { GameDataProvider, useGameData } from "@/contexts/GameDataContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { isLovableEnvironment } from "@/components/ProtectedRoute";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import Layout from "@/components/Layout";
 import Landing from "./pages/Landing";
-import Valkyries from "./pages/Valkyries";
 import Units from "./pages/Units";
 import UnitDetail from "./pages/UnitDetail";
 import Compare from "./pages/Compare";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
-// Lazy-load tab pages
-const Encounters = lazy(() => import("./pages/Encounters"));
-const BossStrikes = lazy(() => import("./pages/BossStrikes"));
+// Public lazy pages
 const Missions = lazy(() => import("./pages/Missions"));
 const Levels = lazy(() => import("./pages/Levels"));
 
-// Lazy-load custom formation page
-const CustomFormation = lazy(() => import("./pages/CustomFormation"));
-
-// Lazy-load simulator pages - only for authenticated users
-const BattleSimulator = lazy(() => import("./pages/BattleSimulator"));
-const LiveBattleSimulator = lazy(() => import("./pages/LiveBattleSimulator"));
+// Protected lazy bundle — only fetched for users who pass the auth gate.
+// All protected route paths/components live inside this chunk, NOT in the
+// main bundle, so unauthenticated visitors can't discover them by reading
+// the downloaded JS.
+const ProtectedAppRoutes = lazy(
+  () => import("./protected/ProtectedAppRoutes"),
+);
 
 const queryClient = new QueryClient();
 
-function SimulatorLoader() {
+function PageLoader() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
     </div>
+  );
+}
+
+function AppRoutes() {
+  const { user, hasAccess } = useAuth();
+  const canSeeProtected = isLovableEnvironment() || (!!user && hasAccess);
+
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/" element={<Landing />} />
+        <Route path="/units" element={<Units />} />
+        <Route
+          path="/missions"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Missions />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/levels"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Levels />
+            </Suspense>
+          }
+        />
+      </Route>
+
+      <Route path="/unit/:id" element={<UnitDetail />} />
+      <Route path="/compare/:id1/:id2" element={<Compare />} />
+      <Route path="/settings" element={<Settings />} />
+
+      {/* Catch-all: authenticated users get the protected route bundle;
+          everyone else gets 404. The literal protected paths never appear
+          in the main bundle. */}
+      <Route
+        path="*"
+        element={
+          canSeeProtected ? (
+            <Suspense fallback={<PageLoader />}>
+              <ProtectedAppRoutes />
+            </Suspense>
+          ) : (
+            <NotFound />
+          )
+        }
+      />
+    </Routes>
   );
 }
 
@@ -81,91 +129,7 @@ function AppContent() {
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <Routes>
-                <Route element={<Layout />}>
-                  <Route path="/" element={<Landing />} />
-                  <Route
-                    path="/valkyries"
-                    element={
-                      <ProtectedRoute>
-                        <Valkyries />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route path="/units" element={<Units />} />
-                  <Route
-                    path="/encounters"
-                    element={
-                      <ProtectedRoute>
-                        <Suspense fallback={<SimulatorLoader />}>
-                          <Encounters />
-                        </Suspense>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/boss-strikes"
-                    element={
-                      <ProtectedRoute>
-                        <Suspense fallback={<SimulatorLoader />}>
-                          <BossStrikes />
-                        </Suspense>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/missions"
-                    element={
-                      <Suspense fallback={<SimulatorLoader />}>
-                        <Missions />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="/levels"
-                    element={
-                      <Suspense fallback={<SimulatorLoader />}>
-                        <Levels />
-                      </Suspense>
-                    }
-                  />
-                </Route>
-
-                <Route path="/unit/:id" element={<UnitDetail />} />
-                <Route path="/compare/:id1/:id2" element={<Compare />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route
-                  path="/battle/:encounterId"
-                  element={
-                    <ProtectedRoute>
-                      <Suspense fallback={<SimulatorLoader />}>
-                        <BattleSimulator />
-                      </Suspense>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/live-battle/:encounterId"
-                  element={
-                    <ProtectedRoute>
-                      <Suspense fallback={<SimulatorLoader />}>
-                        <LiveBattleSimulator />
-                      </Suspense>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/custom-formation"
-                  element={
-                    <Suspense fallback={<SimulatorLoader />}>
-                      <CustomFormation />
-                    </Suspense>
-                  }
-                />
-
-                {/* <Route path="/timeline-preview" element={<Suspense fallback={<SimulatorLoader />}><TimelinePreview /></Suspense>} /> */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <AppRoutes />
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
