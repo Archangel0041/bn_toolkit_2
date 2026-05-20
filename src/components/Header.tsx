@@ -141,7 +141,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl min-w-0">
+        <Link to={logoTo} className="flex items-center gap-2 font-bold text-xl min-w-0">
           <img src={logoPurrface} alt="" className="h-8 w-8 shrink-0 rounded-md object-cover" />
           <span className="truncate">Vogels Laboratory</span>
         </Link>
