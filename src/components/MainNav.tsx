@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Users, Crosshair, Trophy, Map as MapIcon, TrendingUp } from "lucide-react";
+import { Users, Map as MapIcon, TrendingUp } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Select,
@@ -12,8 +12,6 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { to: "/units", label: "Units", icon: Users },
-  { to: "/encounters", label: "Encounters", icon: Crosshair },
-  { to: "/boss-strikes", label: "Boss Strikes", icon: Trophy },
   { to: "/missions", label: "Missions", icon: MapIcon },
   { to: "/levels", label: "Levels", icon: TrendingUp },
 ];

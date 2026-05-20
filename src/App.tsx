@@ -87,17 +87,21 @@ function AppContent() {
                   <Route
                     path="/encounters"
                     element={
-                      <Suspense fallback={<SimulatorLoader />}>
-                        <Encounters />
-                      </Suspense>
+                      <ProtectedRoute>
+                        <Suspense fallback={<SimulatorLoader />}>
+                          <Encounters />
+                        </Suspense>
+                      </ProtectedRoute>
                     }
                   />
                   <Route
                     path="/boss-strikes"
                     element={
-                      <Suspense fallback={<SimulatorLoader />}>
-                        <BossStrikes />
-                      </Suspense>
+                      <ProtectedRoute>
+                        <Suspense fallback={<SimulatorLoader />}>
+                          <BossStrikes />
+                        </Suspense>
+                      </ProtectedRoute>
                     }
                   />
                   <Route
