@@ -1,9 +1,30 @@
 import { useNavigate } from "react-router-dom";
-import { Crosshair, Trophy, ChevronRight } from "lucide-react";
+import { Crosshair, Trophy, Users, Map as MapIcon, TrendingUp, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import logoPurrface from "@/assets/logo-vogels-lab.jpg";
 
 const SECTIONS = [
+  {
+    title: "Units",
+    description: "Browse and inspect unit stats, abilities, and tags.",
+    icon: Users,
+    to: "/units",
+    color: "bg-blue-500/10 text-blue-600",
+  },
+  {
+    title: "Missions",
+    description: "Explore mission stages and enemy formations.",
+    icon: MapIcon,
+    to: "/missions",
+    color: "bg-emerald-500/10 text-emerald-600",
+  },
+  {
+    title: "Levels",
+    description: "View leveling costs and unit experience curves.",
+    icon: TrendingUp,
+    to: "/levels",
+    color: "bg-violet-500/10 text-violet-600",
+  },
   {
     title: "Encounters",
     description: "Simulate encounters and explore battle outcomes.",
@@ -42,7 +63,7 @@ export default function Valkyries() {
       </section>
 
       <section className="container mx-auto px-4 pb-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {SECTIONS.map((section) => {
             const Icon = section.icon;
             return (
