@@ -80,7 +80,41 @@ function AppContent() {
             <Sonner />
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route element={<Layout />}>
+                  <Route path="/" element={<Units />} />
+                  <Route
+                    path="/encounters"
+                    element={
+                      <Suspense fallback={<SimulatorLoader />}>
+                        <Encounters />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/boss-strikes"
+                    element={
+                      <Suspense fallback={<SimulatorLoader />}>
+                        <BossStrikes />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/missions"
+                    element={
+                      <Suspense fallback={<SimulatorLoader />}>
+                        <Missions />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/levels"
+                    element={
+                      <Suspense fallback={<SimulatorLoader />}>
+                        <Levels />
+                      </Suspense>
+                    }
+                  />
+                </Route>
                 <Route path="/unit/:id" element={<UnitDetail />} />
                 <Route path="/compare/:id1/:id2" element={<Compare />} />
                 <Route path="/settings" element={<Settings />} />
