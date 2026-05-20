@@ -46,12 +46,13 @@ export function Header() {
   const { toast } = useToast();
   const location = useLocation();
   const firstSeg = "/" + location.pathname.split("/")[1];
-  const logoTo =
-    firstSeg === "/valkyries" ||
-    firstSeg === "/encounters" ||
-    firstSeg === "/boss-strikes"
-      ? "/valkyries"
-      : "/";
+  // Known public path roots. If an authenticated user is anywhere else,
+  // assume they're inside the protected area and link the logo to the
+  // protected hub via the lazy chunk (so the hub literal stays out of
+  // the main bundle).
+  const PUBLIC_ROOTS = new Set(["/", "/units", "/missions", "/levels", "/unit", "/compare", "/settings"]);
+  const canSeeProtected = isLovableEnvironment() || !!user;
+  const useProtectedHomeLink = canSeeProtected && !PUBLIC_ROOTS.has(firstSeg);
 
   const handleSync = async () => {
     setSyncing(true);
