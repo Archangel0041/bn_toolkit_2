@@ -566,6 +566,8 @@ function MissionTreeInner({
 }: MissionTreeProps) {
   const { t } = useLanguage();
   const localize = useLocalize();
+  const { user, hasAccess } = useAuth();
+  const canSeeProtected = isLovableEnvironment() || (!!user && hasAccess);
   const [pinnedId, setPinnedId] = useState<number | null>(null);
 
   const byId = useMemo(() => new Map(missions.map((m) => [m.id, m])), [missions]);
