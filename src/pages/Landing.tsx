@@ -54,7 +54,7 @@ export default function Landing() {
   return (
     <div className="min-h-[calc(100vh-3.5rem)] flex flex-col">
       {/* Hero */}
-      <section className="flex-1 flex flex-col items-center justify-center px-4 py-16 text-center">
+      <section className="flex flex-col items-center justify-center px-4 pt-12 pb-6 text-center">
         <div className="mb-6">
           <img
             src={logoPurrface}
@@ -65,13 +65,9 @@ export default function Landing() {
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
           Vogels Laboratory
         </h1>
-        <p className="text-lg text-muted-foreground max-w-xl mb-8">
+        <p className="text-lg text-muted-foreground max-w-xl">
           Your companion reference for battle units, encounters, missions, and progression.
         </p>
-        <Button size="lg" onClick={() => navigate("/units")} className="gap-2">
-          Browse Units
-          <ChevronRight className="h-4 w-4" />
-        </Button>
       </section>
 
       {/* Feature cards */}
