@@ -698,7 +698,8 @@ export default function UnitDetail() {
               .filter(({ stat }) => {
                 const hasCost = stat.level_up_cost && Object.keys(stat.level_up_cost).length > 0;
                 const hasXp = !!stat.level_up_rewards?.xp;
-                return hasCost || hasXp;
+                const hasPrereq = (stat.prereqs_for_level?.length ?? 0) > 0;
+                return hasCost || hasXp || hasPrereq;
               });
             if (rows.length === 0) return null;
             return (
@@ -719,6 +720,34 @@ export default function UnitDetail() {
                             </span>
                           ) : null}
                         </div>
+                        {stat.prereqs_for_level && stat.prereqs_for_level.length > 0 && (
+                          <div>
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Prerequisites</div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1">
+                              {stat.prereqs_for_level.map((p, idx) => {
+                                if (p?._t === "player_level_prereq_config" && typeof p.min_level === "number") {
+                                  return (
+                                    <span key={idx} className="inline-flex items-center gap-1 text-sm">
+                                      <img
+                                        src={getResourceIconUrl("player_level")}
+                                        alt="Player Level"
+                                        title="Player Level"
+                                        className="h-4 w-4 object-contain"
+                                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                                      />
+                                      <span className="font-medium">Player Level {p.min_level}</span>
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span key={idx} className="text-sm text-muted-foreground">
+                                    {String(p?._t ?? "prereq")}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
                             <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Cost</div>
