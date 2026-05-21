@@ -15,11 +15,11 @@ interface Props {
 }
 
 function formatSeconds(s: number): string {
-  if (s <= 0) return "0s";
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return r === 0 ? `${m}m` : `${m}m ${r}s`;
+  if (s <= 0) return "00:00";
+  const totalMinutes = Math.ceil(s / 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 function ScalingTable({
