@@ -6,6 +6,7 @@ import { getAllUnits, getAllTags, filterUnits } from "@/lib/units";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UnitSide } from "@/data/gameEnums";
 import { filterUnitsByAdvancedCriteria } from "@/lib/unitAbilityFilters";
+import { EthicalAd } from "@/components/ads/EthicalAd";
 
 const Units = () => {
   const { t } = useLanguage();
