@@ -694,7 +694,7 @@ export default function UnitDetail() {
           {(() => {
             const stats = unit.statsConfig?.stats ?? [];
             const rows = stats
-              .map((s, i) => ({ rank: i + 1, stat: s }))
+              .map((s, i) => ({ rank: i + 1, nextRank: i + 2, stat: s }))
               .filter(({ stat }) => {
                 const hasCost = stat.level_up_cost && Object.keys(stat.level_up_cost).length > 0;
                 const hasXp = !!stat.level_up_rewards?.xp;
