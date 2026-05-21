@@ -697,9 +697,9 @@ export default function UnitDetail() {
               .map((s, i) => ({ rank: i + 1, nextRank: i + 2, stat: s }))
               .filter(({ stat }) => {
                 const hasCost = stat.level_up_cost && Object.keys(stat.level_up_cost).length > 0;
-                const hasXp = !!stat.level_up_rewards?.xp;
+                const hasRewards = stat.level_up_rewards && Object.values(stat.level_up_rewards).some((v) => typeof v === "number" && v > 0);
                 const hasPrereq = (stat.prereqs_for_level?.length ?? 0) > 0;
-                return hasCost || hasXp || hasPrereq;
+                return hasCost || hasRewards || hasPrereq;
               });
             if (rows.length === 0) return null;
             return (
@@ -708,7 +708,11 @@ export default function UnitDetail() {
                   {rows.map(({ rank, nextRank, stat }) => {
                     const costEntries = Object.entries(stat.level_up_cost ?? {});
                     const rewards: Array<{ key: string; label: string; amount: number }> = [];
-                    if (stat.level_up_rewards?.xp) rewards.push({ key: "xp", label: "XP", amount: stat.level_up_rewards.xp });
+                    for (const [k, v] of Object.entries(stat.level_up_rewards ?? {})) {
+                      if (typeof v === "number" && v > 0) {
+                        rewards.push({ key: k, label: k === "xp" ? "XP" : capitalize(k), amount: v });
+                      }
+                    }
                     return (
                       <div key={rank} className="rounded-md border border-border p-3 space-y-2">
                         <div className="flex items-center justify-between">
