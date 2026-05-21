@@ -916,6 +916,7 @@ export default function UnitDetail() {
             );
           })()}
         </div>
+        <EthicalAd type="image" keywords={["gaming", "strategy", "rpg"]} />
       </main>
       <CompareBar />
     </div>
