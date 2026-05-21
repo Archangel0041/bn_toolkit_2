@@ -6,7 +6,7 @@ import { getAllUnits, getAllTags, filterUnits } from "@/lib/units";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UnitSide } from "@/data/gameEnums";
 import { filterUnitsByAdvancedCriteria } from "@/lib/unitAbilityFilters";
-import { EthicalAd } from "@/components/ads/EthicalAd";
+import { AdSense } from "@/components/ads/AdSense";
 
 const Units = () => {
   const { t } = useLanguage();
@@ -102,7 +102,7 @@ const Units = () => {
         <TabsContent value="neutral" className="mt-6"><UnitGrid units={unitsBySide.neutral} /></TabsContent>
         <TabsContent value="test" className="mt-6"><UnitGrid units={unitsBySide.test} /></TabsContent>
       </Tabs>
-      <EthicalAd type="image" keywords={["gaming", "strategy", "rpg"]} />
+      <AdSense />
     </div>
   );
 };

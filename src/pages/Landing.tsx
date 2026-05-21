@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import logoPurrface from "@/assets/logo-vogels-lab.jpg";
-import { EthicalAd } from "@/components/ads/EthicalAd";
+import { AdSense } from "@/components/ads/AdSense";
 
 const SECTIONS = [
   {
@@ -86,7 +86,7 @@ export default function Landing() {
             );
           })}
         </div>
-        <EthicalAd type="image" keywords={["gaming", "strategy", "rpg"]} />
+        <AdSense />
       </section>
     </div>
   );
