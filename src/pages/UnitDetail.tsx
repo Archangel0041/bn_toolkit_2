@@ -690,6 +690,91 @@ export default function UnitDetail() {
             </StatSection>
           )}
 
+          {/* Rank Up Costs & Rewards */}
+          {(() => {
+            const stats = unit.statsConfig?.stats ?? [];
+            const rows = stats
+              .map((s, i) => ({ rank: i + 1, stat: s }))
+              .filter(({ stat }) => {
+                const hasCost = stat.level_up_cost && Object.keys(stat.level_up_cost).length > 0;
+                const hasXp = !!stat.level_up_rewards?.xp;
+                const hasSp = !!stat.rewards?.sp;
+                const hasGold = !!stat.rewards?.gold;
+                return hasCost || hasXp || hasSp || hasGold;
+              });
+            if (rows.length === 0) return null;
+            return (
+              <StatSection title="Rank Up Costs & Rewards" icon={<Coins className="h-4 w-4" />} defaultOpen>
+                <div className="space-y-2">
+                  {rows.map(({ rank, stat }) => {
+                    const costEntries = Object.entries(stat.level_up_cost ?? {});
+                    const rewards: Array<{ key: string; label: string; amount: number }> = [];
+                    if (stat.level_up_rewards?.xp) rewards.push({ key: "xp", label: "XP", amount: stat.level_up_rewards.xp });
+                    if (stat.rewards?.sp) rewards.push({ key: "sp", label: "SP", amount: stat.rewards.sp });
+                    if (stat.rewards?.gold) rewards.push({ key: "gold", label: "Gold", amount: stat.rewards.gold });
+                    return (
+                      <div key={rank} className="rounded-md border border-border p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline">Rank {rank}</Badge>
+                          {stat.level_up_time ? (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDuration(stat.level_up_time)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Cost</div>
+                            {costEntries.length === 0 ? (
+                              <div className="text-sm text-muted-foreground">—</div>
+                            ) : (
+                              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                {costEntries.map(([resource, amount]) => (
+                                  <span key={resource} className="inline-flex items-center gap-1 text-sm">
+                                    <img
+                                      src={getResourceIconUrl(resource)}
+                                      alt={resource}
+                                      title={capitalize(resource)}
+                                      className="h-4 w-4 object-contain"
+                                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                                    />
+                                    <span className="font-medium">{amount.toLocaleString()}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Rewards</div>
+                            {rewards.length === 0 ? (
+                              <div className="text-sm text-muted-foreground">—</div>
+                            ) : (
+                              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                {rewards.map((r) => (
+                                  <span key={r.key} className="inline-flex items-center gap-1 text-sm">
+                                    <img
+                                      src={getResourceIconUrl(r.key)}
+                                      alt={r.label}
+                                      title={r.label}
+                                      className="h-4 w-4 object-contain"
+                                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                                    />
+                                    <span className="font-medium">{r.amount.toLocaleString()}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </StatSection>
+            );
+          })()}
+
           {/* Healing */}
           {unit.healing?.heal_cost && (
             <StatSection title="Healing" icon={<Wrench className="h-4 w-4" />} defaultOpen>
