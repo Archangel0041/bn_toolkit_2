@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import logoPurrface from "@/assets/logo-vogels-lab.jpg";
+import { EthicalAd } from "@/components/ads/EthicalAd";
 
 const SECTIONS = [
   {
