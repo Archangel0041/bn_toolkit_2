@@ -694,7 +694,7 @@ export default function UnitDetail() {
           {(() => {
             const stats = unit.statsConfig?.stats ?? [];
             const rows = stats
-              .map((s, i) => ({ rank: i + 1, stat: s }))
+              .map((s, i) => ({ rank: i + 1, nextRank: i + 2, stat: s }))
               .filter(({ stat }) => {
                 const hasCost = stat.level_up_cost && Object.keys(stat.level_up_cost).length > 0;
                 const hasXp = !!stat.level_up_rewards?.xp;
@@ -704,14 +704,14 @@ export default function UnitDetail() {
             return (
               <StatSection title="Rank Up Costs & Rewards" icon={<Coins className="h-4 w-4" />} defaultOpen>
                 <div className="space-y-2">
-                  {rows.map(({ rank, stat }) => {
+                  {rows.map(({ rank, nextRank, stat }) => {
                     const costEntries = Object.entries(stat.level_up_cost ?? {});
                     const rewards: Array<{ key: string; label: string; amount: number }> = [];
                     if (stat.level_up_rewards?.xp) rewards.push({ key: "xp", label: "XP", amount: stat.level_up_rewards.xp });
                     return (
                       <div key={rank} className="rounded-md border border-border p-3 space-y-2">
                         <div className="flex items-center justify-between">
-                          <Badge variant="outline">Rank {rank}</Badge>
+                          <Badge variant="outline">Rank {rank} to Rank {nextRank}</Badge>
                           {stat.level_up_time ? (
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <Clock className="h-3 w-3" />
