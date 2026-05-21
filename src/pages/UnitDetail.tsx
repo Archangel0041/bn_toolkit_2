@@ -698,7 +698,7 @@ export default function UnitDetail() {
               .filter(({ stat }) => {
                 const hasCost = stat.level_up_cost && Object.keys(stat.level_up_cost).length > 0;
                 const hasRewards = stat.level_up_rewards && Object.values(stat.level_up_rewards).some((v) => typeof v === "number" && v > 0);
-                const hasPrereq = (stat.prereqs_for_level?.length ?? 0) > 0;
+                const hasPrereq = (stat.prereqs_for_level?.length ?? 0) > 0 || (typeof stat.level_cutoff === "number" && stat.level_cutoff > 0);
                 return hasCost || hasRewards || hasPrereq;
               });
             if (rows.length === 0) return null;
