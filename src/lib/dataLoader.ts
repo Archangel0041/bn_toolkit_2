@@ -257,6 +257,10 @@ export async function loadMissions(): Promise<Record<string, any[]>> {
   return fetchFromBucket(CONFIG_BUCKET, "missions.json");
 }
 
+export async function loadCompositions(): Promise<Record<string, any[]>> {
+  return fetchFromBucket(CONFIG_BUCKET, "compositions.json");
+}
+
 export interface LevelEntry {
   attack_zones_count?: number;
   awards?: { nanopods?: number; gold?: number; [k: string]: number | undefined };
