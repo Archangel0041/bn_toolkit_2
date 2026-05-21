@@ -698,9 +698,7 @@ export default function UnitDetail() {
               .filter(({ stat }) => {
                 const hasCost = stat.level_up_cost && Object.keys(stat.level_up_cost).length > 0;
                 const hasXp = !!stat.level_up_rewards?.xp;
-                const hasSp = !!stat.rewards?.sp;
-                const hasGold = !!stat.rewards?.gold;
-                return hasCost || hasXp || hasSp || hasGold;
+                return hasCost || hasXp;
               });
             if (rows.length === 0) return null;
             return (
@@ -710,8 +708,6 @@ export default function UnitDetail() {
                     const costEntries = Object.entries(stat.level_up_cost ?? {});
                     const rewards: Array<{ key: string; label: string; amount: number }> = [];
                     if (stat.level_up_rewards?.xp) rewards.push({ key: "xp", label: "XP", amount: stat.level_up_rewards.xp });
-                    if (stat.rewards?.sp) rewards.push({ key: "sp", label: "SP", amount: stat.rewards.sp });
-                    if (stat.rewards?.gold) rewards.push({ key: "gold", label: "Gold", amount: stat.rewards.gold });
                     return (
                       <div key={rank} className="rounded-md border border-border p-3 space-y-2">
                         <div className="flex items-center justify-between">
