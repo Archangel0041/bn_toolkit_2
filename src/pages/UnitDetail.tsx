@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { CompareBar } from "@/components/units/CompareBar";
-import { EthicalAd } from "@/components/ads/EthicalAd";
+import { AdSense } from "@/components/ads/AdSense";
 import { StatSection, StatRow, DamageModsGrid } from "@/components/units/StatSection";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -916,7 +916,7 @@ export default function UnitDetail() {
             );
           })()}
         </div>
-        <EthicalAd type="image" keywords={["gaming", "strategy", "rpg"]} />
+        <AdSense />
       </main>
       <CompareBar />
     </div>
