@@ -698,7 +698,7 @@ export default function UnitDetail() {
               .filter(({ stat }) => {
                 const hasCost = stat.level_up_cost && Object.keys(stat.level_up_cost).length > 0;
                 const hasRewards = stat.level_up_rewards && Object.values(stat.level_up_rewards).some((v) => typeof v === "number" && v > 0);
-                const hasPrereq = (stat.prereqs_for_level?.length ?? 0) > 0;
+                const hasPrereq = (stat.prereqs_for_level?.length ?? 0) > 0 || (typeof stat.level_cutoff === "number" && stat.level_cutoff > 0);
                 return hasCost || hasRewards || hasPrereq;
               });
             if (rows.length === 0) return null;
@@ -724,11 +724,23 @@ export default function UnitDetail() {
                             </span>
                           ) : null}
                         </div>
-                        {stat.prereqs_for_level && stat.prereqs_for_level.length > 0 && (
+                        {((stat.prereqs_for_level && stat.prereqs_for_level.length > 0) || (typeof stat.level_cutoff === "number" && stat.level_cutoff > 0)) && (
                           <div>
                             <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Prerequisites</div>
                             <div className="flex flex-wrap gap-x-3 gap-y-1">
-                              {stat.prereqs_for_level.map((p, idx) => {
+                              {typeof stat.level_cutoff === "number" && stat.level_cutoff > 0 && (
+                                <span className="inline-flex items-center gap-1 text-sm">
+                                  <img
+                                    src={getResourceIconUrl("sp")}
+                                    alt="SP"
+                                    title="SP"
+                                    className="h-4 w-4 object-contain"
+                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                  />
+                                  <span className="font-medium">{stat.level_cutoff.toLocaleString()} SP</span>
+                                </span>
+                              )}
+                              {stat.prereqs_for_level?.map((p, idx) => {
                                 if (p?._t === "player_level_prereq_config" && typeof p.min_level === "number") {
                                   return (
                                     <span key={idx} className="inline-flex items-center gap-1 text-sm">
