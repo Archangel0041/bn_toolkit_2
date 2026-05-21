@@ -102,6 +102,7 @@ const Units = () => {
         <TabsContent value="neutral" className="mt-6"><UnitGrid units={unitsBySide.neutral} /></TabsContent>
         <TabsContent value="test" className="mt-6"><UnitGrid units={unitsBySide.test} /></TabsContent>
       </Tabs>
+      <EthicalAd type="image" keywords={["gaming", "strategy", "rpg"]} />
     </div>
   );
 };
