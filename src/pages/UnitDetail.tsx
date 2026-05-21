@@ -698,9 +698,7 @@ export default function UnitDetail() {
               .filter(({ stat }) => {
                 const hasCost = stat.level_up_cost && Object.keys(stat.level_up_cost).length > 0;
                 const hasXp = !!stat.level_up_rewards?.xp;
-                const hasSp = !!stat.rewards?.sp;
-                const hasGold = !!stat.rewards?.gold;
-                return hasCost || hasXp || hasSp || hasGold;
+                return hasCost || hasXp;
               });
             if (rows.length === 0) return null;
             return (
