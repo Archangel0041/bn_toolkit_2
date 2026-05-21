@@ -81,11 +81,6 @@ export function scaleHealTime(baseTime: number | undefined, timePercent: number 
 
 /** Lightweight hook: loads compositions.json on demand and caches it. */
 export function useCompositions(): Record<string, any[]> | null {
-  const [data, setData] = useState<Record<string, any[]>> | null>(() => null) as unknown as [
-    Record<string, any[]> | null,
-    (v: Record<string, any[]> | null) => void
-  ];
-  // simple state
   const [comp, setComp] = useState<Record<string, any[]> | null>(null);
 
   useEffect(() => {
