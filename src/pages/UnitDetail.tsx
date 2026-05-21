@@ -711,7 +711,7 @@ export default function UnitDetail() {
                     return (
                       <div key={rank} className="rounded-md border border-border p-3 space-y-2">
                         <div className="flex items-center justify-between">
-                          <Badge variant="outline">Rank {rank}</Badge>
+                          <Badge variant="outline">Rank {rank} to Rank {nextRank}</Badge>
                           {stat.level_up_time ? (
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <Clock className="h-3 w-3" />
