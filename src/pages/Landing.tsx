@@ -86,6 +86,7 @@ export default function Landing() {
             );
           })}
         </div>
+        <EthicalAd type="image" keywords={["gaming", "strategy", "rpg"]} />
       </section>
     </div>
   );
