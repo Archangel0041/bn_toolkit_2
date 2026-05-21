@@ -38,6 +38,8 @@ import { IsometricTargetingDiagram } from "@/components/units/IsometricTargeting
 import { getUnitAbilities } from "@/lib/battleCalculations";
 import { UnitTag, UnitTagLabels } from "@/data/gameEnums";
 import { expandTargetTags } from "@/lib/tagHierarchy";
+import { getApplicableBuildingGroup } from "@/lib/healingBuildings";
+import { HealingScalingTables } from "@/components/units/HealingScalingTables";
 
 // Detailed targeting categories - all unit class types
 const TARGETING_CATEGORIES: { tag: number; label: string; color: string }[] = [
