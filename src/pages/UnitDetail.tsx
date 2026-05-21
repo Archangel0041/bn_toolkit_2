@@ -704,7 +704,7 @@ export default function UnitDetail() {
             return (
               <StatSection title="Rank Up Costs & Rewards" icon={<Coins className="h-4 w-4" />} defaultOpen>
                 <div className="space-y-2">
-                  {rows.map(({ rank, stat }) => {
+                  {rows.map(({ rank, nextRank, stat }) => {
                     const costEntries = Object.entries(stat.level_up_cost ?? {});
                     const rewards: Array<{ key: string; label: string; amount: number }> = [];
                     if (stat.level_up_rewards?.xp) rewards.push({ key: "xp", label: "XP", amount: stat.level_up_rewards.xp });
