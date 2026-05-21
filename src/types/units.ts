@@ -50,7 +50,7 @@ export interface UnitStats {
   rewards?: { sp?: number; gold?: number };
   level_cutoff?: number;
   level_up_cost?: Record<string, number>;
-  level_up_rewards?: { xp?: number };
+  level_up_rewards?: Record<string, number>;
   level_up_time?: number;
   min_drop_level?: number;
   prereqs_for_level?: Array<{ _t: string; min_level: number }>;
