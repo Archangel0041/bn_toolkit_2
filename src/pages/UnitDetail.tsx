@@ -38,6 +38,8 @@ import { IsometricTargetingDiagram } from "@/components/units/IsometricTargeting
 import { getUnitAbilities } from "@/lib/battleCalculations";
 import { UnitTag, UnitTagLabels } from "@/data/gameEnums";
 import { expandTargetTags } from "@/lib/tagHierarchy";
+import { getApplicableBuildingGroup } from "@/lib/healingBuildings";
+import { HealingScalingTables } from "@/components/units/HealingScalingTables";
 
 // Detailed targeting categories - all unit class types
 const TARGETING_CATEGORIES: { tag: number; label: string; color: string }[] = [
@@ -847,6 +849,19 @@ export default function UnitDetail() {
                   <span className="font-medium">{formatDuration(unit.healing.heal_time)}</span>
                 </div>
               </div>
+              {(() => {
+                const group = getApplicableBuildingGroup(unit.identity?.tags);
+                if (!group || !unit.healing?.heal_cost) return null;
+                return (
+                  <div className="mt-4">
+                    <HealingScalingTables
+                      group={group}
+                      baseHealCost={unit.healing.heal_cost}
+                      baseHealTime={unit.healing.heal_time}
+                    />
+                  </div>
+                );
+              })()}
             </StatSection>
           )}
 

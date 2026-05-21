@@ -1,40 +1,54 @@
-## Goal
-Add a "Rank Up Costs & Rewards" section to the unit detail page (`src/pages/UnitDetail.tsx`) that shows, for every rank of the selected unit, the resources required to level up to that rank (SP + any others) and the rewards granted (XP, SP, gold).
+## Findings in `compositions.json`
 
-## Data source
-Already in `unit.statsConfig.stats[]` (one entry per rank). Per-rank fields used:
-- `level_up_cost: Record<string, number>` — cost to reach this rank (includes `sp` when applicable).
-- `level_up_time: number` — duration.
-- `level_up_rewards: { xp?: number }` — XP awarded.
-- `rewards: { sp?: number; gold?: number }` — SP/gold awarded.
+Six healing buildings — Hospital, VRB, SRB — each Normal + Advanced. `building_upgrade_config.levels[]` has 10 entries with:
+- `input` — % of base **heal cost** at that level
+- `time` — % of base **heal time** at that level
+- `upgrade_cost` / `upgrade_time` — cost to reach the **next** level (ignored on unit pages)
 
-No type changes needed (already declared in `src/types/units.ts`).
+| ID | Building | Variant |
+|----|----------|---------|
+| 133 | Hospital | Normal |
+| 134 | Hospital | Advanced |
+| 142 | VRB | Normal |
+| 143 | VRB | Advanced |
+| 140 | SRB | Normal |
+| 141 | SRB | Advanced |
 
-## UI
-New collapsible `StatSection` titled **"Rank Up Costs & Rewards"** placed right after the existing "Build Requirements" section (~line 691 of `UnitDetail.tsx`), open by default when any rank has `level_up_cost` or rewards.
+## Plan
 
-Render a compact responsive table:
+### 1. Data loading
+- Add `loadCompositions()` to `src/lib/dataLoader.ts` (cached, version-aware).
+- Wire into `GameDataContext` + `gameDataStore`.
 
-```text
-Rank | Cost (icons + amounts) | Time | Rewards (XP / SP / Gold icons)
-  2  | 🪙 500  ⭐ 100         | 1h   | XP 250
-  3  | 🪙 1,200 ⭐ 250        | 4h   | XP 600, ⭐ 50
- ...
+### 2. `src/lib/healingBuildings.ts`
+- Building ID constants grouped by unit tag → `{ normalId, advancedId }`.
+- `getBuildingLevels(buildingId)` → 10-level `{ input, time }` (upgrade_cost/upgrade_time ignored).
+- `scaleHealCost(baseCost, inputPct)` → `Math.ceil(amount * inputPct / 100)` per resource.
+- `scaleHealTime(baseTime, timePct)` → `Math.ceil(baseTime * timePct / 100)`.
+- `getApplicableBuildingGroup(unitTags)` → Hospital / VRB / SRB based on unit tags.
+
+### 3. UnitDetail UI — "Healing scaling" tables
+Rendered only for units whose tags include Hospital / VRB / SRB. Below the existing base `heal_cost` block.
+
+Two tables (stacked on mobile, side-by-side on desktop), one Normal, one Advanced:
+
+```
+Lvl │ Heal time │ Cost
+1   │  100s     │ 450 gold · 30 stone
+...
+10  │   40s     │ 150 gold · 10 stone
 ```
 
-- Rank column: rank number (skip rank 1 since it has no level-up cost — or show it grayed as "base").
-- Cost cell: iterate `level_up_cost` entries, each as `<img getResourceIconUrl(key) /> amount` (same pattern as Build Requirements lines 663–676).
-- Time cell: `formatDuration(stat.level_up_time)`.
-- Rewards cell: show XP from `level_up_rewards.xp`, SP from `rewards.sp`, gold from `rewards.gold`, each with its resource icon. Hide entries that are 0/undefined.
+- Heal time = ceil-scaled, formatted seconds or mm:ss.
+- Cost columns = each base `heal_cost` resource scaled by `input%` (ceiling), with `getResourceIconUrl` + `.toLocaleString()`.
+- **No upgrade-cost columns shown** — that data is intentionally omitted from the unit page. Building-upgrade pricing is reserved for a future buildings view if needed.
+- Subtle highlight on lvl-10 row.
 
-Mobile (≤640px): stack as cards instead of a table to stay readable at 430px viewport.
+### 4. Types
+- `src/types/buildings.ts` with `BuildingUpgradeLevel { input?: number; time?: number; maximum_healing_queue_size?: number; upgrade_cost?: Record<string, number>; upgrade_time?: number; }` — full type kept for future reuse, but only `input` and `time` are read on the unit page.
 
-## Technical notes
-- Pure presentational change in `src/pages/UnitDetail.tsx`; reuses `getResourceIconUrl`, `formatDuration`, `StatSection`, and `Coins`/`Star`-style lucide icons already imported.
-- No data loader, store, or type edits. No new files unless the table gets large enough to warrant extracting a `RankUpTable` subcomponent — extract only if the JSX exceeds ~60 lines.
-- Hide the section entirely if every rank lacks both `level_up_cost` and rewards.
-
-## Out of scope
-- Editing the existing per-rank stats viewer.
-- Aggregating cumulative cost (could be a follow-up: "Total SP to max rank" summary row).
-- Changes to other pages (Compare, Encounters, etc.).
+### Technical notes
+- Use `Math.ceil(base * pct / 100)` for both cost (per resource) and time, per latest direction (overrides project-default floor for this UI).
+- Lvl-10 entries may omit `upgrade_cost`/`upgrade_time` — fine, we don't read them here.
+- Compositions ≈ 950 KB — loaded once at startup with other configs.
+- No changes to battle/heal logic elsewhere.
