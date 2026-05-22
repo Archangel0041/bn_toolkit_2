@@ -25,6 +25,7 @@ export interface ParsedObjective {
   icon?: string;
   speakerNpcId?: number;
   jobId?: number;
+  projectId?: number;
   encounterId?: number;
   encounterIds?: number[];
   npcCompositionId?: number;
