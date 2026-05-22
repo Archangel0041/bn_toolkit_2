@@ -68,6 +68,16 @@
     --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
     --tracking-normal: 0em;
     --spacing: 0.25rem;
+
+    /* Mission category tags */
+    --mission-battle: 0 72% 50%;
+    --mission-job: 38 92% 50%;
+    --mission-train: 262 70% 55%;
+    --mission-dialogue: 199 89% 48%;
+    --mission-collect: 152 65% 40%;
+    --mission-build: 25 50% 45%;
+    --mission-explore: 173 70% 40%;
+    --mission-other: 215 16% 55%;
   }
 
   .dark {
