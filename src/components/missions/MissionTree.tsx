@@ -751,30 +751,28 @@ function MissionTreeInner({
   const pinned = pinnedId != null ? byId.get(pinnedId) : null;
 
   return (
-    <>
-      <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-muted/40 overflow-hidden mission-tree-canvas">
-        <ReactFlow
-          nodes={nodes}
-          edges={edgesState}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.05 }}
-          minZoom={0.05}
-          maxZoom={2}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          edgesFocusable={false}
-          edgesReconnectable={false}
-          elementsSelectable
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background gap={24} size={1} />
-          <Controls showInteractive={false} />
-        </ReactFlow>
-      </div>
+    <div className="relative h-[calc(100vh-320px)] min-h-[500px] w-full rounded-lg border bg-muted/40 overflow-hidden mission-tree-canvas">
+      <ReactFlow
+        nodes={nodes}
+        edges={edgesState}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.18, maxZoom: 1, minZoom: 0.05 }}
+        minZoom={0.05}
+        maxZoom={2}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        edgesFocusable={false}
+        edgesReconnectable={false}
+        elementsSelectable
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background gap={24} size={1} />
+        <Controls showInteractive={false} />
+      </ReactFlow>
 
       {pinned && (
         <MissionDetailPanel
@@ -794,9 +792,10 @@ function MissionTreeInner({
           onClose={() => setPinnedId(null)}
         />
       )}
-    </>
+    </div>
   );
 }
+
 
 
 interface MissionDetailPanelProps {
@@ -868,7 +867,7 @@ function MissionDetailPanel({
   };
 
   return (
-    <div className="flex w-full flex-col rounded-lg border bg-background shadow-sm">
+    <div className="absolute right-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] w-[340px] max-w-[calc(100%-1.5rem)] flex-col rounded-lg border bg-background/95 shadow-lg backdrop-blur">
       <div className="flex items-start gap-2 border-b p-3">
         {giverIcon && (
           <img
