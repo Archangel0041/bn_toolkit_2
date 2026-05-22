@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { loadMissions, loadCharacters, loadNpcs, loadDialogues, loadJobInfo, loadEncounters, type CharacterEntry, type NpcEntry, type DialogueLine, type JobInfoEntry, type EncounterEntry } from "@/lib/dataLoader";
+import { loadMissions, loadCharacters, loadNpcs, loadDialogues, loadJobInfo, loadEncounters, loadCompositions, type CharacterEntry, type NpcEntry, type DialogueLine, type JobInfoEntry, type EncounterEntry } from "@/lib/dataLoader";
+import { buildProjectBuildingIndex } from "@/lib/missionJobs";
 import {
   parseMissions,
   buildMissionEdges,
