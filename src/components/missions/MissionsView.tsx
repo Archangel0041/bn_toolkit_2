@@ -469,21 +469,6 @@ export default function MissionsView() {
 
       {raw && (
         <>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border bg-muted/30 px-3 py-2 text-[11px]">
-            <span className="font-medium text-muted-foreground">Tags:</span>
-            {MISSION_CATEGORY_ORDER.map((c) => {
-              const meta = MISSION_CATEGORY_META[c];
-              return (
-                <span key={c} className="inline-flex items-center gap-1.5" title={meta.description}>
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-sm"
-                    style={{ background: `hsl(var(${meta.cssVar}))` }}
-                  />
-                  <span className="text-muted-foreground">{meta.label}</span>
-                </span>
-              );
-            })}
-          </div>
           <div className="text-xs text-muted-foreground">
             Showing {visibleMissions.length} missions, {visibleEdges.length} dependency edges
           </div>
@@ -500,6 +485,23 @@ export default function MissionsView() {
             compositions={compositions}
             projectBuildingIndex={projectBuildingIndex}
           />
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border bg-muted/30 px-3 py-2 text-[11px]">
+            <span className="font-medium text-muted-foreground">Tags:</span>
+            {MISSION_CATEGORY_ORDER.map((c) => {
+              const meta = MISSION_CATEGORY_META[c];
+              return (
+                <span key={c} className="inline-flex items-center gap-1.5" title={meta.description}>
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-sm"
+                    style={{ background: `hsl(var(${meta.cssVar}))` }}
+                  />
+                  <span className="text-muted-foreground">{meta.label}</span>
+                </span>
+              );
+            })}
+          </div>
+
 
           <div className="rounded-lg border p-4 space-y-3">
             <div>
