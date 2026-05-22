@@ -684,6 +684,8 @@ function MissionTreeInner({
           return key ? getNpcIconUrl(key) : getNpcIconUrl(m.giver);
         })(),
         rewardChips: buildRewardChips(m, t, unitsById),
+        categories: getMissionCategories(m),
+
       };
       return {
         id: String(m.id),
