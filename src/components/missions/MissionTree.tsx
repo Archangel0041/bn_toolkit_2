@@ -29,6 +29,7 @@ import dagre from "dagre";
 import { ChevronDown, ChevronRight, X, Swords } from "lucide-react";
 import { Link } from "react-router-dom";
 import { type ParsedMission, type MissionEdge, type MissionPrereqEdgeType, type MissionCategory, getMissionCategories, MISSION_CATEGORY_META } from "@/lib/missions";
+import { type ProjectBuildingIndex, type BuildingInfo, formatDuration, describePrereq } from "@/lib/missionJobs";
 import type { DialogueLine, JobInfoEntry, EncounterEntry } from "@/lib/dataLoader";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl, getJobIconUrl } from "@/lib/resourceImages";
@@ -56,6 +57,8 @@ interface MissionTreeProps {
   dialogues?: Record<string, DialogueLine[]>;
   jobs?: Record<string, JobInfoEntry>;
   encounters?: Record<string, EncounterEntry>;
+  compositions?: Record<string, any[]>;
+  projectBuildingIndex?: ProjectBuildingIndex;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
@@ -577,6 +580,8 @@ function MissionTreeInner({
   dialogues,
   jobs,
   encounters,
+  compositions,
+  projectBuildingIndex,
 }: MissionTreeProps) {
   const { t } = useLanguage();
   const localize = useLocalize();
@@ -782,6 +787,8 @@ function MissionTreeInner({
           dialogues={dialogues}
           jobs={jobs}
           encounters={encounters}
+          compositions={compositions}
+          projectBuildingIndex={projectBuildingIndex}
           onClose={() => setPinnedId(null)}
         />
       )}
@@ -801,6 +808,8 @@ interface MissionDetailPanelProps {
   dialogues?: Record<string, DialogueLine[]>;
   jobs?: Record<string, JobInfoEntry>;
   encounters?: Record<string, EncounterEntry>;
+  compositions?: Record<string, any[]>;
+  projectBuildingIndex?: ProjectBuildingIndex;
   onClose: () => void;
 }
 
@@ -816,6 +825,8 @@ function MissionDetailPanel({
   dialogues,
   jobs,
   encounters,
+  compositions,
+  projectBuildingIndex,
   onClose,
 }: MissionDetailPanelProps) {
   const { t } = useLanguage();
@@ -934,16 +945,26 @@ function MissionDetailPanel({
                   : "";
                 let detail = "";
                 let detailIconUrl: string | undefined;
+                // jobId & projectId both reference the same id space (job_info + units).
+                // Resolve order: explicit jobId, then projectId (jobs → units fallback).
+                const jobOrProjectId = o.jobId ?? o.projectId;
+                const jobEntry = jobOrProjectId != null ? jobs?.[String(jobOrProjectId)] : undefined;
+                const unitFromProject =
+                  o.projectId != null && !jobEntry ? unitsById?.get(o.projectId) : undefined;
+
                 if (o.unitId != null) {
                   const u = unitsById?.get(o.unitId);
                   const lname = u?.name ? localize(u.name, u.name) : `Unit #${o.unitId}`;
                   detail = `${o.count ?? 1}× ${lname}`;
                   detailIconUrl = u?.icon ? getUnitImageUrl(u.icon) : undefined;
-                } else if (o.jobId != null) {
-                  const job = jobs?.[String(o.jobId)];
-                  const lname = job?.name ? localize(job.name, job.name) : `Job #${o.jobId}`;
+                } else if (jobEntry) {
+                  const lname = jobEntry.name ? localize(jobEntry.name, jobEntry.name) : `Job #${jobOrProjectId}`;
                   detail = `${o.count ?? 1}× ${lname}`;
-                  detailIconUrl = job?.icon ? getJobIconUrl(job.icon) : undefined;
+                  detailIconUrl = jobEntry.icon ? getJobIconUrl(jobEntry.icon) : undefined;
+                } else if (unitFromProject) {
+                  const lname = unitFromProject.name ? localize(unitFromProject.name, unitFromProject.name) : `Unit #${o.projectId}`;
+                  detail = `${o.count ?? 1}× ${lname}`;
+                  detailIconUrl = unitFromProject.icon ? getUnitImageUrl(unitFromProject.icon) : undefined;
                 } else if (o.opponentId != null) {
                   const npc = npcs?.[String(o.opponentId)];
                   const lname = npc?.name ? localize(npc.name, npc.name) : `Opponent #${o.opponentId}`;
@@ -952,6 +973,45 @@ function MissionDetailPanel({
                 } else if (o.count != null) {
                   detail = `${o.count}×`;
                 }
+
+                // Resolve producing building (for collect_job / collect_project / start_*).
+                const buildingInfo: BuildingInfo | undefined =
+                  jobOrProjectId != null ? projectBuildingIndex?.get(jobOrProjectId) : undefined;
+                const buildingLocalName = buildingInfo?.nameKey
+                  ? localize(buildingInfo.nameKey, buildingInfo.nameKey)
+                  : undefined;
+                const buildingIconUrl = buildingInfo?.iconKey
+                  ? getJobIconUrl(buildingInfo.iconKey)
+                  : undefined;
+
+                // Per-item build time (only available for job_info entries).
+                const perItemSeconds: number | undefined = jobEntry?.build_time;
+                const count = o.count ?? 1;
+                const totalSeconds = perItemSeconds ? perItemSeconds * count : undefined;
+
+                // Building prereqs (player level, building level, structures required).
+                const prereqLines: string[] = [];
+                const resolveBuildingName = (cid: number): string | undefined => {
+                  const comps = compositions?.[String(cid)];
+                  if (!comps) return undefined;
+                  const smc = comps.find((c: any) => c?._t === "structure_menu_config");
+                  return smc?.name ? localize(smc.name, smc.name) : undefined;
+                };
+                for (const p of buildingInfo?.prereqs ?? []) {
+                  const line = describePrereq(p, { buildingName: resolveBuildingName });
+                  if (line) prereqLines.push(line);
+                }
+                // Also surface the job's own player-level prereq when relevant.
+                for (const p of (jobEntry?.prereqs as any[] | undefined) ?? []) {
+                  const line = describePrereq(p, { buildingName: resolveBuildingName });
+                  if (line && !prereqLines.includes(line)) prereqLines.push(line);
+                }
+                if (jobEntry?.building_level != null) {
+                  prereqLines.unshift(
+                    `${buildingLocalName ?? "Building"} Lv ${jobEntry.building_level}`
+                  );
+                }
+
                 const objIconUrl = o.icon ? getMissionIconUrl(o.icon) : undefined;
                 const speakerNpc = o.speakerNpcId != null ? npcs?.[String(o.speakerNpcId)] : undefined;
                 const speakerIconUrl = speakerNpc?.icon ? getNpcIconUrl(speakerNpc.icon) : undefined;
@@ -1025,6 +1085,53 @@ function MissionDetailPanel({
                         )}
                       </div>
                     )}
+
+                    {(buildingInfo || perItemSeconds != null || prereqLines.length > 0) && (
+                      <div className="mt-1.5 space-y-1 rounded border border-border/60 bg-background/60 p-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                          {buildingInfo && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 font-medium text-foreground"
+                              title={buildingLocalName ?? `Composition #${buildingInfo.compositionId}`}
+                            >
+                              {buildingIconUrl && (
+                                <img
+                                  src={buildingIconUrl}
+                                  alt=""
+                                  className="h-3.5 w-3.5 object-contain"
+                                  onError={(e) => ((e.currentTarget.style.display = "none"))}
+                                  draggable={false}
+                                />
+                              )}
+                              <span className="max-w-[140px] truncate">
+                                {buildingLocalName ?? `Building #${buildingInfo.compositionId}`}
+                              </span>
+                            </span>
+                          )}
+                          {perItemSeconds != null && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 tabular-nums text-muted-foreground"
+                              title={`Per item: ${formatDuration(perItemSeconds)}${totalSeconds ? ` · Total: ${formatDuration(totalSeconds)}` : ""}`}
+                            >
+                              {formatDuration(perItemSeconds)}
+                              {count > 1 && totalSeconds != null && (
+                                <span className="text-muted-foreground/80">
+                                  × {count} = {formatDuration(totalSeconds)}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        {prereqLines.length > 0 && (
+                          <ul className="space-y-0.5 text-[10px] text-muted-foreground">
+                            {prereqLines.map((p, pi) => (
+                              <li key={pi}>· {p}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+
 
                     {encList.length > 0 && (
                       <div className="mt-1.5 space-y-1">

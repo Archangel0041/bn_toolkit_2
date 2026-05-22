@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { loadMissions, loadCharacters, loadNpcs, loadDialogues, loadJobInfo, loadEncounters, type CharacterEntry, type NpcEntry, type DialogueLine, type JobInfoEntry, type EncounterEntry } from "@/lib/dataLoader";
+import { loadMissions, loadCharacters, loadNpcs, loadDialogues, loadJobInfo, loadEncounters, loadCompositions, type CharacterEntry, type NpcEntry, type DialogueLine, type JobInfoEntry, type EncounterEntry } from "@/lib/dataLoader";
+import { buildProjectBuildingIndex } from "@/lib/missionJobs";
 import {
   parseMissions,
   buildMissionEdges,
@@ -106,6 +107,7 @@ export default function MissionsView() {
   const [dialogues, setDialogues] = useState<Record<string, DialogueLine[]>>({});
   const [jobs, setJobs] = useState<Record<string, JobInfoEntry>>({});
   const [encounters, setEncounters] = useState<Record<string, EncounterEntry>>({});
+  const [compositions, setCompositions] = useState<Record<string, any[]>>({});
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
@@ -153,7 +155,15 @@ export default function MissionsView() {
     loadEncounters()
       .then((d) => setEncounters(d?.armies ?? {}))
       .catch(() => {});
+    loadCompositions()
+      .then(setCompositions)
+      .catch(() => {});
   }, []);
+
+  const projectBuildingIndex = useMemo(
+    () => buildProjectBuildingIndex(compositions),
+    [compositions]
+  );
 
   const allParsed = useMemo(() => (raw ? parseMissions(raw) : []), [raw]);
 
@@ -487,6 +497,8 @@ export default function MissionsView() {
             unitsById={unitsById}
             jobs={jobs}
             encounters={encounters}
+            compositions={compositions}
+            projectBuildingIndex={projectBuildingIndex}
           />
 
           <div className="rounded-lg border p-4 space-y-3">

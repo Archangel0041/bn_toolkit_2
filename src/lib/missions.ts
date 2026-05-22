@@ -25,6 +25,7 @@ export interface ParsedObjective {
   icon?: string;
   speakerNpcId?: number;
   jobId?: number;
+  projectId?: number;
   encounterId?: number;
   encounterIds?: number[];
   npcCompositionId?: number;
@@ -159,6 +160,7 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
           icon: typeof identity?.icon === "string" ? identity.icon : undefined,
           speakerNpcId: typeof identity?.npc_id === "number" ? identity.npc_id : undefined,
           jobId: typeof prereq?.job_id === "number" ? prereq.job_id : undefined,
+          projectId: typeof prereq?.project_id === "number" ? prereq.project_id : undefined,
           encounterId: typeof prereq?.encounter_id === "number" ? prereq.encounter_id : undefined,
           encounterIds,
           npcCompositionId:
@@ -338,12 +340,14 @@ function classifyObjective(o: ParsedObjective): MissionCategory {
     return "battle";
   }
 
-  if (t.includes("job") || o.jobId != null) return "job";
-
-  if (t.includes("train") || t.includes("produce") || t.includes("unit_production") ||
+  if (t === "collect_project_prereq_config" || t === "start_project_prereq_config" ||
+      t.includes("project") || t.includes("train") || t.includes("produce") || t.includes("unit_production") ||
       (o.unitId != null && (t.includes("have") || t.includes("own") || t.includes("train")))) {
     return "train";
   }
+
+  if (t.includes("job") || o.jobId != null) return "job";
+
 
   if (t.includes("dialog") || t.includes("talk") || t.includes("speak") ||
       t.includes("conversation") || t.includes("npc_interaction")) {
