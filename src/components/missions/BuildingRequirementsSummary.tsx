@@ -7,7 +7,7 @@ import {
   formatDuration,
 } from "@/lib/missionJobs";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getJobIconUrl } from "@/lib/unitImages";
+import { getJobIconUrl } from "@/lib/resourceImages";
 
 interface Props {
   missions: ParsedMission[];
