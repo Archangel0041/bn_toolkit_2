@@ -160,6 +160,7 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
           icon: typeof identity?.icon === "string" ? identity.icon : undefined,
           speakerNpcId: typeof identity?.npc_id === "number" ? identity.npc_id : undefined,
           jobId: typeof prereq?.job_id === "number" ? prereq.job_id : undefined,
+          projectId: typeof prereq?.project_id === "number" ? prereq.project_id : undefined,
           encounterId: typeof prereq?.encounter_id === "number" ? prereq.encounter_id : undefined,
           encounterIds,
           npcCompositionId:
