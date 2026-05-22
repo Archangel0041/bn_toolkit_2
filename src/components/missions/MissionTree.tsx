@@ -29,6 +29,7 @@ import dagre from "dagre";
 import { ChevronDown, ChevronRight, X, Swords } from "lucide-react";
 import { Link } from "react-router-dom";
 import { type ParsedMission, type MissionEdge, type MissionPrereqEdgeType, type MissionCategory, getMissionCategories, MISSION_CATEGORY_META } from "@/lib/missions";
+import { type ProjectBuildingIndex, type BuildingInfo, formatDuration, describePrereq } from "@/lib/missionJobs";
 import type { DialogueLine, JobInfoEntry, EncounterEntry } from "@/lib/dataLoader";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl, getJobIconUrl } from "@/lib/resourceImages";
