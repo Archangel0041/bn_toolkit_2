@@ -340,12 +340,14 @@ function classifyObjective(o: ParsedObjective): MissionCategory {
     return "battle";
   }
 
-  if (t.includes("job") || o.jobId != null) return "job";
-
-  if (t.includes("train") || t.includes("produce") || t.includes("unit_production") ||
+  if (t === "collect_project_prereq_config" || t === "start_project_prereq_config" ||
+      t.includes("project") || t.includes("train") || t.includes("produce") || t.includes("unit_production") ||
       (o.unitId != null && (t.includes("have") || t.includes("own") || t.includes("train")))) {
     return "train";
   }
+
+  if (t.includes("job") || o.jobId != null) return "job";
+
 
   if (t.includes("dialog") || t.includes("talk") || t.includes("speak") ||
       t.includes("conversation") || t.includes("npc_interaction")) {
