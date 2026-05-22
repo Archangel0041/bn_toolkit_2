@@ -29,6 +29,8 @@ export interface ParsedObjective {
   encounterId?: number;
   encounterIds?: number[];
   npcCompositionId?: number;
+  /** composition_id referenced by "has_composition" / similar non-battle prereqs */
+  compositionId?: number;
   prereqRaw?: Record<string, unknown>;
 }
 
@@ -165,6 +167,10 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
           encounterIds,
           npcCompositionId:
             prereq?._t === "attack_npc_building_prereq_config" && typeof prereq?.composition_id === "number"
+              ? prereq.composition_id
+              : undefined,
+          compositionId:
+            prereq?._t !== "attack_npc_building_prereq_config" && typeof prereq?.composition_id === "number"
               ? prereq.composition_id
               : undefined,
           prereqRaw: prereq,
@@ -360,7 +366,7 @@ function classifyObjective(o: ParsedObjective): MissionCategory {
   }
 
   if (t.includes("build") || t.includes("construct") || t.includes("upgrade") ||
-      t.includes("building")) {
+      t.includes("building") || t.includes("composition") || o.compositionId != null) {
     return "build";
   }
 
