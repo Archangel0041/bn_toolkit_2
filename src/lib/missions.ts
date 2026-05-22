@@ -169,6 +169,10 @@ export function parseMissions(raw: Record<string, RawComponent[]>): ParsedMissio
             prereq?._t === "attack_npc_building_prereq_config" && typeof prereq?.composition_id === "number"
               ? prereq.composition_id
               : undefined,
+          compositionId:
+            prereq?._t !== "attack_npc_building_prereq_config" && typeof prereq?.composition_id === "number"
+              ? prereq.composition_id
+              : undefined,
           prereqRaw: prereq,
         };
       }
