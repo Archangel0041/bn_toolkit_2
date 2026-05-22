@@ -366,7 +366,7 @@ function classifyObjective(o: ParsedObjective): MissionCategory {
   }
 
   if (t.includes("build") || t.includes("construct") || t.includes("upgrade") ||
-      t.includes("building")) {
+      t.includes("building") || t.includes("composition") || o.compositionId != null) {
     return "build";
   }
 
