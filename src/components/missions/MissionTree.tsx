@@ -57,6 +57,8 @@ interface MissionTreeProps {
   dialogues?: Record<string, DialogueLine[]>;
   jobs?: Record<string, JobInfoEntry>;
   encounters?: Record<string, EncounterEntry>;
+  compositions?: Record<string, any[]>;
+  projectBuildingIndex?: ProjectBuildingIndex;
 }
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
