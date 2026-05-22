@@ -868,7 +868,7 @@ function MissionDetailPanel({
   };
 
   return (
-    <div className="absolute right-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] w-[340px] max-w-[calc(100%-1.5rem)] flex-col rounded-lg border bg-background/95 shadow-lg backdrop-blur">
+    <div className="flex w-full flex-col rounded-lg border bg-background shadow-sm">
       <div className="flex items-start gap-2 border-b p-3">
         {giverIcon && (
           <img
