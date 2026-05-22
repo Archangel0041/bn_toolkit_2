@@ -497,6 +497,8 @@ export default function MissionsView() {
             unitsById={unitsById}
             jobs={jobs}
             encounters={encounters}
+            compositions={compositions}
+            projectBuildingIndex={projectBuildingIndex}
           />
 
           <div className="rounded-lg border p-4 space-y-3">
