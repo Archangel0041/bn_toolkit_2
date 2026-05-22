@@ -580,6 +580,8 @@ function MissionTreeInner({
   dialogues,
   jobs,
   encounters,
+  compositions,
+  projectBuildingIndex,
 }: MissionTreeProps) {
   const { t } = useLanguage();
   const localize = useLocalize();
