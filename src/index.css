@@ -131,6 +131,16 @@
     --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
     --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
     --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+
+    /* Mission category tags — slightly brighter in dark mode */
+    --mission-battle: 0 84% 60%;
+    --mission-job: 38 95% 60%;
+    --mission-train: 262 85% 70%;
+    --mission-dialogue: 199 95% 60%;
+    --mission-collect: 152 65% 50%;
+    --mission-build: 25 60% 58%;
+    --mission-explore: 173 75% 50%;
+    --mission-other: 215 20% 65%;
   }
 }
 
