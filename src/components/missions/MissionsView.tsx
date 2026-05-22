@@ -7,6 +7,7 @@ import {
   type ParsedMission,
 } from "@/lib/missions";
 import { MissionTree } from "@/components/missions/MissionTree";
+import { MISSION_CATEGORY_ORDER, MISSION_CATEGORY_META } from "@/lib/missions";
 import { MissionPicker } from "@/components/missions/MissionPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
