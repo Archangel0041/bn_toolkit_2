@@ -945,16 +945,26 @@ function MissionDetailPanel({
                   : "";
                 let detail = "";
                 let detailIconUrl: string | undefined;
+                // jobId & projectId both reference the same id space (job_info + units).
+                // Resolve order: explicit jobId, then projectId (jobs → units fallback).
+                const jobOrProjectId = o.jobId ?? o.projectId;
+                const jobEntry = jobOrProjectId != null ? jobs?.[String(jobOrProjectId)] : undefined;
+                const unitFromProject =
+                  o.projectId != null && !jobEntry ? unitsById?.get(o.projectId) : undefined;
+
                 if (o.unitId != null) {
                   const u = unitsById?.get(o.unitId);
                   const lname = u?.name ? localize(u.name, u.name) : `Unit #${o.unitId}`;
                   detail = `${o.count ?? 1}× ${lname}`;
                   detailIconUrl = u?.icon ? getUnitImageUrl(u.icon) : undefined;
-                } else if (o.jobId != null) {
-                  const job = jobs?.[String(o.jobId)];
-                  const lname = job?.name ? localize(job.name, job.name) : `Job #${o.jobId}`;
+                } else if (jobEntry) {
+                  const lname = jobEntry.name ? localize(jobEntry.name, jobEntry.name) : `Job #${jobOrProjectId}`;
                   detail = `${o.count ?? 1}× ${lname}`;
-                  detailIconUrl = job?.icon ? getJobIconUrl(job.icon) : undefined;
+                  detailIconUrl = jobEntry.icon ? getJobIconUrl(jobEntry.icon) : undefined;
+                } else if (unitFromProject) {
+                  const lname = unitFromProject.name ? localize(unitFromProject.name, unitFromProject.name) : `Unit #${o.projectId}`;
+                  detail = `${o.count ?? 1}× ${lname}`;
+                  detailIconUrl = unitFromProject.icon ? getUnitImageUrl(unitFromProject.icon) : undefined;
                 } else if (o.opponentId != null) {
                   const npc = npcs?.[String(o.opponentId)];
                   const lname = npc?.name ? localize(npc.name, npc.name) : `Opponent #${o.opponentId}`;
@@ -963,6 +973,51 @@ function MissionDetailPanel({
                 } else if (o.count != null) {
                   detail = `${o.count}×`;
                 }
+
+                // Resolve producing building (for collect_job / collect_project / start_*).
+                const buildingInfo: BuildingInfo | undefined =
+                  jobOrProjectId != null ? projectBuildingIndex?.get(jobOrProjectId) : undefined;
+                const buildingLocalName = buildingInfo?.nameKey
+                  ? localize(buildingInfo.nameKey, buildingInfo.nameKey)
+                  : undefined;
+                const buildingIconUrl = buildingInfo?.iconKey
+                  ? getJobIconUrl(buildingInfo.iconKey)
+                  : undefined;
+
+                // Per-item build time (from job_info or unit requirements).
+                const perItemSeconds: number | undefined =
+                  jobEntry?.build_time ??
+                  (o.projectId != null
+                    ? (gameDataLookupUnitBuildTime(unitsById, o.projectId))
+                    : o.unitId != null
+                      ? gameDataLookupUnitBuildTime(unitsById, o.unitId)
+                      : undefined);
+                const count = o.count ?? 1;
+                const totalSeconds = perItemSeconds ? perItemSeconds * count : undefined;
+
+                // Building prereqs (player level, building level, structures required).
+                const prereqLines: string[] = [];
+                const resolveBuildingName = (cid: number): string | undefined => {
+                  const comps = compositions?.[String(cid)];
+                  if (!comps) return undefined;
+                  const smc = comps.find((c: any) => c?._t === "structure_menu_config");
+                  return smc?.name ? localize(smc.name, smc.name) : undefined;
+                };
+                for (const p of buildingInfo?.prereqs ?? []) {
+                  const line = describePrereq(p, { buildingName: resolveBuildingName });
+                  if (line) prereqLines.push(line);
+                }
+                // Also surface the job's own player-level prereq when relevant.
+                for (const p of (jobEntry?.prereqs as any[] | undefined) ?? []) {
+                  const line = describePrereq(p, { buildingName: resolveBuildingName });
+                  if (line && !prereqLines.includes(line)) prereqLines.push(line);
+                }
+                if (jobEntry?.building_level != null) {
+                  prereqLines.unshift(
+                    `${buildingLocalName ?? "Building"} Lv ${jobEntry.building_level}`
+                  );
+                }
+
                 const objIconUrl = o.icon ? getMissionIconUrl(o.icon) : undefined;
                 const speakerNpc = o.speakerNpcId != null ? npcs?.[String(o.speakerNpcId)] : undefined;
                 const speakerIconUrl = speakerNpc?.icon ? getNpcIconUrl(speakerNpc.icon) : undefined;
