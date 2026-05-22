@@ -825,6 +825,8 @@ function MissionDetailPanel({
   dialogues,
   jobs,
   encounters,
+  compositions,
+  projectBuildingIndex,
   onClose,
 }: MissionDetailPanelProps) {
   const { t } = useLanguage();
