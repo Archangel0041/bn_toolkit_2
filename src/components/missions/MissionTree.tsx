@@ -392,6 +392,7 @@ interface MissionNodeData extends Record<string, unknown> {
   missionId: number;
   iconUrl?: string;
   rewardChips: RewardChip[];
+  categories: MissionCategory[];
 }
 
 function MissionNode({ data }: { data: MissionNodeData }) {
