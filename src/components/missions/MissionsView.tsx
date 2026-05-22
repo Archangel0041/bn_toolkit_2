@@ -155,7 +155,15 @@ export default function MissionsView() {
     loadEncounters()
       .then((d) => setEncounters(d?.armies ?? {}))
       .catch(() => {});
+    loadCompositions()
+      .then(setCompositions)
+      .catch(() => {});
   }, []);
+
+  const projectBuildingIndex = useMemo(
+    () => buildProjectBuildingIndex(compositions),
+    [compositions]
+  );
 
   const allParsed = useMemo(() => (raw ? parseMissions(raw) : []), [raw]);
 
