@@ -984,14 +984,8 @@ function MissionDetailPanel({
                   ? getJobIconUrl(buildingInfo.iconKey)
                   : undefined;
 
-                // Per-item build time (from job_info or unit requirements).
-                const perItemSeconds: number | undefined =
-                  jobEntry?.build_time ??
-                  (o.projectId != null
-                    ? (gameDataLookupUnitBuildTime(unitsById, o.projectId))
-                    : o.unitId != null
-                      ? gameDataLookupUnitBuildTime(unitsById, o.unitId)
-                      : undefined);
+                // Per-item build time (only available for job_info entries).
+                const perItemSeconds: number | undefined = jobEntry?.build_time;
                 const count = o.count ?? 1;
                 const totalSeconds = perItemSeconds ? perItemSeconds * count : undefined;
 
