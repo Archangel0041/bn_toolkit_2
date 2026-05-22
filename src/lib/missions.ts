@@ -277,3 +277,103 @@ export function filterRemaining(
   }
   return { remaining, availableNow };
 }
+
+// ---------------------------------------------------------------------------
+// Mission categorization — used for color-coded tags on the mission tree.
+// Derived from each objective's prereq `_t` (the parsed `type` field).
+// ---------------------------------------------------------------------------
+
+export type MissionCategory =
+  | "battle"
+  | "job"
+  | "train"
+  | "dialogue"
+  | "collect"
+  | "build"
+  | "explore"
+  | "other";
+
+export const MISSION_CATEGORY_ORDER: MissionCategory[] = [
+  "battle",
+  "job",
+  "train",
+  "dialogue",
+  "collect",
+  "build",
+  "explore",
+  "other",
+];
+
+export const MISSION_CATEGORY_META: Record<
+  MissionCategory,
+  { label: string; cssVar: string; description: string }
+> = {
+  battle:   { label: "Battle",   cssVar: "--mission-battle",   description: "Defeat enemies, NPCs or encounters" },
+  job:      { label: "Job",      cssVar: "--mission-job",      description: "Complete a city/job task" },
+  train:    { label: "Train",    cssVar: "--mission-train",    description: "Produce or train units" },
+  dialogue: { label: "Dialogue", cssVar: "--mission-dialogue", description: "Talk to an NPC" },
+  collect:  { label: "Collect",  cssVar: "--mission-collect",  description: "Gather resources or items" },
+  build:    { label: "Build",    cssVar: "--mission-build",    description: "Build or upgrade a structure" },
+  explore:  { label: "Explore",  cssVar: "--mission-explore",  description: "Visit a location or open the map" },
+  other:    { label: "Other",    cssVar: "--mission-other",    description: "Other objective" },
+};
+
+function classifyObjective(o: ParsedObjective): MissionCategory {
+  const t = (o.type ?? "").toLowerCase();
+
+  // Battle-flavored prereqs
+  if (
+    t.includes("encounter") ||
+    t.includes("attack_npc") ||
+    t.includes("opponent") ||
+    t.includes("defeat") ||
+    t.includes("battle") ||
+    t.includes("kill") ||
+    t.includes("pvp") ||
+    o.encounterId != null ||
+    (o.encounterIds && o.encounterIds.length > 0) ||
+    o.opponentId != null ||
+    o.npcCompositionId != null
+  ) {
+    return "battle";
+  }
+
+  if (t.includes("job") || o.jobId != null) return "job";
+
+  if (t.includes("train") || t.includes("produce") || t.includes("unit_production") ||
+      (o.unitId != null && (t.includes("have") || t.includes("own") || t.includes("train")))) {
+    return "train";
+  }
+
+  if (t.includes("dialog") || t.includes("talk") || t.includes("speak") ||
+      t.includes("conversation") || t.includes("npc_interaction")) {
+    return "dialogue";
+  }
+
+  if (t.includes("collect") || t.includes("gather") || t.includes("resource") ||
+      t.includes("harvest") || t.includes("loot") || t.includes("item")) {
+    return "collect";
+  }
+
+  if (t.includes("build") || t.includes("construct") || t.includes("upgrade") ||
+      t.includes("building")) {
+    return "build";
+  }
+
+  if (t.includes("visit") || t.includes("explore") || t.includes("travel") ||
+      t.includes("map") || t.includes("location") || t.includes("region")) {
+    return "explore";
+  }
+
+  // Fallback heuristics on parsed fields
+  if (o.unitId != null) return "train";
+
+  return "other";
+}
+
+export function getMissionCategories(m: ParsedMission): MissionCategory[] {
+  const seen = new Set<MissionCategory>();
+  for (const o of m.objectives) seen.add(classifyObjective(o));
+  return MISSION_CATEGORY_ORDER.filter((c) => seen.has(c));
+}
+

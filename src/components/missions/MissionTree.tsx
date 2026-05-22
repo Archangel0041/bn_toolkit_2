@@ -28,7 +28,7 @@ import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 import { ChevronDown, ChevronRight, X, Swords } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { ParsedMission, MissionEdge, MissionPrereqEdgeType } from "@/lib/missions";
+import { type ParsedMission, type MissionEdge, type MissionPrereqEdgeType, type MissionCategory, getMissionCategories, MISSION_CATEGORY_META } from "@/lib/missions";
 import type { DialogueLine, JobInfoEntry, EncounterEntry } from "@/lib/dataLoader";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getMissionIconUrl, getNpcIconUrl, getResourceIconUrl, getJobIconUrl } from "@/lib/resourceImages";
@@ -392,6 +392,7 @@ interface MissionNodeData extends Record<string, unknown> {
   missionId: number;
   iconUrl?: string;
   rewardChips: RewardChip[];
+  categories: MissionCategory[];
 }
 
 function MissionNode({ data }: { data: MissionNodeData }) {
@@ -399,14 +400,27 @@ function MissionNode({ data }: { data: MissionNodeData }) {
   return (
     <div
       className={[
-        "relative h-full w-full rounded-md border-2 px-2 py-1.5 text-left shadow-md transition-all bg-card text-card-foreground",
+        "relative h-full w-full overflow-hidden rounded-md border-2 pl-3 pr-2 py-1.5 text-left shadow-md transition-all bg-card text-card-foreground",
         data.isAvailable ? "border-primary ring-2 ring-primary/40" : "border-border/80",
         data.isHighlight ? "ring-2 ring-accent" : "",
         data.isDimmed ? "opacity-30" : "",
       ].join(" ")}
     >
+      {data.categories.length > 0 && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex w-1.5 flex-col">
+          {data.categories.map((c) => (
+            <span
+              key={c}
+              className="flex-1"
+              style={{ background: `hsl(var(${MISSION_CATEGORY_META[c].cssVar}))` }}
+              title={MISSION_CATEGORY_META[c].label}
+            />
+          ))}
+        </div>
+      )}
       <Handle type="target" position={Position.Top} style={{ background: "hsl(var(--primary))", width: 8, height: 8 }} />
       <Handle type="source" position={Position.Bottom} style={{ background: "hsl(var(--primary))", width: 8, height: 8 }} />
+
       <div className="flex items-start gap-2">
         {data.iconUrl && !imgFailed ? (
           <img
@@ -670,6 +684,8 @@ function MissionTreeInner({
           return key ? getNpcIconUrl(key) : getNpcIconUrl(m.giver);
         })(),
         rewardChips: buildRewardChips(m, t, unitsById),
+        categories: getMissionCategories(m),
+
       };
       return {
         id: String(m.id),
