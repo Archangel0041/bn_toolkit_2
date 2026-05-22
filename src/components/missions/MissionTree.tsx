@@ -787,6 +787,8 @@ function MissionTreeInner({
           dialogues={dialogues}
           jobs={jobs}
           encounters={encounters}
+          compositions={compositions}
+          projectBuildingIndex={projectBuildingIndex}
           onClose={() => setPinnedId(null)}
         />
       )}
