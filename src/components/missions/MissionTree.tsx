@@ -808,6 +808,8 @@ interface MissionDetailPanelProps {
   dialogues?: Record<string, DialogueLine[]>;
   jobs?: Record<string, JobInfoEntry>;
   encounters?: Record<string, EncounterEntry>;
+  compositions?: Record<string, any[]>;
+  projectBuildingIndex?: ProjectBuildingIndex;
   onClose: () => void;
 }
 
