@@ -29,6 +29,8 @@ export interface ParsedObjective {
   encounterId?: number;
   encounterIds?: number[];
   npcCompositionId?: number;
+  /** composition_id referenced by "has_composition" / similar non-battle prereqs */
+  compositionId?: number;
   prereqRaw?: Record<string, unknown>;
 }
 
