@@ -975,8 +975,30 @@ function MissionDetailPanel({
                 }
 
                 // Resolve producing building (for collect_job / collect_project / start_*).
-                const buildingInfo: BuildingInfo | undefined =
+                // Fall back to direct composition_id (e.g. has_composition prereq → "build" objective).
+                let buildingInfo: BuildingInfo | undefined =
                   jobOrProjectId != null ? projectBuildingIndex?.get(jobOrProjectId) : undefined;
+                if (!buildingInfo && o.compositionId != null) {
+                  const comps = compositions?.[String(o.compositionId)];
+                  const smc = comps?.find((c: any) => c?._t === "structure_menu_config");
+                  if (smc) {
+                    buildingInfo = {
+                      compositionId: o.compositionId,
+                      nameKey: typeof smc.name === "string" ? smc.name : undefined,
+                      iconKey: typeof smc.icon === "string" ? smc.icon : undefined,
+                      cost: smc.cost && typeof smc.cost === "object" ? smc.cost : undefined,
+                      prereqs: Array.isArray(smc.prereqs) ? smc.prereqs : undefined,
+                    };
+                  }
+                }
+                // If the objective is a has_composition and we have no other detail, show the building as the target.
+                if (!detail && o.compositionId != null && buildingInfo) {
+                  const lname = buildingInfo.nameKey
+                    ? localize(buildingInfo.nameKey, buildingInfo.nameKey)
+                    : `Building #${o.compositionId}`;
+                  detail = `${o.count ?? 1}× ${lname}`;
+                  detailIconUrl = buildingInfo.iconKey ? getJobIconUrl(buildingInfo.iconKey) : undefined;
+                }
                 const buildingLocalName = buildingInfo?.nameKey
                   ? localize(buildingInfo.nameKey, buildingInfo.nameKey)
                   : undefined;
