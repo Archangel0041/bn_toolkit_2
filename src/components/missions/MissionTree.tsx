@@ -1086,6 +1086,53 @@ function MissionDetailPanel({
                       </div>
                     )}
 
+                    {(buildingInfo || perItemSeconds != null || prereqLines.length > 0) && (
+                      <div className="mt-1.5 space-y-1 rounded border border-border/60 bg-background/60 p-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                          {buildingInfo && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 font-medium text-foreground"
+                              title={buildingLocalName ?? `Composition #${buildingInfo.compositionId}`}
+                            >
+                              {buildingIconUrl && (
+                                <img
+                                  src={buildingIconUrl}
+                                  alt=""
+                                  className="h-3.5 w-3.5 object-contain"
+                                  onError={(e) => ((e.currentTarget.style.display = "none"))}
+                                  draggable={false}
+                                />
+                              )}
+                              <span className="max-w-[140px] truncate">
+                                {buildingLocalName ?? `Building #${buildingInfo.compositionId}`}
+                              </span>
+                            </span>
+                          )}
+                          {perItemSeconds != null && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 tabular-nums text-muted-foreground"
+                              title={`Per item: ${formatDuration(perItemSeconds)}${totalSeconds ? ` · Total: ${formatDuration(totalSeconds)}` : ""}`}
+                            >
+                              {formatDuration(perItemSeconds)}
+                              {count > 1 && totalSeconds != null && (
+                                <span className="text-muted-foreground/80">
+                                  × {count} = {formatDuration(totalSeconds)}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        {prereqLines.length > 0 && (
+                          <ul className="space-y-0.5 text-[10px] text-muted-foreground">
+                            {prereqLines.map((p, pi) => (
+                              <li key={pi}>· {p}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+
+
                     {encList.length > 0 && (
                       <div className="mt-1.5 space-y-1">
                         <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
