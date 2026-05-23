@@ -8,7 +8,7 @@ import {
   type ParsedMission,
 } from "@/lib/missions";
 import { MissionTree } from "@/components/missions/MissionTree";
-import { BuildingRequirementsSummary } from "@/components/missions/BuildingRequirementsSummary";
+import { MissionPlanner } from "@/components/missions/MissionPlanner";
 
 import { MISSION_CATEGORY_ORDER, MISSION_CATEGORY_META } from "@/lib/missions";
 import { MissionPicker } from "@/components/missions/MissionPicker";
@@ -503,7 +503,7 @@ export default function MissionsView() {
             projectBuildingIndex={projectBuildingIndex}
           />
 
-          <BuildingRequirementsSummary
+          <MissionPlanner
             missions={visibleMissions}
             jobs={jobs}
             compositions={compositions}
