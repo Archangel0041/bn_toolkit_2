@@ -62,6 +62,23 @@ export function formatDuration(seconds: number | undefined): string {
 }
 
 /**
+ * Returns the mission IDs that must be ACTIVE for this job/project to be
+ * buildable. Empty array => generic (can be queued anytime).
+ */
+export function getJobActiveMissionGate(jobEntry: any): number[] {
+  const out: number[] = [];
+  const prereqs = jobEntry?.prereqs;
+  if (!Array.isArray(prereqs)) return out;
+  for (const p of prereqs) {
+    if (!p || typeof p !== "object") continue;
+    if (p._t === "active_missions_prereq_config" && Array.isArray(p.mission_ids)) {
+      for (const id of p.mission_ids) if (typeof id === "number") out.push(id);
+    }
+  }
+  return out;
+}
+
+/**
  * Convert a single building/job prereq config into a short human-readable line.
  * Returns null if we don't know how to render it.
  */
