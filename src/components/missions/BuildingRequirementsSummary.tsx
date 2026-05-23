@@ -64,6 +64,13 @@ export function BuildingRequirementsSummary({
 
     for (const m of missions) {
       for (const o of m.objectives) {
+        // Skip assistance / visit-friend style objectives — these aren't
+        // things the player builds or queues in their own base.
+        const typeStr = (o.type ?? "").toLowerCase();
+        if (typeStr.includes("assist") || typeStr.includes("visit_friend") || typeStr.includes("help_friend")) {
+          continue;
+        }
+
         const jobOrProjectId = o.jobId ?? o.projectId;
         let info: BuildingInfo | undefined =
           jobOrProjectId != null ? projectBuildingIndex.get(jobOrProjectId) : undefined;
@@ -132,7 +139,7 @@ export function BuildingRequirementsSummary({
       }
     }
 
-    return Array.from(byBuilding.values()).sort((a, b) => a.earliestLevel - b.earliestLevel);
+    return Array.from(byBuilding.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [missions, jobs, compositions, projectBuildingIndex, t]);
 
   if (groups.length === 0) {
@@ -153,7 +160,6 @@ export function BuildingRequirementsSummary({
         <p className="text-xs text-muted-foreground">
           Every building required to complete the {missions.length} visible missions, with the
           jobs/projects you'll need to queue up, per-item time, total quantity, and total time.
-          Sorted by the earliest mission that needs them.
         </p>
       </div>
 
@@ -175,9 +181,6 @@ export function BuildingRequirementsSummary({
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold" title={g.name}>
                   {g.name}
-                </div>
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  First needed at Lv {g.earliestLevel}
                 </div>
               </div>
             </div>
