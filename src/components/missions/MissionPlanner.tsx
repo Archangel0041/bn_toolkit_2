@@ -133,12 +133,13 @@ export function MissionPlanner({
     };
   };
 
-  const { plan, buildingWindows } = useMemo(() => {
+  const { plan, buildingWindows, schedule, totalSeconds } = useMemo(() => {
     const sorted = [...missions].sort(
       (a, b) => a.displayLevel - b.displayLevel || a.id - b.id
     );
     const plan: PlannedMission[] = [];
     const usage = new Map<number, BuildingUsageWindow>();
+    const byId = new Map(missions.map((m) => [m.id, m]));
 
     for (const m of sorted) {
       const pm: PlannedMission = {
@@ -192,8 +193,13 @@ export function MissionPlanner({
 
         const jobEntry = ref != null ? jobs?.[String(ref)] : undefined;
         const gate = jobEntry ? getJobActiveMissionGate(jobEntry) : [];
-        // quest-specific if its gate references THIS mission (or any visible mission)
+        // "has_composition" objectives only need the building to EXIST —
+        // they can be satisfied by pre-building.
+        const isHasComposition =
+          (o.type ?? "").toLowerCase().includes("has_composition") ||
+          (o.compositionId != null && ref == null);
         const isQuestGated =
+          !isHasComposition &&
           gate.length > 0 &&
           gate.some((mid) => mid === m.id || visibleMissionIds.has(mid));
 
@@ -240,7 +246,6 @@ export function MissionPlanner({
           pm.prepSeconds += total;
         }
 
-        // building usage
         let w = usage.get(binfo.compositionId);
         if (!w) {
           w = {
@@ -264,7 +269,67 @@ export function MissionPlanner({
       .map((w) => ({ ...w, missionLevels: [...w.missionLevels].sort((a, b) => a - b) }))
       .sort((a, b) => a.missionLevels[0] - b.missionLevels[0]);
 
-    return { plan, buildingWindows };
+    // ---- Time scheduling. t=0 = now; all initial buildings assumed in place.
+    // activation[m] = max completion of prereq missions
+    // completion[m] = activation[m] + gateSeconds[m]
+    // prep latest start[m] = max(0, activation[m] - prepSeconds[m])
+    // (battle/dialogue/assist time not modelled — treated as instant.)
+    const activation = new Map<number, number>();
+    const completion = new Map<number, number>();
+    const memo = new Map<number, number>();
+    const stack = new Set<number>();
+    const gateSec = new Map<number, number>();
+    const prepSec = new Map<number, number>();
+    for (const pm of plan) {
+      gateSec.set(pm.id, pm.gateSeconds);
+      prepSec.set(pm.id, pm.prepSeconds);
+    }
+    const computeCompletion = (id: number): number => {
+      if (memo.has(id)) return memo.get(id)!;
+      if (stack.has(id)) return 0;
+      const m = byId.get(id);
+      if (!m) return 0;
+      stack.add(id);
+      let act = 0;
+      for (const pid of m.prereqMissionIds.all) {
+        act = Math.max(act, computeCompletion(pid));
+      }
+      if (m.prereqMissionIds.any.length > 0) {
+        let easiest = Infinity;
+        for (const pid of m.prereqMissionIds.any) {
+          easiest = Math.min(easiest, computeCompletion(pid));
+        }
+        if (easiest !== Infinity) act = Math.max(act, easiest);
+      }
+      activation.set(id, act);
+      const comp = act + (gateSec.get(id) ?? 0);
+      completion.set(id, comp);
+      memo.set(id, comp);
+      stack.delete(id);
+      return comp;
+    };
+    for (const pm of plan) computeCompletion(pm.id);
+
+    const schedule = new Map<
+      number,
+      { activation: number; completion: number; prepLatestStart: number }
+    >();
+    for (const pm of plan) {
+      const act = activation.get(pm.id) ?? 0;
+      const comp = completion.get(pm.id) ?? act;
+      const prep = prepSec.get(pm.id) ?? 0;
+      schedule.set(pm.id, {
+        activation: act,
+        completion: comp,
+        prepLatestStart: Math.max(0, act - prep),
+      });
+    }
+    const totalSeconds = plan.reduce(
+      (mx, pm) => Math.max(mx, completion.get(pm.id) ?? 0),
+      0
+    );
+
+    return { plan, buildingWindows, schedule, totalSeconds };
   }, [missions, jobs, compositions, projectBuildingIndex, t, visibleMissionIds]);
 
   // Aggregate the two pools across the whole plan, grouped by building.
@@ -454,15 +519,32 @@ export function MissionPlanner({
 
       {/* Timeline */}
       <div className="rounded-lg border p-4 space-y-3">
-        <div>
-          <h2 className="text-lg font-semibold">Timeline</h2>
-          <p className="text-xs text-muted-foreground">
-            Missions in completion order. Each block shows what to prep ahead, what to queue once
-            active, plus battles/assists/dialogue you'll need.
-          </p>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold">Timeline (t = 0 is now)</h2>
+            <p className="text-xs text-muted-foreground">
+              Assumes you start mission #1 immediately with all currently-required buildings in
+              place. Prep jobs are scheduled to finish exactly at activation. Battle / dialogue /
+              assist time is not modelled.
+            </p>
+          </div>
+          <div className="rounded-md border bg-primary/10 px-3 py-1.5 text-sm">
+            <span className="font-medium">Total time to clear all quests: </span>
+            <span className="tabular-nums font-semibold">
+              {formatDuration(totalSeconds) || "0s"}
+            </span>
+          </div>
         </div>
         <ol className="space-y-2">
-          {plan.map((m, i) => (
+          {plan.map((m, i) => {
+            const s = schedule.get(m.id) ?? {
+              activation: 0,
+              completion: 0,
+              prepLatestStart: 0,
+            };
+            const prepIsBottleneck =
+              s.prepLatestStart === 0 && m.prepSeconds > s.activation;
+            return (
             <li
               key={m.id}
               className="rounded-md border bg-muted/20 p-3 space-y-2"
@@ -475,17 +557,22 @@ export function MissionPlanner({
                   Lv {m.level}
                 </span>
                 <span className="text-sm font-semibold">{m.title}</span>
-                {(m.prepSeconds > 0 || m.gateSeconds > 0) && (
-                  <span className="ml-auto text-[10px] text-muted-foreground tabular-nums">
-                    prep {formatDuration(m.prepSeconds) || "0s"} · gated{" "}
-                    {formatDuration(m.gateSeconds) || "0s"}
-                  </span>
-                )}
+                <span className="ml-auto text-[10px] text-muted-foreground tabular-nums">
+                  activates t={formatDuration(s.activation) || "0s"} · done t=
+                  {formatDuration(s.completion) || "0s"}
+                </span>
               </div>
 
               {m.prepJobs.length > 0 && (
                 <div className="rounded border bg-background/60 p-2 text-xs space-y-1">
-                  <div className="font-medium">Start ahead of time:</div>
+                  <div className="font-medium">
+                    Start ahead — latest start t={formatDuration(s.prepLatestStart) || "0s"}
+                    {prepIsBottleneck && (
+                      <span className="ml-1 text-amber-600 dark:text-amber-400">
+                        (start now — prep is the bottleneck)
+                      </span>
+                    )}
+                  </div>
                   <ul className="space-y-0.5">
                     {m.prepJobs.map((j) => (
                       <li key={j.key} className="flex items-center gap-2">
@@ -507,7 +594,9 @@ export function MissionPlanner({
 
               {m.questGatedJobs.length > 0 && (
                 <div className="rounded border bg-background/60 p-2 text-xs space-y-1">
-                  <div className="font-medium">After activation, queue:</div>
+                  <div className="font-medium">
+                    After activation (t={formatDuration(s.activation) || "0s"}), queue:
+                  </div>
                   <ul className="space-y-0.5">
                     {m.questGatedJobs.map((j) => (
                       <li key={j.key} className="flex items-center gap-2">
@@ -555,7 +644,8 @@ export function MissionPlanner({
                 </div>
               )}
             </li>
-          ))}
+            );
+          })}
         </ol>
       </div>
 
