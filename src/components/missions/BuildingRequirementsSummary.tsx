@@ -160,7 +160,6 @@ export function BuildingRequirementsSummary({
         <p className="text-xs text-muted-foreground">
           Every building required to complete the {missions.length} visible missions, with the
           jobs/projects you'll need to queue up, per-item time, total quantity, and total time.
-          Sorted by the earliest mission that needs them.
         </p>
       </div>
 
