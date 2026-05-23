@@ -519,15 +519,32 @@ export function MissionPlanner({
 
       {/* Timeline */}
       <div className="rounded-lg border p-4 space-y-3">
-        <div>
-          <h2 className="text-lg font-semibold">Timeline</h2>
-          <p className="text-xs text-muted-foreground">
-            Missions in completion order. Each block shows what to prep ahead, what to queue once
-            active, plus battles/assists/dialogue you'll need.
-          </p>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold">Timeline (t = 0 is now)</h2>
+            <p className="text-xs text-muted-foreground">
+              Assumes you start mission #1 immediately with all currently-required buildings in
+              place. Prep jobs are scheduled to finish exactly at activation. Battle / dialogue /
+              assist time is not modelled.
+            </p>
+          </div>
+          <div className="rounded-md border bg-primary/10 px-3 py-1.5 text-sm">
+            <span className="font-medium">Total time to clear all quests: </span>
+            <span className="tabular-nums font-semibold">
+              {formatDuration(totalSeconds) || "0s"}
+            </span>
+          </div>
         </div>
         <ol className="space-y-2">
-          {plan.map((m, i) => (
+          {plan.map((m, i) => {
+            const s = schedule.get(m.id) ?? {
+              activation: 0,
+              completion: 0,
+              prepLatestStart: 0,
+            };
+            const prepIsBottleneck =
+              s.prepLatestStart === 0 && m.prepSeconds > s.activation;
+            return (
             <li
               key={m.id}
               className="rounded-md border bg-muted/20 p-3 space-y-2"
@@ -540,17 +557,22 @@ export function MissionPlanner({
                   Lv {m.level}
                 </span>
                 <span className="text-sm font-semibold">{m.title}</span>
-                {(m.prepSeconds > 0 || m.gateSeconds > 0) && (
-                  <span className="ml-auto text-[10px] text-muted-foreground tabular-nums">
-                    prep {formatDuration(m.prepSeconds) || "0s"} · gated{" "}
-                    {formatDuration(m.gateSeconds) || "0s"}
-                  </span>
-                )}
+                <span className="ml-auto text-[10px] text-muted-foreground tabular-nums">
+                  activates t={formatDuration(s.activation) || "0s"} · done t=
+                  {formatDuration(s.completion) || "0s"}
+                </span>
               </div>
 
               {m.prepJobs.length > 0 && (
                 <div className="rounded border bg-background/60 p-2 text-xs space-y-1">
-                  <div className="font-medium">Start ahead of time:</div>
+                  <div className="font-medium">
+                    Start ahead — latest start t={formatDuration(s.prepLatestStart) || "0s"}
+                    {prepIsBottleneck && (
+                      <span className="ml-1 text-amber-600 dark:text-amber-400">
+                        (start now — prep is the bottleneck)
+                      </span>
+                    )}
+                  </div>
                   <ul className="space-y-0.5">
                     {m.prepJobs.map((j) => (
                       <li key={j.key} className="flex items-center gap-2">
@@ -572,7 +594,9 @@ export function MissionPlanner({
 
               {m.questGatedJobs.length > 0 && (
                 <div className="rounded border bg-background/60 p-2 text-xs space-y-1">
-                  <div className="font-medium">After activation, queue:</div>
+                  <div className="font-medium">
+                    After activation (t={formatDuration(s.activation) || "0s"}), queue:
+                  </div>
                   <ul className="space-y-0.5">
                     {m.questGatedJobs.map((j) => (
                       <li key={j.key} className="flex items-center gap-2">
@@ -620,7 +644,8 @@ export function MissionPlanner({
                 </div>
               )}
             </li>
-          ))}
+            );
+          })}
         </ol>
       </div>
 
