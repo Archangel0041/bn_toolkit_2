@@ -182,9 +182,6 @@ export function BuildingRequirementsSummary({
                 <div className="truncate text-sm font-semibold" title={g.name}>
                   {g.name}
                 </div>
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  First needed at Lv {g.earliestLevel}
-                </div>
               </div>
             </div>
 
