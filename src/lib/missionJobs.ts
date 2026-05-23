@@ -22,8 +22,6 @@ export function buildProjectBuildingIndex(
   for (const [cidStr, comps] of Object.entries(compositions)) {
     if (!Array.isArray(comps)) continue;
     const cid = Number(cidStr);
-    const projList = comps.find((c) => c?._t === "project_list_config");
-    if (!projList || !Array.isArray(projList.jobs)) continue;
     const smc = comps.find((c) => c?._t === "structure_menu_config") ?? {};
     const info: BuildingInfo = {
       compositionId: cid,
@@ -32,8 +30,17 @@ export function buildProjectBuildingIndex(
       cost: smc.cost && typeof smc.cost === "object" ? smc.cost : undefined,
       prereqs: Array.isArray(smc.prereqs) ? smc.prereqs : undefined,
     };
-    for (const jobId of projList.jobs) {
-      if (typeof jobId === "number" && !idx.has(jobId)) idx.set(jobId, info);
+    // Both project_list_config (unit production projects) and
+    // job_list_config (collect jobs / resource production) reference the
+    // same job/project id space used by mission objectives.
+    const collectIds = (key: string): number[] => {
+      const c = comps.find((x) => x?._t === key);
+      return Array.isArray(c?.jobs)
+        ? (c.jobs as unknown[]).filter((v): v is number => typeof v === "number")
+        : [];
+    };
+    for (const id of [...collectIds("project_list_config"), ...collectIds("job_list_config")]) {
+      if (!idx.has(id)) idx.set(id, info);
     }
   }
   return idx;
