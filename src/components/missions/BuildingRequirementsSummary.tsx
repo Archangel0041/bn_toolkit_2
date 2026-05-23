@@ -139,7 +139,7 @@ export function BuildingRequirementsSummary({
       }
     }
 
-    return Array.from(byBuilding.values()).sort((a, b) => a.earliestLevel - b.earliestLevel);
+    return Array.from(byBuilding.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [missions, jobs, compositions, projectBuildingIndex, t]);
 
   if (groups.length === 0) {
