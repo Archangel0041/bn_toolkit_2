@@ -64,6 +64,13 @@ export function BuildingRequirementsSummary({
 
     for (const m of missions) {
       for (const o of m.objectives) {
+        // Skip assistance / visit-friend style objectives — these aren't
+        // things the player builds or queues in their own base.
+        const typeStr = (o.type ?? "").toLowerCase();
+        if (typeStr.includes("assist") || typeStr.includes("visit_friend") || typeStr.includes("help_friend")) {
+          continue;
+        }
+
         const jobOrProjectId = o.jobId ?? o.projectId;
         let info: BuildingInfo | undefined =
           jobOrProjectId != null ? projectBuildingIndex.get(jobOrProjectId) : undefined;
