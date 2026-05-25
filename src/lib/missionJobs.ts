@@ -78,6 +78,52 @@ export function getJobActiveMissionGate(jobEntry: any): number[] {
   return out;
 }
 
+export interface BuildingDetails {
+  compositionId: number;
+  nameKey?: string;
+  iconKey?: string;
+  /** Initial purchase cost (structure_menu_config.cost), non-zero entries only. */
+  cost: Record<string, number>;
+  /** Population slots this building consumes when placed. */
+  population: number;
+  /** Seconds to construct (construction_config.build_time). */
+  buildTime: number;
+}
+
+export function getBuildingDetails(
+  compositions: Record<string, any[]> | undefined | null,
+  compositionId: number
+): BuildingDetails | undefined {
+  const comps = compositions?.[String(compositionId)];
+  if (!Array.isArray(comps)) return undefined;
+  const smc = comps.find((c) => c?._t === "structure_menu_config") ?? {};
+  const cc = comps.find((c) => c?._t === "construction_config") ?? {};
+  const cost: Record<string, number> = {};
+  if (smc.cost && typeof smc.cost === "object") {
+    for (const [k, v] of Object.entries(smc.cost)) {
+      const n = Number(v);
+      if (n > 0) cost[k] = n;
+    }
+  }
+  let population = 0;
+  if (Array.isArray(smc.prereqs)) {
+    for (const p of smc.prereqs) {
+      if (p?._t === "enough_population_limit_prereq_config" && typeof p.additional_population === "number") {
+        population = p.additional_population;
+        break;
+      }
+    }
+  }
+  return {
+    compositionId,
+    nameKey: typeof smc.name === "string" ? smc.name : undefined,
+    iconKey: typeof smc.icon === "string" ? smc.icon : undefined,
+    cost,
+    population,
+    buildTime: typeof cc.build_time === "number" ? cc.build_time : 0,
+  };
+}
+
 /**
  * Convert a single building/job prereq config into a short human-readable line.
  * Returns null if we don't know how to render it.
