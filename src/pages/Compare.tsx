@@ -57,6 +57,11 @@ export default function Compare() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`${unit1.identity.name.en || "Unit"} vs ${unit2.identity.name.en || "Unit"}`}
+        description="Side-by-side stat comparison of two Battle Nations units in Vogels Laboratory."
+        path={`/compare/${unit1.id}/${unit2.id}`}
+      />
       <Header />
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center gap-4">

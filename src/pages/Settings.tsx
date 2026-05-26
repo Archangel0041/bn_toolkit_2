@@ -12,6 +12,7 @@ import {
 } from '@/hooks/useAccountLevel';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
+import { Seo } from '@/components/Seo';
 
 export default function Settings() {
   const { user, loading: authLoading } = useAuth();
