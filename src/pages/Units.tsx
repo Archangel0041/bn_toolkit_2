@@ -7,6 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { UnitSide } from "@/data/gameEnums";
 import { filterUnitsByAdvancedCriteria } from "@/lib/unitAbilityFilters";
 import { AdSense } from "@/components/ads/AdSense";
+import { Seo } from "@/components/Seo";
 
 const Units = () => {
   const { t } = useLanguage();
@@ -49,6 +50,11 @@ const Units = () => {
 
   return (
     <div className="space-y-6">
+      <Seo
+        title="Units Database"
+        description={`Browse ${allUnits.length}+ Battle Nations units, filter by tags, damage types, status effects, and inspect abilities, stats, and unlock requirements.`}
+        path="/units"
+      />
       <div>
         <h1 className="text-3xl font-bold mb-2">Battle Unit Database</h1>
         <p className="text-muted-foreground">

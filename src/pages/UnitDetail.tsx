@@ -41,6 +41,7 @@ import { UnitTag, UnitTagLabels } from "@/data/gameEnums";
 import { expandTargetTags } from "@/lib/tagHierarchy";
 import { getApplicableBuildingGroup } from "@/lib/healingBuildings";
 import { HealingScalingTables } from "@/components/units/HealingScalingTables";
+import { Seo } from "@/components/Seo";
 
 // Detailed targeting categories - all unit class types
 const TARGETING_CATEGORIES: { tag: number; label: string; color: string }[] = [
