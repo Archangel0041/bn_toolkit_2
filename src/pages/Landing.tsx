@@ -8,6 +8,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import logoPurrface from "@/assets/logo-vogels-lab.jpg";
 import { AdSense } from "@/components/ads/AdSense";
+import { Seo } from "@/components/Seo";
 
 const SECTIONS = [
   {
