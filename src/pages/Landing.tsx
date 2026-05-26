@@ -8,6 +8,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import logoPurrface from "@/assets/logo-vogels-lab.jpg";
 import { AdSense } from "@/components/ads/AdSense";
+import { Seo } from "@/components/Seo";
 
 const SECTIONS = [
   {
@@ -38,6 +39,11 @@ export default function Landing() {
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] flex flex-col">
+      <Seo
+        title="Vogels Laboratory — Battle Nations Toolkit"
+        description="Browse Battle Nations units, abilities, missions, and levels. Plan parties, simulate battles, and explore the full game database in one toolkit."
+        path="/"
+      />
       {/* Hero */}
       <section className="flex flex-col items-center justify-center px-4 pt-12 pb-6 text-center">
         <div className="mb-6">

@@ -41,6 +41,7 @@ import { UnitTag, UnitTagLabels } from "@/data/gameEnums";
 import { expandTargetTags } from "@/lib/tagHierarchy";
 import { getApplicableBuildingGroup } from "@/lib/healingBuildings";
 import { HealingScalingTables } from "@/components/units/HealingScalingTables";
+import { Seo } from "@/components/Seo";
 
 // Detailed targeting categories - all unit class types
 const TARGETING_CATEGORIES: { tag: number; label: string; color: string }[] = [
@@ -164,6 +165,7 @@ export default function UnitDetail() {
   if (!unit) {
     return (
       <div className="min-h-screen bg-background">
+        <Seo title="Unit Not Found" description="The requested Battle Nations unit could not be found in the Vogels Laboratory database." />
         <Header />
         <main className="container mx-auto px-4 py-12 text-center">
           <h1 className="text-2xl font-bold mb-4">Unit Not Found</h1>
@@ -220,8 +222,14 @@ export default function UnitDetail() {
     }
   };
 
+  const unitName = t(unit.identity.name);
   return (
     <div className="min-h-screen bg-background pb-20">
+      <Seo
+        title={`${unitName} — Unit Details`}
+        description={`${unitName} stats, abilities, damage, targeting, and unlock requirements for Battle Nations. Class ${classDisplayName}, ${sideLabel} side.`}
+        path={`/unit/${unit.id}`}
+      />
       <Header />
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">

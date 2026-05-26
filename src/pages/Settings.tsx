@@ -12,6 +12,7 @@ import {
 } from '@/hooks/useAccountLevel';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
+import { Seo } from '@/components/Seo';
 
 export default function Settings() {
   const { user, loading: authLoading } = useAuth();
@@ -50,6 +51,11 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Settings"
+        description="Configure your Vogels Laboratory preferences, including account level used for boss strike scaling and other level-based content."
+        path="/settings"
+      />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <h1 className="text-3xl font-bold mb-6">Settings</h1>

@@ -7,6 +7,7 @@ import { getUnitById } from "@/lib/units";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ArrowLeft, Heart, Zap, Shield, Target, Eye, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Seo } from "@/components/Seo";
 
 export default function Compare() {
   const { id1, id2 } = useParams<{ id1: string; id2: string }>();
@@ -56,6 +57,11 @@ export default function Compare() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`${t(unit1.identity.name)} vs ${t(unit2.identity.name)}`}
+        description="Side-by-side stat comparison of two Battle Nations units in Vogels Laboratory."
+        path={`/compare/${unit1.id}/${unit2.id}`}
+      />
       <Header />
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center gap-4">
