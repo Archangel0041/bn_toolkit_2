@@ -7,6 +7,7 @@ import { getUnitById } from "@/lib/units";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ArrowLeft, Heart, Zap, Shield, Target, Eye, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Seo } from "@/components/Seo";
 
 export default function Compare() {
   const { id1, id2 } = useParams<{ id1: string; id2: string }>();

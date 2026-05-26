@@ -222,8 +222,14 @@ export default function UnitDetail() {
     }
   };
 
+  const unitName = t(unit.identity.name);
   return (
     <div className="min-h-screen bg-background pb-20">
+      <Seo
+        title={`${unitName} — Unit Details`}
+        description={`${unitName} stats, abilities, damage, targeting, and unlock requirements for Battle Nations. Class ${classDisplayName}, ${sideLabel} side.`}
+        path={`/unit/${unit.id}`}
+      />
       <Header />
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
