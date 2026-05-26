@@ -58,7 +58,7 @@ export default function Compare() {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title={`${unit1.identity.name.en || "Unit"} vs ${unit2.identity.name.en || "Unit"}`}
+        title={`${t(unit1.identity.name)} vs ${t(unit2.identity.name)}`}
         description="Side-by-side stat comparison of two Battle Nations units in Vogels Laboratory."
         path={`/compare/${unit1.id}/${unit2.id}`}
       />
