@@ -12,8 +12,7 @@ function isLovableEnvironment(): boolean {
     hostname.includes('lovableproject.com') ||
     hostname.includes('lovable.app') ||
     hostname.includes('localhost') ||
-    hostname.includes('127.0.0.1') ||
-    hostname.endsWith('vogelslabaratory.com')
+    hostname.includes('127.0.0.1')
   );
 }
 
