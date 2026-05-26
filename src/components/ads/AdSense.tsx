@@ -60,19 +60,11 @@ export function AdSense({
 
   if (loading || hasAccess) return null;
 
-  // Render a subtle placeholder block in dev so you can see slot positions.
+  // Hide entirely until a real publisher ID + slot is configured.
   if (PUBLISHER_ID === "ca-pub-0000000000000000") {
-    return (
-      <div
-        className={cn(
-          "mx-auto my-6 max-w-2xl rounded-md border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-xs text-muted-foreground",
-          className,
-        )}
-      >
-        Ad slot (AdSense placeholder — set VITE_ADSENSE_PUBLISHER_ID)
-      </div>
-    );
+    return null;
   }
+
 
   return (
     <ins
