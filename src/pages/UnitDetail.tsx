@@ -165,6 +165,7 @@ export default function UnitDetail() {
   if (!unit) {
     return (
       <div className="min-h-screen bg-background">
+        <Seo title="Unit Not Found" description="The requested Battle Nations unit could not be found in the Vogels Laboratory database." />
         <Header />
         <main className="container mx-auto px-4 py-12 text-center">
           <h1 className="text-2xl font-bold mb-4">Unit Not Found</h1>
