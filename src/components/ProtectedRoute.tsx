@@ -5,14 +5,15 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-// Check if we're in the Lovable development environment
+// Check if we're in a Lovable-hosted environment (preview, published, or custom domain)
 function isLovableEnvironment(): boolean {
   const hostname = window.location.hostname;
   return (
     hostname.includes('lovableproject.com') ||
     hostname.includes('lovable.app') ||
     hostname.includes('localhost') ||
-    hostname.includes('127.0.0.1')
+    hostname.includes('127.0.0.1') ||
+    hostname.endsWith('vogelslabaratory.com')
   );
 }
 
