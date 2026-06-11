@@ -4,12 +4,13 @@ interface SeoProps {
   title: string;
   description: string;
   path?: string;
+  jsonLd?: Record<string, unknown>;
 }
 
 const SITE = "Vogels Laboratory";
 const ORIGIN = "https://vogellab.lovable.app";
 
-export function Seo({ title, description, path }: SeoProps) {
+export function Seo({ title, description, path, jsonLd }: SeoProps) {
   const fullTitle = title.includes(SITE) ? title : `${title} — ${SITE}`;
   const cappedTitle = fullTitle.length > 60 ? fullTitle.slice(0, 57) + "…" : fullTitle;
   const url = path ? `${ORIGIN}${path}` : undefined;
@@ -23,6 +24,9 @@ export function Seo({ title, description, path }: SeoProps) {
       <meta name="twitter:description" content={description} />
       {url && <link rel="canonical" href={url} />}
       {url && <meta property="og:url" content={url} />}
+      {jsonLd && (
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+      )}
     </Helmet>
   );
 }
