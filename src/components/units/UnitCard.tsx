@@ -131,6 +131,22 @@ export const UnitCard = memo(function UnitCard({ unit }: UnitCardProps) {
                 </span>
               </div>
             )}
+            {stats?.rewards && (stats.rewards.sp || stats.rewards.gold) && (
+              <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                {stats.rewards.sp ? (
+                  <span className="flex items-center gap-1" title="SP reward on defeat">
+                    <img src={getResourceIconUrl("sp")} alt="" className="h-3 w-3 object-contain" />
+                    {stats.rewards.sp}
+                  </span>
+                ) : null}
+                {stats.rewards.gold ? (
+                  <span className="flex items-center gap-1" title="Gold reward on defeat">
+                    <img src={getResourceIconUrl("gold")} alt="" className="h-3 w-3 object-contain" />
+                    {stats.rewards.gold}
+                  </span>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       </Card>
