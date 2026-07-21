@@ -11,6 +11,7 @@ import type { ParsedUnit } from "@/types/units";
 import { Plus, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import premiumRays from "@/assets/premium_rays.png";
+import { getResourceIconUrl } from "@/lib/resourceImages";
 
 interface UnitCardProps {
   unit: ParsedUnit;
@@ -128,6 +129,22 @@ export const UnitCard = memo(function UnitCard({ unit }: UnitCardProps) {
                   <img src={statIcons.critical} alt="" className="h-3 w-3 object-contain" />
                   {stats.critical}%
                 </span>
+              </div>
+            )}
+            {stats?.rewards && (stats.rewards.sp || stats.rewards.gold) && (
+              <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                {stats.rewards.sp ? (
+                  <span className="flex items-center gap-1" title="SP reward on defeat">
+                    <img src={getResourceIconUrl("sp")} alt="" className="h-3 w-3 object-contain" />
+                    {stats.rewards.sp}
+                  </span>
+                ) : null}
+                {stats.rewards.gold ? (
+                  <span className="flex items-center gap-1" title="Gold reward on defeat">
+                    <img src={getResourceIconUrl("gold")} alt="" className="h-3 w-3 object-contain" />
+                    {stats.rewards.gold}
+                  </span>
+                ) : null}
               </div>
             )}
           </div>

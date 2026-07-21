@@ -316,6 +316,27 @@ export default function UnitDetail() {
                   <StatRow label="Preferred Row" value={unit.statsConfig.preferred_row} />
                 </div>
               )}
+              {stats.rewards && (stats.rewards.sp || stats.rewards.gold) && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="text-sm font-medium mb-2">Defeat Rewards (Rank {selectedRank})</div>
+                  <div className="flex flex-wrap gap-4">
+                    {stats.rewards.sp ? (
+                      <span className="flex items-center gap-1.5 text-sm">
+                        <img src={getResourceIconUrl("sp")} alt="SP" className="h-5 w-5 object-contain" />
+                        <span className="font-semibold">{stats.rewards.sp}</span>
+                        <span className="text-muted-foreground">SP</span>
+                      </span>
+                    ) : null}
+                    {stats.rewards.gold ? (
+                      <span className="flex items-center gap-1.5 text-sm">
+                        <img src={getResourceIconUrl("gold")} alt="Gold" className="h-5 w-5 object-contain" />
+                        <span className="font-semibold">{stats.rewards.gold}</span>
+                        <span className="text-muted-foreground">Gold</span>
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              )}
             </StatSection>
           )}
 
