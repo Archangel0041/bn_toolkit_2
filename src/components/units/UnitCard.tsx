@@ -11,6 +11,7 @@ import type { ParsedUnit } from "@/types/units";
 import { Plus, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import premiumRays from "@/assets/premium_rays.png";
+import { getResourceIconUrl } from "@/lib/resourceImages";
 
 interface UnitCardProps {
   unit: ParsedUnit;
