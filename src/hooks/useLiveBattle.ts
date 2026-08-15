@@ -37,12 +37,13 @@ import {
 
 interface UseLiveBattleOptions {
   encounter?: Encounter | null;
+  encounterId?: string;
   waves: EncounterUnit[][];
   friendlyParty: PartyUnit[];
   startingWave?: number;
 }
 
-export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 0 }: UseLiveBattleOptions) {
+export function useLiveBattle({ encounter, encounterId, waves, friendlyParty, startingWave = 0 }: UseLiveBattleOptions) {
   const { t } = useLanguage();
   const [battleState, setBattleState] = useState<LiveBattleState | null>(null);
   const [selectedUnitGridId, setSelectedUnitGridId] = useState<number | null>(null);
