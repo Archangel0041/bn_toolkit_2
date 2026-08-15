@@ -81,7 +81,17 @@ export function useLiveBattle({ encounter, encounterId, waves, friendlyParty, st
     setIsProcessing(false);
     // First turn is already ready - no DOT to process yet
     setPlayerTurnStartProcessed(true);
-  }, [friendlyParty, waves, startingWave, encounter?.environmental_status_effect]);
+
+    // Start analytics session for this battle
+    analyticsStartedRef.current = true;
+    clearActiveBattleAnalytics();
+    startBattleAnalytics({
+      encounter,
+      encounterId,
+      friendlyParty,
+      enemyUnits: state.enemyUnits,
+    });
+  }, [friendlyParty, waves, startingWave, encounter, encounterId]);
 
   // Execute player turn start phase: DoT -> deaths -> collapse -> cooldowns
   // Called automatically when player turn begins (after enemy turn ends)
