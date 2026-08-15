@@ -541,6 +541,7 @@ export default function MissionsView() {
             missions={visibleMissions}
             edges={visibleEdges}
             availableNow={availableNow}
+            focusId={focusMissionId ?? undefined}
             characters={characters}
             npcs={npcs}
             dialogues={dialogues}
@@ -550,6 +551,7 @@ export default function MissionsView() {
             compositions={compositions}
             projectBuildingIndex={projectBuildingIndex}
           />
+
 
           <MissionPlanner
             missions={visibleMissions}
