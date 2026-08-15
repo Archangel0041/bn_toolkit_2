@@ -1341,7 +1341,7 @@ interface DialogLineRender {
   iconUrl?: string;
 }
 
-function DialogSection({
+export function DialogSection({
   title,
   baseKey,
   suffix,

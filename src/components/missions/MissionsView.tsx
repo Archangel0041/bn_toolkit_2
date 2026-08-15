@@ -7,7 +7,7 @@ import {
   filterRemaining,
   type ParsedMission,
 } from "@/lib/missions";
-import { MissionTree } from "@/components/missions/MissionTree";
+import { MissionTree, DialogSection } from "@/components/missions/MissionTree";
 import { MissionPlanner } from "@/components/missions/MissionPlanner";
 
 import { MISSION_CATEGORY_ORDER, MISSION_CATEGORY_META } from "@/lib/missions";
@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useGameData } from "@/contexts/GameDataContext";
-import { getResourceIconUrl } from "@/lib/resourceImages";
+import { getResourceIconUrl, getNpcIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
 import { Search, X } from "lucide-react";
 
@@ -130,12 +130,18 @@ function MissionPreviewCard({
   onAdd,
   onFocus,
   onClose,
+  characters,
+  dialogues,
+  unitsById,
 }: {
   mission: ParsedMission;
   isAdded: boolean;
   onAdd: () => void;
   onFocus?: () => void;
   onClose: () => void;
+  characters: Record<string, CharacterEntry>;
+  dialogues: Record<string, DialogueLine[]>;
+  unitsById: Map<number, { name: string; icon?: string }>;
 }) {
   const { t } = useLanguage();
   const loc = (s?: string) => {
@@ -146,10 +152,50 @@ function MissionPreviewCard({
   const prereqCount =
     mission.prereqMissionIds.all.length + mission.prereqMissionIds.any.length;
 
+  const giverIcon = (() => {
+    if (!mission.giver) return undefined;
+    const ch = characters?.[mission.giver.toLowerCase()];
+    const key = ch?.small_icon ?? ch?.regular_icon;
+    return key ? getNpcIconUrl(key) : getNpcIconUrl(mission.giver);
+  })();
+
+  // Localized hint lines (same source as the tree detail panel).
+  const hintLines = (() => {
+    const base = mission.title?.replace(/_title$/, "") ?? "";
+    const lines: string[] = [];
+    if (base) {
+      for (let i = 0; i < 12; i++) {
+        const k = `mis_${base}_20hint_${i}_body_0`;
+        const tr = t(k);
+        if (!tr || tr === k) {
+          if (i === 0) continue;
+          break;
+        }
+        lines.push(tr);
+      }
+    }
+    if (lines.length > 0) return lines;
+    const fallback = mission.description ? loc(mission.description) : "";
+    return fallback ? [fallback] : [];
+  })();
+
+  const resourceEntries = Object.entries(mission.rewards.resources).sort(([a], [b]) =>
+    a === "xp" ? -1 : b === "xp" ? 1 : a.localeCompare(b)
+  );
+
   return (
-    <div className="rounded-lg border p-3 space-y-2 max-w-3xl">
-      <div className="flex items-start justify-between gap-2">
-        <div>
+    <div className="rounded-lg border p-3 space-y-3 max-w-3xl">
+      <div className="flex items-start gap-2">
+        {giverIcon && (
+          <img
+            src={giverIcon}
+            alt=""
+            className="h-10 w-10 shrink-0 rounded bg-muted object-cover"
+            onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+            draggable={false}
+          />
+        )}
+        <div className="min-w-0 flex-1">
           <div className="font-semibold text-sm">{loc(mission.title)}</div>
           <div className="text-[11px] text-muted-foreground">
             Lv{mission.displayLevel} · #{mission.id}
@@ -168,9 +214,44 @@ function MissionPreviewCard({
         </Button>
       </div>
 
-      {mission.description && (
-        <p className="text-xs text-muted-foreground">{loc(mission.description)}</p>
+      {hintLines.length > 0 && (
+        <div className="space-y-1">
+          {hintLines.map((line, i) => (
+            <p key={i} className="text-xs text-muted-foreground">{line}</p>
+          ))}
+        </div>
       )}
+
+      <DialogSection
+        title="Pre-mission Dialog"
+        baseKey={mission.title}
+        suffix="10startdialog"
+        t={t}
+        characters={characters}
+        dialogues={dialogues}
+        fallbackSpeakerIconUrl={giverIcon}
+        fallbackSpeakerName={mission.giver ? titleCase(mission.giver) : undefined}
+      />
+      <DialogSection
+        title="Completion Dialog"
+        baseKey={mission.title}
+        suffix="70enddialog"
+        t={t}
+        characters={characters}
+        dialogues={dialogues}
+        fallbackSpeakerIconUrl={giverIcon}
+        fallbackSpeakerName={mission.giver ? titleCase(mission.giver) : undefined}
+      />
+      <DialogSection
+        title="Reward Dialog"
+        baseKey={mission.title}
+        suffix="60reward"
+        t={t}
+        characters={characters}
+        dialogues={dialogues}
+        fallbackSpeakerIconUrl={giverIcon}
+        fallbackSpeakerName={mission.giver ? titleCase(mission.giver) : undefined}
+      />
 
       {mission.objectives.length > 0 && (
         <div className="space-y-0.5">
@@ -186,21 +267,50 @@ function MissionPreviewCard({
         </div>
       )}
 
-      {(Object.keys(mission.rewards.resources).length > 0 ||
+      {(resourceEntries.length > 0 ||
         Object.keys(mission.rewards.units).length > 0) && (
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           <div className="text-[11px] font-medium">Rewards</div>
           <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
-            {Object.entries(mission.rewards.resources).map(([k, v]) => (
-              <span key={k} className="rounded border bg-muted px-1.5 py-0.5">
-                {titleCase(k)} {v}
+            {resourceEntries.map(([k, v]) => (
+              <span
+                key={k}
+                className="inline-flex items-center gap-1 rounded border bg-muted px-1.5 py-0.5"
+              >
+                <img
+                  src={getResourceIconUrl(k)}
+                  alt=""
+                  className="h-3.5 w-3.5 object-contain"
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                  draggable={false}
+                />
+                <span>{titleCase(k)}</span>
+                <span className="font-medium text-foreground">{v}</span>
               </span>
             ))}
-            {Object.entries(mission.rewards.units).map(([k, v]) => (
-              <span key={k} className="rounded border bg-muted px-1.5 py-0.5">
-                Unit #{k} ×{v}
-              </span>
-            ))}
+            {Object.entries(mission.rewards.units).map(([id, qty]) => {
+              const u = unitsById.get(Number(id));
+              const label = u?.name ? loc(u.name) : `Unit #${id}`;
+              const icon = u?.icon ? getUnitImageUrl(u.icon) : undefined;
+              return (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1 rounded border bg-muted px-1.5 py-0.5"
+                >
+                  {icon && (
+                    <img
+                      src={icon}
+                      alt=""
+                      className="h-3.5 w-3.5 object-contain"
+                      onError={(e) => (e.currentTarget.style.display = "none")}
+                      draggable={false}
+                    />
+                  )}
+                  <span>{label}</span>
+                  <span className="font-medium text-foreground">×{qty}</span>
+                </span>
+              );
+            })}
           </div>
         </div>
       )}
@@ -218,6 +328,7 @@ function MissionPreviewCard({
     </div>
   );
 }
+
 
 
 /**
@@ -504,6 +615,9 @@ export default function MissionsView() {
                 })
               }
               onClose={() => setPreviewMissionId(null)}
+              characters={characters}
+              dialogues={dialogues}
+              unitsById={unitsById}
             />
           );
         })()}
@@ -628,6 +742,9 @@ export default function MissionsView() {
                 : undefined
             }
             onClose={() => setPreviewMissionId(null)}
+            characters={characters}
+            dialogues={dialogues}
+            unitsById={unitsById}
           />
         );
       })()}
