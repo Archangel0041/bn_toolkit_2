@@ -735,6 +735,7 @@ function MissionTreeInner({
 
   const [nodes, setNodes] = useNodesState(rfNodes);
   const [edgesState, setEdges] = useEdgesState(rfEdges);
+  const [initialFitDone, setInitialFitDone] = useState(false);
   const { fitView } = useReactFlow();
   useEffect(() => setNodes(rfNodes), [rfNodes, setNodes]);
   useEffect(() => setEdges(rfEdges), [rfEdges, setEdges]);
@@ -746,9 +747,19 @@ function MissionTreeInner({
     didInitialFit.current = true;
     const handle = setTimeout(() => {
       fitView({ padding: 0.18, maxZoom: 1, minZoom: 0.05, duration: 350 });
+      setInitialFitDone(true);
     }, 60);
     return () => clearTimeout(handle);
   }, [rfNodes, fitView]);
+
+  // When a mission is focused (search or click), zoom to it.
+  useEffect(() => {
+    if (!initialFitDone || pinnedId == null) return;
+    const id = String(pinnedId);
+    if (!nodes.some((n) => n.id === id)) return;
+    fitView({ nodes: [{ id }], padding: 0.25, maxZoom: 1.5, duration: 400 });
+  }, [initialFitDone, pinnedId, nodes, fitView]);
+
 
   const onNodeClick = useCallback<NodeMouseHandler>((_evt, node) => {
     const id = parseInt(node.id, 10);
