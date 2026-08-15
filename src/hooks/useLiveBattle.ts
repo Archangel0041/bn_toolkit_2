@@ -330,8 +330,8 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     
     if (isRandom) {
       affectedPositions = targets.map(u => ({ gridId: u.gridId, damagePercent: 100 }));
-    } else if (selectedAbility.isFixed && fixedAttackPositions.enemyGrid.length > 0) {
-      affectedPositions = fixedAttackPositions.enemyGrid;
+    } else if (selectedAbility.isFixed && (targetsAreOnEnemyGrid ? fixedAttackPositions.enemyGrid : fixedAttackPositions.friendlyGrid).length > 0) {
+      affectedPositions = targetsAreOnEnemyGrid ? fixedAttackPositions.enemyGrid : fixedAttackPositions.friendlyGrid;
     } else if (isSingleSelectionWithSplash) {
       // Single-selection with splash - calculate for ALL potential targets
       const allSplashPositions: { gridId: number; damagePercent: number }[] = [];
@@ -340,7 +340,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
           targetType: 2,
           data: [{ x: 0, y: 0, damagePercent: 100 }],
         };
-        const splashPositions = getAffectedGridPositions(target.gridId, syntheticTargetArea, true, selectedAbility.damageArea);
+        const splashPositions = getAffectedGridPositions(target.gridId, syntheticTargetArea, targetsAreOnEnemyGrid, selectedAbility.damageArea);
         for (const pos of splashPositions) {
           const existing = allSplashPositions.find(p => p.gridId === pos.gridId);
           if (existing) {
@@ -352,7 +352,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       }
       affectedPositions = allSplashPositions;
     } else if (!selectedAbility.isSingleTarget && selectedAbility.targetArea) {
-      affectedPositions = getAffectedGridPositions(enemyReticleGridId, selectedAbility.targetArea, true, selectedAbility.damageArea);
+      affectedPositions = getAffectedGridPositions(enemyReticleGridId, selectedAbility.targetArea, targetsAreOnEnemyGrid, selectedAbility.damageArea);
     } else {
       // Pure single target - calculate for all valid targets
       affectedPositions = targets.map(u => ({ gridId: u.gridId, damagePercent: 100 }));
@@ -580,7 +580,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
   // Get valid target positions (grid IDs) for player units - includes empty positions
   // This allows players to target empty grid positions within range/LoF
   const validTargetPositions = useMemo<Set<number>>(() => {
-    if (!battleState || !selectedUnit || !selectedAbility || selectedUnit.isEnemy) return new Set();
+    if (!battleState || !selectedUnit || !selectedAbility) return new Set();
     
     // For AOE abilities with reticle, use validReticlePositions instead
     if (!selectedAbility.isSingleTarget && !selectedAbility.isFixed) return new Set();
@@ -589,7 +589,7 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     const attackerCollapsedRows = selectedUnit.isEnemy ? battleState.enemyCollapsedRows : battleState.friendlyCollapsedRows;
     const targetCollapsedRows = selectedUnit.isEnemy ? battleState.friendlyCollapsedRows : battleState.enemyCollapsedRows;
     
-    const targetUnits = battleState.enemyUnits;
+    const targetUnits = selectedUnit.isEnemy ? battleState.friendlyUnits : battleState.enemyUnits;
     const blockingUnits = getBlockingUnits(
       targetUnits.filter(u => !u.isDead).map(u => ({ unit_id: u.unitId, grid_id: u.gridId })),
       true
