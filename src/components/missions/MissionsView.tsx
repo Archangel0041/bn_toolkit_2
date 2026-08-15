@@ -124,6 +124,101 @@ function MissionFind({
   );
 }
 
+function MissionPreviewCard({
+  mission,
+  isAdded,
+  onAdd,
+  onFocus,
+  onClose,
+}: {
+  mission: ParsedMission;
+  isAdded: boolean;
+  onAdd: () => void;
+  onFocus?: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useLanguage();
+  const loc = (s?: string) => {
+    if (!s) return "";
+    const v = t(s);
+    return v && v !== s ? v : s;
+  };
+  const prereqCount =
+    mission.prereqMissionIds.all.length + mission.prereqMissionIds.any.length;
+
+  return (
+    <div className="rounded-lg border p-3 space-y-2 max-w-3xl">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-semibold text-sm">{loc(mission.title)}</div>
+          <div className="text-[11px] text-muted-foreground">
+            Lv{mission.displayLevel} · #{mission.id}
+            {mission.giver ? ` · ${titleCase(mission.giver)}` : ""}
+            {prereqCount > 0 ? ` · ${prereqCount} prerequisite mission(s)` : ""}
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={onClose}
+          aria-label="Close mission preview"
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {mission.description && (
+        <p className="text-xs text-muted-foreground">{loc(mission.description)}</p>
+      )}
+
+      {mission.objectives.length > 0 && (
+        <div className="space-y-0.5">
+          <div className="text-[11px] font-medium">Objectives</div>
+          <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-0.5">
+            {mission.objectives.map((o, i) => (
+              <li key={i}>
+                {loc(o.title) || o.type || "Objective"}
+                {o.count ? ` ×${o.count}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(Object.keys(mission.rewards.resources).length > 0 ||
+        Object.keys(mission.rewards.units).length > 0) && (
+        <div className="space-y-0.5">
+          <div className="text-[11px] font-medium">Rewards</div>
+          <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+            {Object.entries(mission.rewards.resources).map(([k, v]) => (
+              <span key={k} className="rounded border bg-muted px-1.5 py-0.5">
+                {titleCase(k)} {v}
+              </span>
+            ))}
+            {Object.entries(mission.rewards.units).map(([k, v]) => (
+              <span key={k} className="rounded border bg-muted px-1.5 py-0.5">
+                Unit #{k} ×{v}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2 pt-1">
+        <Button size="sm" onClick={onAdd} disabled={isAdded}>
+          {isAdded ? "Already in my missions" : "Add to my current missions"}
+        </Button>
+        {onFocus && (
+          <Button size="sm" variant="outline" onClick={onFocus}>
+            Show in tree
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 /**
  * Number input that lets the user fully clear / retype the value without
@@ -194,6 +289,8 @@ export default function MissionsView() {
   const [error, setError] = useState<string | null>(null);
 
   const [focusMissionId, setFocusMissionId] = useState<number | null>(null);
+  const [previewMissionId, setPreviewMissionId] = useState<number | null>(null);
+
 
   const [currentLevel, setCurrentLevel] = useState(accountLevel);
 
@@ -389,14 +486,28 @@ export default function MissionsView() {
 
         <MissionFind
           missions={allParsed}
-          onSelect={(m) => {
-            setVisibleText((prev) => {
-              const ids = parseIdText(prev);
-              ids.add(m.id);
-              return idsToText([...ids]);
-            });
-          }}
+          onSelect={(m) => setPreviewMissionId(m.id)}
         />
+
+        {previewMissionId != null && (() => {
+          const pm = allParsed.find((m) => m.id === previewMissionId);
+          if (!pm) return null;
+          return (
+            <MissionPreviewCard
+              mission={pm}
+              isAdded={visibleIds.has(pm.id)}
+              onAdd={() =>
+                setVisibleText((prev) => {
+                  const ids = parseIdText(prev);
+                  ids.add(pm.id);
+                  return idsToText([...ids]);
+                })
+              }
+              onClose={() => setPreviewMissionId(null)}
+            />
+          );
+        })()}
+
 
         {error && (
 
@@ -493,9 +604,34 @@ export default function MissionsView() {
       </div>
 
       <MissionFind
-        missions={visibleMissions}
-        onSelect={(m) => setFocusMissionId(m.id)}
+        missions={allParsed}
+        onSelect={(m) => setPreviewMissionId(m.id)}
       />
+
+      {previewMissionId != null && (() => {
+        const pm = allParsed.find((m) => m.id === previewMissionId);
+        if (!pm) return null;
+        return (
+          <MissionPreviewCard
+            mission={pm}
+            isAdded={visibleIds.has(pm.id)}
+            onAdd={() =>
+              setVisibleText((prev) => {
+                const ids = parseIdText(prev);
+                ids.add(pm.id);
+                return idsToText([...ids]);
+              })
+            }
+            onFocus={
+              visibleMissions.some((m) => m.id === pm.id)
+                ? () => setFocusMissionId(pm.id)
+                : undefined
+            }
+            onClose={() => setPreviewMissionId(null)}
+          />
+        );
+      })()}
+
 
 
       <div className="rounded-lg border p-3 space-y-1.5">
