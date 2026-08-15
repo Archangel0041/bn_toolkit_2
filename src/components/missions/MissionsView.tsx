@@ -615,9 +615,6 @@ export default function MissionsView() {
                 })
               }
               onClose={() => setPreviewMissionId(null)}
-            characters={characters}
-            dialogues={dialogues}
-            unitsById={unitsById}
               characters={characters}
               dialogues={dialogues}
               unitsById={unitsById}
