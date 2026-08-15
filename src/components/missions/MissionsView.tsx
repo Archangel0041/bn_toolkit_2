@@ -21,6 +21,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useGameData } from "@/contexts/GameDataContext";
 import { getResourceIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
+import { Search, X } from "lucide-react";
+
 
 const VISIBLE_KEY = "missions:visible";
 const HIDE_ABOVE_KEY = "missions:hideAbove";
