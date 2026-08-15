@@ -270,10 +270,14 @@ export default function MissionsView() {
     } else {
       missions = r.remaining.filter((m) => m.displayLevel <= effectiveCap);
     }
+    return { visibleMissions: missions, availableNow: r.availableNow };
+  }, [allParsed, currentLevel, effectiveCap, effectiveCompletedIds, upcomingMode, upcomingMin, upcomingMax]);
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      missions = missions.filter((m) => {
+  const findMatches = useMemo(() => {
+    const q = findQuery.trim().toLowerCase();
+    if (!q) return [];
+    return visibleMissions
+      .filter((m) => {
         const localized = t(m.title);
         const title = localized && localized !== m.title ? localized : m.title;
         return (
@@ -281,10 +285,10 @@ export default function MissionsView() {
           (m.giver ?? "").toLowerCase().includes(q) ||
           String(m.id).includes(q)
         );
-      });
-    }
-    return { visibleMissions: missions, availableNow: r.availableNow };
-  }, [allParsed, currentLevel, effectiveCap, effectiveCompletedIds, search, t, upcomingMode, upcomingMin, upcomingMax]);
+      })
+      .slice(0, 10);
+  }, [findQuery, visibleMissions, t]);
+
 
   const rewardTotals = useMemo(() => {
     const resources: Record<string, number> = {};
