@@ -695,8 +695,10 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
         battleLog: [...prev.battleLog],
       };
 
-      // Find the attacker in cloned state
-      const clonedAttacker = clonedState.friendlyUnits.find(u => u.gridId === selectedUnit.gridId);
+      // Find the attacker in cloned state (either side, for dual-side control)
+      const attackerIsEnemy = selectedUnit.isEnemy;
+      const clonedAttacker = (attackerIsEnemy ? clonedState.enemyUnits : clonedState.friendlyUnits)
+        .find(u => u.gridId === selectedUnit.gridId);
       if (!clonedAttacker) return prev;
 
       // Get localized names
@@ -734,10 +736,15 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       // Add turn to log with summary
       const turn: BattleTurn = {
         turnNumber: clonedState.currentTurn,
-        isPlayerTurn: true,
+        isPlayerTurn: !attackerIsEnemy,
         actions,
         summary: calculateTurnSummary(actions),
       };
+
+      // Enemy attacks reduce enemy cooldowns after execution
+      if (attackerIsEnemy) {
+        reduceCooldowns(clonedState.enemyUnits);
+      }
 
       // Check battle end
       const endCheck = checkBattleEnd(clonedState);
@@ -754,8 +761,9 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
         battleLog: [...clonedState.battleLog, turn],
         isBattleOver: endCheck.isOver,
         isPlayerVictory: endCheck.playerWon,
-        isPlayerTurn: !endCheck.isOver ? false : clonedState.isPlayerTurn,
-        currentEnemyIndex: 0, // Reset enemy index when transitioning to enemy turn
+        currentTurn: attackerIsEnemy ? clonedState.currentTurn + 1 : clonedState.currentTurn,
+        isPlayerTurn: endCheck.isOver ? clonedState.isPlayerTurn : attackerIsEnemy,
+        currentEnemyIndex: 0, // Reset enemy index when transitioning turns
       };
     });
 
