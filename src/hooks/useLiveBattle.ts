@@ -28,6 +28,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import type { PartyUnit, AbilityInfo, DamagePreview, DamageResult, StatusEffectPreview, TargetArea } from "@/types/battleSimulator";
 import type { EncounterUnit, Encounter } from "@/types/encounters";
 import type { LiveBattleState, LiveBattleUnit, BattleAction, BattleTurn, TurnSummary } from "@/types/liveBattle";
+import {
+  startBattleAnalytics,
+  recordAnalyticsTurns,
+  closeBattleAnalytics,
+  clearActiveBattleAnalytics,
+} from "@/lib/battleAnalytics";
 
 interface UseLiveBattleOptions {
   encounter?: Encounter | null;
