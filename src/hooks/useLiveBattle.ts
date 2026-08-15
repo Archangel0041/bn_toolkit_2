@@ -54,6 +54,8 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
   // Manual control of the enemy side (player drives both sides of the board)
   const [manualEnemyControl, setManualEnemyControl] = useState(false);
   const [enemyTurnStartProcessed, setEnemyTurnStartProcessed] = useState(false);
+  // Track whether analytics have been started for the current battle
+  const analyticsStartedRef = useRef(false);
   
   // Get environmental damage mods
   const environmentalDamageMods = useMemo(() => {
