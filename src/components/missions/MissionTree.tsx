@@ -51,6 +51,7 @@ interface MissionTreeProps {
   edges: MissionEdge[];
   availableNow?: Set<number>;
   highlightId?: number;
+  focusId?: number;
   characters?: Record<string, { small_icon?: string; regular_icon?: string }>;
   unitsById?: Map<number, UnitInfo>;
   npcs?: Record<string, NpcInfo>;
@@ -60,6 +61,7 @@ interface MissionTreeProps {
   compositions?: Record<string, any[]>;
   projectBuildingIndex?: ProjectBuildingIndex;
 }
+
 
 const EDGE_DASH: Record<MissionPrereqEdgeType, string | undefined> = {
   "complete-all": undefined,
