@@ -508,82 +508,11 @@ export default function MissionsView() {
         </Button>
       </div>
 
-      <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
-        <div className="flex flex-col gap-1 relative">
-          <Label htmlFor="mission-find" className="text-xs">Find mission</Label>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              id="mission-find"
-              className="pl-9 pr-8"
-              placeholder="Title, giver, or ID…"
-              value={findQuery}
-              onChange={(e) => setFindQuery(e.target.value)}
-            />
-            {findQuery && (
-              <button
-                type="button"
-                onClick={() => { setFindQuery(""); setFocusMissionId(null); }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Clear"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          {findQuery.trim() && (
-            <div className="absolute z-20 mt-1 top-full left-0 right-0 max-h-60 overflow-auto rounded-md border bg-popover shadow-md">
-              {findMatches.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-muted-foreground">No missions match.</div>
-              ) : (
-                findMatches.map((m) => {
-                  const localized = t(m.title);
-                  const title = localized && localized !== m.title ? localized : m.title;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => { setFocusMissionId(m.id); setFindQuery(""); }}
-                      className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground text-xs"
-                    >
-                      <div className="font-medium">{title}</div>
-                      <div className="text-[10px] text-muted-foreground">
-                        Lv{m.displayLevel} · #{m.id} · {m.giver ? titleCase(m.giver) : "—"}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          )}
-        </div>
+      <MissionFind
+        missions={visibleMissions}
+        onSelect={(m) => setFocusMissionId(m.id)}
+      />
 
-
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="current-level" className="text-xs">Current level</Label>
-          <LevelInput
-            id="current-level"
-            className="w-24"
-            value={currentLevel}
-            onChange={setCurrentLevel}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="level-cap" className="text-xs">Level cap</Label>
-          <LevelInput
-            id="level-cap"
-            className="w-24"
-            value={levelCap}
-            onChange={setLevelCap}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Switch id="hide-above" checked={hideAbove} onCheckedChange={setHideAbove} />
-          <Label htmlFor="hide-above" className="text-xs">Cap at current level</Label>
-        </div>
-      </div>
 
       <div className="rounded-lg border p-3 space-y-1.5">
         <Label className="text-xs">My current missions (search by name)</Label>
