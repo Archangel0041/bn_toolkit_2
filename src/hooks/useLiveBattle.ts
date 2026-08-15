@@ -28,15 +28,22 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import type { PartyUnit, AbilityInfo, DamagePreview, DamageResult, StatusEffectPreview, TargetArea } from "@/types/battleSimulator";
 import type { EncounterUnit, Encounter } from "@/types/encounters";
 import type { LiveBattleState, LiveBattleUnit, BattleAction, BattleTurn, TurnSummary } from "@/types/liveBattle";
+import {
+  startBattleAnalytics,
+  recordAnalyticsTurns,
+  closeBattleAnalytics,
+  clearActiveBattleAnalytics,
+} from "@/lib/battleAnalytics";
 
 interface UseLiveBattleOptions {
   encounter?: Encounter | null;
+  encounterId?: string;
   waves: EncounterUnit[][];
   friendlyParty: PartyUnit[];
   startingWave?: number;
 }
 
-export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 0 }: UseLiveBattleOptions) {
+export function useLiveBattle({ encounter, encounterId, waves, friendlyParty, startingWave = 0 }: UseLiveBattleOptions) {
   const { t } = useLanguage();
   const [battleState, setBattleState] = useState<LiveBattleState | null>(null);
   const [selectedUnitGridId, setSelectedUnitGridId] = useState<number | null>(null);
@@ -48,6 +55,8 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
   // Manual control of the enemy side (player drives both sides of the board)
   const [manualEnemyControl, setManualEnemyControl] = useState(false);
   const [enemyTurnStartProcessed, setEnemyTurnStartProcessed] = useState(false);
+  // Track whether analytics have been started for the current battle
+  const analyticsStartedRef = useRef(false);
   
   // Get environmental damage mods
   const environmentalDamageMods = useMemo(() => {
@@ -72,7 +81,17 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     setIsProcessing(false);
     // First turn is already ready - no DOT to process yet
     setPlayerTurnStartProcessed(true);
-  }, [friendlyParty, waves, startingWave, encounter?.environmental_status_effect]);
+
+    // Start analytics session for this battle
+    analyticsStartedRef.current = true;
+    clearActiveBattleAnalytics();
+    startBattleAnalytics({
+      encounter,
+      encounterId,
+      friendlyParty,
+      enemyUnits: state.enemyUnits,
+    });
+  }, [friendlyParty, waves, startingWave, encounter, encounterId]);
 
   // Execute player turn start phase: DoT -> deaths -> collapse -> cooldowns
   // Called automatically when player turn begins (after enemy turn ends)
@@ -163,6 +182,29 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
       setPlayerTurnStartProcessed(false);
     }
   }, [battleState?.isPlayerTurn]);
+
+  // Record battle analytics turns as they are added to the log, and close the session when the battle ends
+  useEffect(() => {
+    if (!battleState || !analyticsStartedRef.current) return;
+
+    recordAnalyticsTurns(battleState);
+
+    if (battleState.isBattleOver) {
+      closeBattleAnalytics(battleState);
+      analyticsStartedRef.current = false;
+    }
+  }, [battleState?.battleLog.length, battleState?.isBattleOver]);
+
+  // Close analytics session if the component unmounts while a battle is in progress
+  useEffect(() => {
+    return () => {
+      if (analyticsStartedRef.current) {
+        // We don't have access to the latest state here, so just clear the ref.
+        // The session will remain open as "abandoned" until we add explicit handling.
+        clearActiveBattleAnalytics();
+      }
+    };
+  }, []);
 
   // Get currently selected unit - use both gridId AND isEnemy to find the right unit
   const selectedUnit = useMemo(() => {
