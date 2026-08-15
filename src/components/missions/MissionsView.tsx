@@ -46,6 +46,85 @@ const titleCase = (s: string) =>
   s.replace(/[_-]+/g, " ").trim().split(/\s+/)
     .map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)).join(" ");
 
+function MissionFind({
+  missions,
+  onSelect,
+}: {
+  missions: ParsedMission[];
+  onSelect: (m: ParsedMission) => void;
+}) {
+  const { t } = useLanguage();
+  const [query, setQuery] = useState("");
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return missions
+      .filter((m) => {
+        const localized = t(m.title);
+        const title = localized && localized !== m.title ? localized : m.title;
+        return (
+          title.toLowerCase().includes(q) ||
+          (m.giver ?? "").toLowerCase().includes(q) ||
+          String(m.id).includes(q)
+        );
+      })
+      .slice(0, 10);
+  }, [query, missions, t]);
+
+  return (
+    <div className="flex flex-col gap-1 relative">
+      <Label htmlFor="mission-find" className="text-xs">Find mission</Label>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          id="mission-find"
+          className="pl-9 pr-8"
+          placeholder="Title, giver, or ID…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Clear"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {query.trim() && (
+        <div className="absolute z-20 mt-1 top-full left-0 right-0 max-h-60 overflow-auto rounded-md border bg-popover shadow-md">
+          {matches.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-muted-foreground">No missions match.</div>
+          ) : (
+            matches.map((m) => {
+              const localized = t(m.title);
+              const title = localized && localized !== m.title ? localized : m.title;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => { onSelect(m); setQuery(""); }}
+                  className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground text-xs"
+                >
+                  <div className="font-medium">{title}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Lv{m.displayLevel} · #{m.id} · {m.giver ? titleCase(m.giver) : "—"}
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 /**
  * Number input that lets the user fully clear / retype the value without
  * snapping to a fallback (like 1) on every keystroke. The committed number
