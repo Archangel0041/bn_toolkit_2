@@ -133,6 +133,7 @@ const LiveBattleSimulator = () => {
     restoreBattleState,
   } = useLiveBattle({
     encounter,
+    encounterId,
     waves,
     friendlyParty: tempFormation.units,
   });
