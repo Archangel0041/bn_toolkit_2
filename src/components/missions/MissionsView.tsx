@@ -352,24 +352,8 @@ export default function MissionsView() {
     return { visibleMissions: missions, availableNow: r.availableNow };
   }, [allParsed, currentLevel, effectiveCap, effectiveCompletedIds, upcomingMode, upcomingMin, upcomingMax]);
 
-  const findMatches = useMemo(() => {
-    const q = findQuery.trim().toLowerCase();
-    if (!q) return [];
-    return visibleMissions
-      .filter((m) => {
-        const localized = t(m.title);
-        const title = localized && localized !== m.title ? localized : m.title;
-        return (
-          title.toLowerCase().includes(q) ||
-          (m.giver ?? "").toLowerCase().includes(q) ||
-          String(m.id).includes(q)
-        );
-      })
-      .slice(0, 10);
-  }, [findQuery, visibleMissions, t]);
-
-
   const rewardTotals = useMemo(() => {
+
     const resources: Record<string, number> = {};
     const units: Record<string, number> = {};
     for (const m of visibleMissions) {
