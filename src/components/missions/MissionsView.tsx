@@ -114,8 +114,10 @@ export default function MissionsView() {
   const [compositions, setCompositions] = useState<Record<string, any[]>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const [search, setSearch] = useState("");
+  const [findQuery, setFindQuery] = useState("");
+  const [focusMissionId, setFocusMissionId] = useState<number | null>(null);
   const [currentLevel, setCurrentLevel] = useState(accountLevel);
+
   const [visibleText, setVisibleText] = useState<string>(
     () => localStorage.getItem(VISIBLE_KEY) ?? ""
   );
