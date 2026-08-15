@@ -7,7 +7,7 @@ import {
   filterRemaining,
   type ParsedMission,
 } from "@/lib/missions";
-import { MissionTree } from "@/components/missions/MissionTree";
+import { MissionTree, DialogSection } from "@/components/missions/MissionTree";
 import { MissionPlanner } from "@/components/missions/MissionPlanner";
 
 import { MISSION_CATEGORY_ORDER, MISSION_CATEGORY_META } from "@/lib/missions";
@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useGameData } from "@/contexts/GameDataContext";
-import { getResourceIconUrl } from "@/lib/resourceImages";
+import { getResourceIconUrl, getNpcIconUrl } from "@/lib/resourceImages";
 import { getUnitImageUrl } from "@/lib/unitImages";
 import { Search, X } from "lucide-react";
 
@@ -615,6 +615,12 @@ export default function MissionsView() {
                 })
               }
               onClose={() => setPreviewMissionId(null)}
+            characters={characters}
+            dialogues={dialogues}
+            unitsById={unitsById}
+              characters={characters}
+              dialogues={dialogues}
+              unitsById={unitsById}
             />
           );
         })()}
@@ -739,6 +745,9 @@ export default function MissionsView() {
                 : undefined
             }
             onClose={() => setPreviewMissionId(null)}
+            characters={characters}
+            dialogues={dialogues}
+            unitsById={unitsById}
           />
         );
       })()}
