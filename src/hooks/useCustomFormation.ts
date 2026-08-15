@@ -8,6 +8,7 @@ import { useState, useCallback } from "react";
 import { getUnitById } from "@/lib/units";
 import { ALL_GRID_POSITIONS } from "@/types/encounters";
 import type { EncounterUnit } from "@/types/encounters";
+import type { PartyUnit } from "@/types/battleSimulator";
 
 export interface CustomFormationUnit extends EncounterUnit {
   rank?: number;
@@ -21,6 +22,8 @@ export interface CustomFormation {
   name: string;
   waves: CustomWave[];
   level?: number;
+  /** Player-side formation (both sides of the battle are editable) */
+  playerUnits?: PartyUnit[];
 }
 
 export function useCustomFormation(initialFormation?: CustomFormation) {
@@ -29,6 +32,7 @@ export function useCustomFormation(initialFormation?: CustomFormation) {
       name: "Custom Formation",
       waves: [{ units: [] }],
       level: 1,
+      playerUnits: [],
     }
   );
   const [currentWave, setCurrentWave] = useState(0);
@@ -181,9 +185,65 @@ export function useCustomFormation(initialFormation?: CustomFormation) {
       name: "Custom Formation",
       waves: [{ units: [] }],
       level: 1,
+      playerUnits: [],
     });
     setCurrentWave(0);
   }, []);
+
+  // ===== Player side =====
+  const playerUnits = formation.playerUnits ?? [];
+
+  const setPlayerUnits = useCallback((updater: (prev: PartyUnit[]) => PartyUnit[]) => {
+    setFormation(prev => ({ ...prev, playerUnits: updater(prev.playerUnits ?? []) }));
+  }, []);
+
+  const addPlayerUnit = useCallback((unitId: number, gridId?: number): { success: boolean; error?: string } => {
+    const unit = getUnitById(unitId);
+    if (!unit) return { success: false, error: "Unit not found" };
+
+    const current = formation.playerUnits ?? [];
+    const occupied = new Set(current.map(u => u.gridId));
+
+    let targetGridId = gridId;
+    if (targetGridId === undefined || occupied.has(targetGridId)) {
+      const available = ALL_GRID_POSITIONS.find(pos => !occupied.has(pos));
+      if (available === undefined) return { success: false, error: "Grid is full" };
+      targetGridId = available;
+    }
+
+    const maxRank = unit.statsConfig?.stats?.length || 1;
+    setPlayerUnits(prev => [...prev, { unitId, gridId: targetGridId!, rank: maxRank }]);
+    return { success: true };
+  }, [formation.playerUnits, setPlayerUnits]);
+
+  const removePlayerUnit = useCallback((gridId: number) => {
+    setPlayerUnits(prev => prev.filter(u => u.gridId !== gridId));
+  }, [setPlayerUnits]);
+
+  const setPlayerUnitRank = useCallback((gridId: number, rank: number) => {
+    setPlayerUnits(prev => prev.map(u => (u.gridId === gridId ? { ...u, rank } : u)));
+  }, [setPlayerUnits]);
+
+  const movePlayerUnit = useCallback((fromGridId: number, toGridId: number) => {
+    setPlayerUnits(prev => {
+      const fromUnit = prev.find(u => u.gridId === fromGridId);
+      if (!fromUnit) return prev;
+      const toUnit = prev.find(u => u.gridId === toGridId);
+      return prev.map(u => {
+        if (u.gridId === fromGridId) return { ...u, gridId: toGridId };
+        if (toUnit && u.gridId === toGridId) return { ...u, gridId: fromGridId };
+        return u;
+      });
+    });
+  }, [setPlayerUnits]);
+
+  const clearPlayerUnits = useCallback(() => {
+    setPlayerUnits(() => []);
+  }, [setPlayerUnits]);
+
+  const loadPlayerUnits = useCallback((units: PartyUnit[]) => {
+    setPlayerUnits(() => [...units]);
+  }, [setPlayerUnits]);
 
   // Convert to encounter format for simulation
   const toEncounterUnits = useCallback((): EncounterUnit[] => {
@@ -213,5 +273,13 @@ export function useCustomFormation(initialFormation?: CustomFormation) {
     loadFormation,
     clearFormation,
     toEncounterUnits,
+    // Player side
+    playerUnits,
+    addPlayerUnit,
+    removePlayerUnit,
+    setPlayerUnitRank,
+    movePlayerUnit,
+    clearPlayerUnits,
+    loadPlayerUnits,
   };
 }
