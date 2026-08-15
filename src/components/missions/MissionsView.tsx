@@ -486,14 +486,28 @@ export default function MissionsView() {
 
         <MissionFind
           missions={allParsed}
-          onSelect={(m) => {
-            setVisibleText((prev) => {
-              const ids = parseIdText(prev);
-              ids.add(m.id);
-              return idsToText([...ids]);
-            });
-          }}
+          onSelect={(m) => setPreviewMissionId(m.id)}
         />
+
+        {previewMissionId != null && (() => {
+          const pm = allParsed.find((m) => m.id === previewMissionId);
+          if (!pm) return null;
+          return (
+            <MissionPreviewCard
+              mission={pm}
+              isAdded={visibleIds.has(pm.id)}
+              onAdd={() =>
+                setVisibleText((prev) => {
+                  const ids = parseIdText(prev);
+                  ids.add(pm.id);
+                  return idsToText([...ids]);
+                })
+              }
+              onClose={() => setPreviewMissionId(null)}
+            />
+          );
+        })()}
+
 
         {error && (
 
