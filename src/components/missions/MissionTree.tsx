@@ -576,6 +576,7 @@ function MissionTreeInner({
   edges,
   availableNow,
   highlightId,
+  focusId,
   characters,
   unitsById,
   npcs,
@@ -590,6 +591,12 @@ function MissionTreeInner({
   const { user, hasAccess } = useAuth();
   const canSeeProtected = isLovableEnvironment() || (!!user && hasAccess);
   const [pinnedId, setPinnedId] = useState<number | null>(null);
+
+  // Focus a mission from the parent search.
+  useEffect(() => {
+    if (focusId != null) setPinnedId(focusId);
+  }, [focusId]);
+
 
   const byId = useMemo(() => new Map(missions.map((m) => [m.id, m])), [missions]);
 
