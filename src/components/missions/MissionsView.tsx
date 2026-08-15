@@ -289,6 +289,8 @@ export default function MissionsView() {
   const [error, setError] = useState<string | null>(null);
 
   const [focusMissionId, setFocusMissionId] = useState<number | null>(null);
+  const [previewMissionId, setPreviewMissionId] = useState<number | null>(null);
+
 
   const [currentLevel, setCurrentLevel] = useState(accountLevel);
 
