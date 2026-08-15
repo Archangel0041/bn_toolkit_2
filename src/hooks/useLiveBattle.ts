@@ -183,6 +183,29 @@ export function useLiveBattle({ encounter, encounterId, waves, friendlyParty, st
     }
   }, [battleState?.isPlayerTurn]);
 
+  // Record battle analytics turns as they are added to the log, and close the session when the battle ends
+  useEffect(() => {
+    if (!battleState || !analyticsStartedRef.current) return;
+
+    recordAnalyticsTurns(battleState);
+
+    if (battleState.isBattleOver) {
+      closeBattleAnalytics(battleState);
+      analyticsStartedRef.current = false;
+    }
+  }, [battleState?.battleLog.length, battleState?.isBattleOver]);
+
+  // Close analytics session if the component unmounts while a battle is in progress
+  useEffect(() => {
+    return () => {
+      if (analyticsStartedRef.current) {
+        // We don't have access to the latest state here, so just clear the ref.
+        // The session will remain open as "abandoned" until we add explicit handling.
+        clearActiveBattleAnalytics();
+      }
+    };
+  }, []);
+
   // Get currently selected unit - use both gridId AND isEnemy to find the right unit
   const selectedUnit = useMemo(() => {
     if (!battleState || selectedUnitGridId === null) return null;
