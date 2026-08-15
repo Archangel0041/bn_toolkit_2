@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Play, SkipForward, RotateCcw, Swords, Trophy, Skull, Save, FolderOpen, Trash2 } from "lucide-react";
+import { ArrowLeft, Play, SkipForward, RotateCcw, Swords, Trophy, Skull, Save, FolderOpen, Trash2, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,8 @@ import { UnitSelector } from "@/components/battle/UnitSelector";
 import { PartyManager } from "@/components/battle/PartyManager";
 import { UnitInfoPanel } from "@/components/battle/UnitInfoPanel";
 import type { PartyUnit } from "@/types/battleSimulator";
+import type { Encounter } from "@/types/encounters";
+import type { CustomFormation } from "@/hooks/useCustomFormation";
 import { useParties } from "@/hooks/useParties";
 import { useTempFormation } from "@/hooks/useTempFormation";
 import { useLiveBattle } from "@/hooks/useLiveBattle";
@@ -58,8 +60,27 @@ const LiveBattleSimulator = () => {
   const location = useLocation();
   const { t } = useLanguage();
 
-  const encounter = encounterId ? getEncounterById(parseInt(encounterId)) : null;
-  const waves = encounter ? getEncounterWaves(encounter) : [];
+  // Custom formations (built on the Custom Formation page) are passed via router state
+  const customFormation = (location.state as any)?.customFormation as CustomFormation | undefined;
+
+  const encounter = useMemo<Encounter | null>(() => {
+    if (customFormation) {
+      return {
+        name: customFormation.name,
+        level: customFormation.level,
+        units: customFormation.waves.flatMap((wave, waveIdx) =>
+          wave.units.map(u => ({
+            unit_id: u.unit_id,
+            grid_id: u.grid_id,
+            wave_number: waveIdx,
+          })),
+        ),
+      } as Encounter;
+    }
+    return encounterId && encounterId !== "custom" ? getEncounterById(parseInt(encounterId)) : null;
+  }, [customFormation, encounterId]);
+
+  const waves = useMemo(() => (encounter ? getEncounterWaves(encounter) : []), [encounter]);
 
   const {
     parties,
@@ -231,6 +252,33 @@ const LiveBattleSimulator = () => {
     restoreBattleState(deserializeBattleState(snapshot.state));
     setIsSnapshotsOpen(false);
     toast.success(`Restored: ${snapshot.name}`);
+  };
+
+  const handleExportSnapshot = (snapshot: BattleSnapshot) => {
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${snapshot.name.replace(/[^a-z0-9]+/gi, "_")}.battle.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportSnapshotFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string) as BattleSnapshot;
+        if (!data?.state) throw new Error("Invalid file");
+        handleRestore(data);
+      } catch {
+        toast.error("Invalid battle state file");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   const handleDeleteSnapshot = (id: string) => {
@@ -860,6 +908,9 @@ const LiveBattleSimulator = () => {
                       </p>
                     </div>
                     <Button size="sm" onClick={() => handleRestore(snapshot)}>Restore</Button>
+                    <Button size="icon" variant="ghost" onClick={() => handleExportSnapshot(snapshot)} title="Export as JSON">
+                      <Download className="h-4 w-4" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -871,6 +922,15 @@ const LiveBattleSimulator = () => {
                   </div>
                 ))
               )}
+            </div>
+            <div className="pt-2 border-t">
+              <Button variant="outline" size="sm" className="w-full" asChild>
+                <label className="cursor-pointer">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import battle state (.json)
+                  <input type="file" accept=".json" className="hidden" onChange={handleImportSnapshotFile} />
+                </label>
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

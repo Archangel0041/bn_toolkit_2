@@ -7,6 +7,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getAllUnits, getUnitById } from "@/lib/units";
 import { UnitImage } from "@/components/units/UnitImage";
 import { EncounterGrid } from "@/components/encounters/EncounterGrid";
+import { BattleGrid } from "@/components/battle/BattleGrid";
+import { UnitSelector } from "@/components/battle/UnitSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,6 +77,12 @@ function CustomFormationContent() {
     setFormationLevel,
     clearFormation,
     loadFormation,
+    playerUnits,
+    addPlayerUnit,
+    removePlayerUnit,
+    setPlayerUnitRank,
+    movePlayerUnit,
+    clearPlayerUnits,
   } = useCustomFormation();
 
   // Get all hostile units for selection
@@ -116,14 +124,20 @@ function CustomFormationContent() {
 
   const handleStartSimulation = () => {
     if (formation.waves.every(w => w.units.length === 0)) {
-      toast.error("Add at least one unit to the formation");
+      toast.error("Add at least one enemy unit to the formation");
       return;
     }
-    
-    // Navigate to battle simulator with custom formation
-    navigate("/battle/custom", {
+    if (playerUnits.length === 0) {
+      toast.error("Add at least one unit to your side");
+      return;
+    }
+
+    // Navigate to the live simulator with both sides of the custom formation
+    navigate("/live-battle/custom", {
       state: {
         customFormation: formation,
+        formation: playerUnits,
+        from: "/custom-formation",
       },
     });
   };
@@ -159,8 +173,12 @@ function CustomFormationContent() {
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.waves && Array.isArray(data.waves)) {
-          // Use the imported formation
-          // We'd need to add a loadFormation method
+          loadFormation({
+            name: data.name || "Imported Formation",
+            level: data.level || 1,
+            waves: data.waves,
+            playerUnits: Array.isArray(data.playerUnits) ? data.playerUnits : [],
+          });
           toast.success("Formation imported");
         } else {
           throw new Error("Invalid format");
@@ -464,12 +482,45 @@ function CustomFormationContent() {
                 </TabsList>
                 
                 <TabsContent value="grid">
-                  <div className="flex justify-center">
-                    <EncounterGrid units={gridUnits} />
+                  <div className="space-y-4">
+                    <div className="text-sm text-muted-foreground">
+                      Enemy side — Wave {currentWave + 1} ({currentWaveUnits.length} units)
+                    </div>
+                    <div className="flex justify-center">
+                      <EncounterGrid units={gridUnits} />
+                    </div>
+
+                    <div className="border-t pt-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm text-muted-foreground">
+                          Your side ({playerUnits.length} units)
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearPlayerUnits}
+                          disabled={playerUnits.length === 0}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                      <BattleGrid
+                        isEnemy={false}
+                        units={playerUnits}
+                        selectedUnit={null}
+                        onUnitClick={() => {}}
+                        damagePreviews={[]}
+                        onMoveUnit={movePlayerUnit}
+                        onRemoveUnit={removePlayerUnit}
+                      />
+                      <UnitSelector
+                        partyUnits={playerUnits}
+                        onAddUnit={(unit) => addPlayerUnit(unit.unitId, unit.gridId)}
+                        onRemoveUnit={removePlayerUnit}
+                        onUpdateRank={setPlayerUnitRank}
+                      />
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground text-center mt-4">
-                    Click units in the list to remove them
-                  </p>
                 </TabsContent>
                 
                 <TabsContent value="all-waves">
