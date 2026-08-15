@@ -284,10 +284,12 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
 
   // Calculate damage previews for live battle (uses current HP/armor)
   const damagePreviews = useMemo<DamagePreview[]>(() => {
-    if (!battleState || !selectedUnit || !selectedAbility || selectedUnit.isEnemy) return [];
+    if (!battleState || !selectedUnit || !selectedAbility) return [];
     
     const totalShots = selectedAbility.shotsPerAttack * selectedAbility.attacksPerUse;
-    const targets = battleState.enemyUnits;
+    // Targets live on the opposite side of the attacker (works for both sides)
+    const targetsAreOnEnemyGrid = !selectedUnit.isEnemy;
+    const targets = selectedUnit.isEnemy ? battleState.friendlyUnits : battleState.enemyUnits;
     
     const blockingUnits = getBlockingUnits(
       targets.filter(u => !u.isDead).map(u => ({ unit_id: u.unitId, grid_id: u.gridId })),
