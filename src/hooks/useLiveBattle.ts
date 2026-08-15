@@ -45,6 +45,9 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
   const [isProcessing, setIsProcessing] = useState(false);
   // Track if the current player turn has had its start-of-turn processing done
   const [playerTurnStartProcessed, setPlayerTurnStartProcessed] = useState(false);
+  // Manual control of the enemy side (player drives both sides of the board)
+  const [manualEnemyControl, setManualEnemyControl] = useState(false);
+  const [enemyTurnStartProcessed, setEnemyTurnStartProcessed] = useState(false);
   
   // Get environmental damage mods
   const environmentalDamageMods = useMemo(() => {
@@ -146,6 +149,13 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     setPlayerTurnStartProcessed(true);
     setIsProcessing(false);
   }, [battleState, isProcessing, playerTurnStartProcessed, environmentalDamageMods, encounter?.environmental_status_effect]);
+
+  // Reset enemy turn-start flag when control returns to the player
+  useEffect(() => {
+    if (battleState?.isPlayerTurn) {
+      setEnemyTurnStartProcessed(false);
+    }
+  }, [battleState?.isPlayerTurn]);
 
   // Reset playerTurnStartProcessed when turn changes to enemy
   useEffect(() => {
@@ -1081,6 +1091,111 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     });
   }, [battleState, isProcessing]);
 
+  // ===== Manual enemy control (control both sides of the board) =====
+
+  // Start-of-turn processing for the enemy side when the player drives it manually
+  const executeEnemyTurnStart = useCallback(() => {
+    if (!battleState || battleState.isPlayerTurn || battleState.isBattleOver || isProcessing) return;
+    if (enemyTurnStartProcessed) return;
+
+    setBattleState(prev => {
+      if (!prev) return prev;
+      const cloneUnits = (units: LiveBattleUnit[]) => units.map(u => ({
+        ...u,
+        abilityCooldowns: { ...u.abilityCooldowns },
+        weaponGlobalCooldown: { ...u.weaponGlobalCooldown },
+        weaponAmmo: { ...u.weaponAmmo },
+        weaponReloadCooldown: { ...u.weaponReloadCooldown },
+        activeStatusEffects: u.activeStatusEffects.map(e => ({ ...e })),
+        abilityChargeProgress: { ...u.abilityChargeProgress },
+      }));
+
+      const newState: LiveBattleState = {
+        ...prev,
+        friendlyUnits: cloneUnits(prev.friendlyUnits),
+        enemyUnits: cloneUnits(prev.enemyUnits),
+        friendlyCollapsedRows: new Set(prev.friendlyCollapsedRows),
+        enemyCollapsedRows: new Set(prev.enemyCollapsedRows),
+        battleLog: [...prev.battleLog],
+      };
+
+      const actions: BattleAction[] = [];
+      actions.push(...processStatusEffects(newState.enemyUnits, environmentalDamageMods, encounter?.environmental_status_effect));
+
+      newState.friendlyCollapsedRows = collapseGrid(newState.friendlyUnits, newState.friendlyCollapsedRows);
+      newState.enemyCollapsedRows = collapseGrid(newState.enemyUnits, newState.enemyCollapsedRows);
+
+      const endCheck = checkBattleEnd(newState);
+
+      if (actions.length > 0) {
+        newState.battleLog = [...newState.battleLog, {
+          turnNumber: newState.currentTurn,
+          isPlayerTurn: false,
+          actions,
+          summary: calculateTurnSummary(actions),
+        }];
+      }
+
+      return { ...newState, isBattleOver: endCheck.isOver, isPlayerVictory: endCheck.playerWon };
+    });
+
+    setEnemyTurnStartProcessed(true);
+  }, [battleState, isProcessing, enemyTurnStartProcessed, environmentalDamageMods, encounter?.environmental_status_effect]);
+
+  // Skip the enemy turn while under manual control
+  const skipEnemyTurn = useCallback(() => {
+    if (!battleState || battleState.isPlayerTurn || battleState.isBattleOver || isProcessing) return;
+
+    setBattleState(prev => {
+      if (!prev) return prev;
+      const cloneUnits = (units: LiveBattleUnit[]) => units.map(u => ({
+        ...u,
+        abilityCooldowns: { ...u.abilityCooldowns },
+        weaponGlobalCooldown: { ...u.weaponGlobalCooldown },
+        weaponAmmo: { ...u.weaponAmmo },
+        weaponReloadCooldown: { ...u.weaponReloadCooldown },
+        activeStatusEffects: u.activeStatusEffects.map(e => ({ ...e })),
+        abilityChargeProgress: { ...u.abilityChargeProgress },
+      }));
+
+      const newState: LiveBattleState = {
+        ...prev,
+        friendlyUnits: cloneUnits(prev.friendlyUnits),
+        enemyUnits: cloneUnits(prev.enemyUnits),
+        friendlyCollapsedRows: new Set(prev.friendlyCollapsedRows),
+        enemyCollapsedRows: new Set(prev.enemyCollapsedRows),
+      };
+
+      reduceCooldowns(newState.enemyUnits);
+
+      return {
+        ...newState,
+        battleLog: [...prev.battleLog, {
+          turnNumber: prev.currentTurn,
+          isPlayerTurn: false,
+          actions: [{ type: "skip" as const, message: "Enemy turn skipped" }],
+        }],
+        currentTurn: prev.currentTurn + 1,
+        isPlayerTurn: true,
+        currentEnemyIndex: 0,
+      };
+    });
+
+    setSelectedUnitGridId(null);
+    setSelectedAbilityId(null);
+  }, [battleState, isProcessing]);
+
+  // Restore a previously saved battle state
+  const restoreBattleState = useCallback((state: LiveBattleState) => {
+    setBattleState(state);
+    setSelectedUnitGridId(null);
+    setSelectedUnitIsEnemy(false);
+    setSelectedAbilityId(null);
+    setIsProcessing(false);
+    setPlayerTurnStartProcessed(true);
+    setEnemyTurnStartProcessed(true);
+  }, []);
+
   return {
     battleState,
     selectedUnit,
@@ -1110,5 +1225,12 @@ export function useLiveBattle({ encounter, waves, friendlyParty, startingWave = 
     fixedAttackPositions,
     validReticlePositions,
     isRandomAttack: selectedAbility?.targetArea?.random === true,
+    // Dual-side control + save/restore
+    manualEnemyControl,
+    setManualEnemyControl,
+    executeEnemyTurnStart,
+    enemyTurnStartProcessed,
+    skipEnemyTurn,
+    restoreBattleState,
   };
 }
