@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Play, SkipForward, RotateCcw, Swords, Trophy, Skull } from "lucide-react";
+import { ArrowLeft, Play, SkipForward, RotateCcw, Swords, Trophy, Skull, Save, FolderOpen, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,22 @@ import { getEncounterById, getEncounterWaves } from "@/lib/encounters";
 import { getUnitById } from "@/lib/units";
 import { UnitImage } from "@/components/units/UnitImage";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  getBattleSnapshots,
+  saveBattleSnapshot,
+  deleteBattleSnapshot,
+  deserializeBattleState,
+  type BattleSnapshot,
+} from "@/lib/battleSnapshots";
 import { toast } from "sonner";
 
 // Kill feed entry
@@ -88,6 +104,12 @@ const LiveBattleSimulator = () => {
     fixedAttackPositions,
     validReticlePositions,
     isRandomAttack,
+    manualEnemyControl,
+    setManualEnemyControl,
+    executeEnemyTurnStart,
+    enemyTurnStartProcessed,
+    skipEnemyTurn,
+    restoreBattleState,
   } = useLiveBattle({
     encounter,
     waves,
@@ -125,6 +147,15 @@ const LiveBattleSimulator = () => {
   useEffect(() => {
     console.log('[LiveBattle useEffect] isPlayerTurn:', battleState?.isPlayerTurn, 'isProcessing:', isProcessing, 'isBattleOver:', battleState?.isBattleOver);
     
+    if (battleState && !battleState.isPlayerTurn && !battleState.isBattleOver && !isProcessing && manualEnemyControl) {
+      // Manual control: only run start-of-turn processing, the user picks the action
+      if (!enemyTurnStartProcessed) {
+        const startTimer = setTimeout(() => executeEnemyTurnStart(), 300);
+        return () => clearTimeout(startTimer);
+      }
+      return;
+    }
+
     if (battleState && !battleState.isPlayerTurn && !battleState.isBattleOver && !isProcessing) {
       console.log('[LiveBattle useEffect] Scheduling enemy turn');
       
@@ -137,7 +168,7 @@ const LiveBattleSimulator = () => {
         clearTimeout(timer);
       };
     }
-  }, [battleState?.isPlayerTurn, battleState?.isBattleOver, isProcessing, executeEnemyTurn]);
+  }, [battleState?.isPlayerTurn, battleState?.isBattleOver, isProcessing, executeEnemyTurn, manualEnemyControl, enemyTurnStartProcessed, executeEnemyTurnStart]);
 
   const handleLoadParty = () => {
     if (selectedParty) {
@@ -160,6 +191,51 @@ const LiveBattleSimulator = () => {
     
     // Players can attack any position - let them try
     executePlayerAction(unit.gridId);
+  };
+
+  // Manual enemy-side control state
+  const enemyControlActive = !!battleState && manualEnemyControl && !battleState.isPlayerTurn && !battleState.isBattleOver;
+  const enemyAttackerReady = enemyControlActive && !!selectedUnit?.isEnemy && !!selectedAbility;
+
+  // Save / restore battle state
+  const [snapshots, setSnapshots] = useState<BattleSnapshot[]>([]);
+  const [isSnapshotsOpen, setIsSnapshotsOpen] = useState(false);
+
+  const handleSaveState = () => {
+    if (!battleState) return;
+    const name = prompt("Name this saved battle state:", `Turn ${battleState.currentTurn} — ${new Date().toLocaleString()}`);
+    if (!name?.trim()) return;
+    const saved = saveBattleSnapshot({
+      name: name.trim(),
+      state: battleState,
+      formation: tempFormation.units,
+      encounterId,
+      encounterName: encounter?.name ? t(encounter.name) : undefined,
+    });
+    if (saved) {
+      toast.success(`Saved: ${saved.name}`);
+    } else {
+      toast.error("Failed to save battle state");
+    }
+  };
+
+  const openSnapshots = () => {
+    setSnapshots(getBattleSnapshots());
+    setIsSnapshotsOpen(true);
+  };
+
+  const handleRestore = (snapshot: BattleSnapshot) => {
+    if (snapshot.formation?.length) {
+      tempFormation.loadFromParty(snapshot.formation);
+    }
+    restoreBattleState(deserializeBattleState(snapshot.state));
+    setIsSnapshotsOpen(false);
+    toast.success(`Restored: ${snapshot.name}`);
+  };
+
+  const handleDeleteSnapshot = (id: string) => {
+    deleteBattleSnapshot(id);
+    setSnapshots(getBattleSnapshots());
   };
 
   const selectedUnitData = selectedUnit ? getUnitById(selectedUnit.unitId) : null;
@@ -552,7 +628,7 @@ const LiveBattleSimulator = () => {
                   highlightedGridIds={battleState.isPlayerTurn && selectedAbility ? highlightedGridIds : undefined}
                   validTargetPositions={battleState.isPlayerTurn && selectedAbility?.isSingleTarget ? validTargetPositions : undefined}
                   lastActionGridIds={enemyLastActionGridIds}
-                  damagePreviews={damagePreviews}
+                  damagePreviews={selectedUnit?.isEnemy ? [] : damagePreviews}
                   reticleGridId={enemyReticleGridId}
                   onReticleMove={(gridId) => {
                     // Only allow reticle movement to valid positions
@@ -566,7 +642,7 @@ const LiveBattleSimulator = () => {
                       executePlayerAction(enemyReticleGridId);
                     }
                   }}
-                  showReticle={!!selectedAbility && !selectedAbility.isSingleTarget && !selectedAbility.isFixed && !isRandomAttack}
+                  showReticle={!!selectedAbility && !selectedUnit?.isEnemy && !selectedAbility.isSingleTarget && !selectedAbility.isFixed && !isRandomAttack}
                   targetArea={selectedAbility?.targetArea}
                   damageArea={selectedAbility?.damageArea}
                   fixedAttackPositions={fixedAttackPositions.enemyGrid}
@@ -594,7 +670,7 @@ const LiveBattleSimulator = () => {
                         </p>
                       </div>
                       {/* Show LiveAbilitySelector for friendly units on player turn */}
-                      {!selectedUnit.isEnemy && battleState.isPlayerTurn ? (
+                      {(!selectedUnit.isEnemy && battleState.isPlayerTurn) || (selectedUnit.isEnemy && enemyControlActive) ? (
                         <LiveAbilitySelector
                           abilities={allAbilities}
                           selectedAbilityId={selectedAbilityId}
@@ -604,7 +680,7 @@ const LiveBattleSimulator = () => {
                           weaponAmmo={selectedUnit.weaponAmmo}
                           weaponReloadCooldown={selectedUnit.weaponReloadCooldown}
                           abilityChargeProgress={selectedUnit.abilityChargeProgress}
-                          disabled={!battleState.isPlayerTurn || battleState.isBattleOver}
+                          disabled={battleState.isBattleOver}
                         />
                       ) : (
                         /* Show static AbilitySelector for enemy units or when not player turn (view-only with live state) */
@@ -624,7 +700,9 @@ const LiveBattleSimulator = () => {
                     <p className="text-center text-muted-foreground">
                       {battleState.isPlayerTurn 
                         ? "Select one of your units to attack" 
-                        : "Enemy is taking their turn..."}
+                        : enemyControlActive
+                          ? "Select an enemy unit to act with"
+                          : "Enemy is taking their turn..."}
                     </p>
                   )}
                 </div>
@@ -635,12 +713,37 @@ const LiveBattleSimulator = () => {
                   units={battleState.friendlyUnits}
                   selectedUnitGridId={!selectedUnitIsEnemy ? selectedUnitGridId : null}
                   onUnitClick={(unit) => {
-                    if (battleState.isPlayerTurn) {
+                    if (enemyAttackerReady) {
+                      executePlayerAction(unit.gridId);
+                    } else if (battleState.isPlayerTurn || enemyControlActive) {
                       selectUnit(unit.gridId, false);
                     }
                   }}
+                  onEmptySlotClick={(gridId) => {
+                    if (enemyAttackerReady && selectedAbility?.isSingleTarget) {
+                      executePlayerAction(gridId);
+                    }
+                  }}
+                  highlightedGridIds={enemyAttackerReady ? highlightedGridIds : undefined}
+                  validTargetPositions={enemyAttackerReady && selectedAbility?.isSingleTarget ? validTargetPositions : undefined}
                   lastActionGridIds={friendlyLastActionGridIds}
-                  damagePreviews={[]}
+                  damagePreviews={selectedUnit?.isEnemy ? damagePreviews : []}
+                  reticleGridId={enemyReticleGridId}
+                  onReticleMove={(gridId) => {
+                    if (validReticlePositions?.has(gridId)) {
+                      setEnemyReticleGridId(gridId);
+                    }
+                  }}
+                  onReticleConfirm={() => {
+                    if (enemyAttackerReady && enemyReticleGridId !== undefined) {
+                      executePlayerAction(enemyReticleGridId);
+                    }
+                  }}
+                  showReticle={enemyAttackerReady && !selectedAbility!.isSingleTarget && !selectedAbility!.isFixed && !isRandomAttack}
+                  targetArea={selectedUnit?.isEnemy ? selectedAbility?.targetArea : undefined}
+                  damageArea={selectedUnit?.isEnemy ? selectedAbility?.damageArea : undefined}
+                  validReticlePositions={enemyAttackerReady ? validReticlePositions : undefined}
+                  isRandomAttack={selectedUnit?.isEnemy ? isRandomAttack : false}
                   fixedAttackPositions={fixedAttackPositions.friendlyGrid}
                   attackAnimationTrigger={attackAnimationTrigger}
                   recentlyDeadGridIds={recentlyDeadGridIds.friendly}
@@ -680,6 +783,37 @@ const LiveBattleSimulator = () => {
                       <SkipForward className="h-4 w-4 mr-2" />
                       Skip Turn
                     </Button>
+                    {enemyControlActive && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={skipEnemyTurn}
+                        disabled={isProcessing}
+                      >
+                        <SkipForward className="h-4 w-4 mr-2" />
+                        End Enemy Turn
+                      </Button>
+                    )}
+                    <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                      <Label htmlFor="manual-enemy" className="text-xs cursor-pointer">
+                        Control enemy side
+                      </Label>
+                      <Switch
+                        id="manual-enemy"
+                        checked={manualEnemyControl}
+                        onCheckedChange={setManualEnemyControl}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm" onClick={handleSaveState}>
+                        <Save className="h-4 w-4 mr-1" />
+                        Save
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={openSnapshots}>
+                        <FolderOpen className="h-4 w-4 mr-1" />
+                        Restore
+                      </Button>
+                    </div>
                     <Button
                       variant="outline"
                       className="w-full"
@@ -706,6 +840,40 @@ const LiveBattleSimulator = () => {
             </div>
           </>
         )}
+        {/* Saved battle states */}
+        <Dialog open={isSnapshotsOpen} onOpenChange={setIsSnapshotsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Saved Battle States</DialogTitle>
+              <DialogDescription>Restore a previously saved battle to continue from that point.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[50vh] overflow-y-auto space-y-2">
+              {snapshots.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No saved battle states yet.</p>
+              ) : (
+                snapshots.map(snapshot => (
+                  <div key={snapshot.id} className="flex items-center gap-2 rounded-md border p-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{snapshot.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {snapshot.encounterName || `Encounter ${snapshot.encounterId ?? "?"}`} • Turn {snapshot.turn} • Wave {snapshot.wave + 1}
+                      </p>
+                    </div>
+                    <Button size="sm" onClick={() => handleRestore(snapshot)}>Restore</Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => handleDeleteSnapshot(snapshot.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
