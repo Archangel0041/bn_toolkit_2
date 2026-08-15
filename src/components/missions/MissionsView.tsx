@@ -394,7 +394,7 @@ export default function MissionsView() {
   if (!setupComplete) {
     return (
       <div className="space-y-4">
-        <div>
+      <div>
           <h1 className="text-3xl font-bold mb-1">Mission Tree</h1>
           <p className="text-muted-foreground text-sm">
             Tell us what missions you currently have so we can show you only what's
@@ -403,7 +403,19 @@ export default function MissionsView() {
           </p>
         </div>
 
+        <MissionFind
+          missions={allParsed}
+          onSelect={(m) => {
+            setVisibleText((prev) => {
+              const ids = parseIdText(prev);
+              ids.add(m.id);
+              return idsToText([...ids]);
+            });
+          }}
+        />
+
         {error && (
+
           <div className="rounded border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
             Failed to load missions: {error}
           </div>
