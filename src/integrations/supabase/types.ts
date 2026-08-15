@@ -14,6 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
+      battle_sessions: {
+        Row: {
+          app_version: string | null
+          bs_points: number | null
+          client_session_id: string | null
+          created_at: string
+          encounter_id: string | null
+          encounter_name: string | null
+          ended_at: string | null
+          enemy_formation: Json
+          enemy_units_damaged: number
+          enemy_units_killed: number
+          enemy_units_total: number
+          id: string
+          is_boss_strike: boolean
+          outcome: string | null
+          player_formation: Json
+          player_units_damaged: number
+          player_units_killed: number
+          player_units_total: number
+          started_at: string
+          total_turns: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          app_version?: string | null
+          bs_points?: number | null
+          client_session_id?: string | null
+          created_at?: string
+          encounter_id?: string | null
+          encounter_name?: string | null
+          ended_at?: string | null
+          enemy_formation?: Json
+          enemy_units_damaged?: number
+          enemy_units_killed?: number
+          enemy_units_total?: number
+          id?: string
+          is_boss_strike?: boolean
+          outcome?: string | null
+          player_formation?: Json
+          player_units_damaged?: number
+          player_units_killed?: number
+          player_units_total?: number
+          started_at?: string
+          total_turns?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          app_version?: string | null
+          bs_points?: number | null
+          client_session_id?: string | null
+          created_at?: string
+          encounter_id?: string | null
+          encounter_name?: string | null
+          ended_at?: string | null
+          enemy_formation?: Json
+          enemy_units_damaged?: number
+          enemy_units_killed?: number
+          enemy_units_total?: number
+          id?: string
+          is_boss_strike?: boolean
+          outcome?: string | null
+          player_formation?: Json
+          player_units_damaged?: number
+          player_units_killed?: number
+          player_units_total?: number
+          started_at?: string
+          total_turns?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      battle_turn_events: {
+        Row: {
+          actions: Json
+          created_at: string
+          id: string
+          is_player_turn: boolean
+          session_id: string
+          summary: Json | null
+          turn_number: number
+          wave_number: number
+        }
+        Insert: {
+          actions?: Json
+          created_at?: string
+          id?: string
+          is_player_turn?: boolean
+          session_id: string
+          summary?: Json | null
+          turn_number: number
+          wave_number?: number
+        }
+        Update: {
+          actions?: Json
+          created_at?: string
+          id?: string
+          is_player_turn?: boolean
+          session_id?: string
+          summary?: Json | null
+          turn_number?: number
+          wave_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_turn_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "battle_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parties: {
         Row: {
           created_at: string
